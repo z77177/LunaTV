@@ -241,7 +241,7 @@ function PlayPageClient() {
   };
 
   // 发送弹幕
-  const sendDanmaku = async (text: string, time: number, color: string = '#FFFFFF', type: number = 0) => {
+  const _sendDanmaku = async (text: string, time: number, color = '#FFFFFF', type = 0) => {
     if (!detail || !videoTitleRef.current) return;
     
     try {
