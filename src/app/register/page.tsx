@@ -67,50 +67,62 @@ function VersionDisplay() {
   );
 }
 
-function LoginPageClient() {
+function RegisterPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [shouldAskUsername, setShouldAskUsername] = useState(false);
+  const [shouldShowRegister, setShouldShowRegister] = useState(false);
 
   const { siteName } = useSite();
 
-  // 在客户端挂载后设置配置
+  // 检查存储类型，只有非 localStorage 模式才显示注册页面
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storageType = (window as any).RUNTIME_CONFIG?.STORAGE_TYPE;
-      setShouldAskUsername(storageType && storageType !== 'localstorage');
+      setShouldShowRegister(storageType && storageType !== 'localstorage');
+      
+      if (!storageType || storageType === 'localstorage') {
+        router.replace('/login');
+      }
     }
-  }, []);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
-    if (!password || (shouldAskUsername && !username)) return;
+    if (!username || !password || !confirmPassword) {
+      setError('请填写完整信息');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('两次输入的密码不一致');
+      return;
+    }
 
     try {
       setLoading(true);
-      const res = await fetch('/api/login', {
+      const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username,
           password,
-          ...(shouldAskUsername ? { username } : {}),
+          confirmPassword,
         }),
       });
 
       if (res.ok) {
         const redirect = searchParams.get('redirect') || '/';
         router.replace(redirect);
-      } else if (res.status === 401) {
-        setError('密码错误');
       } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error ?? '服务器错误');
+        const data = await res.json();
+        setError(data.error ?? '注册失败');
       }
     } catch (error) {
       setError('网络错误，请稍后重试');
@@ -119,7 +131,9 @@ function LoginPageClient() {
     }
   };
 
-
+  if (!shouldShowRegister) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className='relative min-h-screen flex items-center justify-center px-4 overflow-hidden'>
@@ -127,26 +141,28 @@ function LoginPageClient() {
         <ThemeToggle />
       </div>
       <div className='relative z-10 w-full max-w-md rounded-3xl bg-gradient-to-b from-white/90 via-white/70 to-white/40 dark:from-zinc-900/90 dark:via-zinc-900/70 dark:to-zinc-900/40 backdrop-blur-xl shadow-2xl p-10 dark:border dark:border-zinc-800'>
-        <h1 className='text-green-600 tracking-tight text-center text-3xl font-extrabold mb-8 bg-clip-text drop-shadow-sm'>
+        <h1 className='text-green-600 tracking-tight text-center text-3xl font-extrabold mb-2 bg-clip-text drop-shadow-sm'>
           {siteName}
         </h1>
-        <form onSubmit={handleSubmit} className='space-y-8'>
-          {shouldAskUsername && (
-            <div>
-              <label htmlFor='username' className='sr-only'>
-                用户名
-              </label>
-              <input
-                id='username'
-                type='text'
-                autoComplete='username'
-                className='block w-full rounded-lg border-0 py-3 px-4 text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-white/60 dark:ring-white/20 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none sm:text-base bg-white/60 dark:bg-zinc-800/60 backdrop-blur'
-                placeholder='输入用户名'
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-          )}
+        <p className='text-center text-gray-600 dark:text-gray-400 text-sm mb-8'>
+          注册新账户
+        </p>
+        
+        <form onSubmit={handleSubmit} className='space-y-6'>
+          <div>
+            <label htmlFor='username' className='sr-only'>
+              用户名
+            </label>
+            <input
+              id='username'
+              type='text'
+              autoComplete='username'
+              className='block w-full rounded-lg border-0 py-3 px-4 text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-white/60 dark:ring-white/20 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none sm:text-base bg-white/60 dark:bg-zinc-800/60 backdrop-blur'
+              placeholder='输入用户名 (3-20位字母数字下划线)'
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
 
           <div>
             <label htmlFor='password' className='sr-only'>
@@ -155,11 +171,26 @@ function LoginPageClient() {
             <input
               id='password'
               type='password'
-              autoComplete='current-password'
+              autoComplete='new-password'
               className='block w-full rounded-lg border-0 py-3 px-4 text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-white/60 dark:ring-white/20 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none sm:text-base bg-white/60 dark:bg-zinc-800/60 backdrop-blur'
-              placeholder='输入访问密码'
+              placeholder='输入密码 (至少6位)'
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label htmlFor='confirmPassword' className='sr-only'>
+              确认密码
+            </label>
+            <input
+              id='confirmPassword'
+              type='password'
+              autoComplete='new-password'
+              className='block w-full rounded-lg border-0 py-3 px-4 text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-white/60 dark:ring-white/20 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none sm:text-base bg-white/60 dark:bg-zinc-800/60 backdrop-blur'
+              placeholder='再次输入密码'
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
             />
           </div>
 
@@ -167,45 +198,40 @@ function LoginPageClient() {
             <p className='text-sm text-red-600 dark:text-red-400'>{error}</p>
           )}
 
-          {/* 登录按钮 */}
           <button
             type='submit'
             disabled={
-              !password || loading || (shouldAskUsername && !username)
+              !username || !password || !confirmPassword || loading
             }
             className='inline-flex w-full justify-center rounded-lg bg-green-600 py-3 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:from-green-600 hover:to-blue-600 disabled:cursor-not-allowed disabled:opacity-50'
           >
-            {loading ? '登录中...' : '登录'}
+            {loading ? '注册中...' : '注册'}
           </button>
 
-          {/* 注册链接 - 仅在非 localStorage 模式下显示 */}
-          {shouldAskUsername && (
-            <div className='text-center'>
-              <span className='text-gray-600 dark:text-gray-400 text-sm'>
-                还没有账户？
-              </span>
-              <button
-                type='button'
-                onClick={() => router.push('/register')}
-                className='ml-2 text-green-600 dark:text-green-400 text-sm font-medium hover:underline'
-              >
-                立即注册
-              </button>
-            </div>
-          )}
+          <div className='text-center'>
+            <span className='text-gray-600 dark:text-gray-400 text-sm'>
+              已有账户？
+            </span>
+            <button
+              type='button'
+              onClick={() => router.push('/login')}
+              className='ml-2 text-green-600 dark:text-green-400 text-sm font-medium hover:underline'
+            >
+              立即登录
+            </button>
+          </div>
         </form>
       </div>
 
-      {/* 版本信息显示 */}
       <VersionDisplay />
     </div>
   );
 }
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <LoginPageClient />
+      <RegisterPageClient />
     </Suspense>
   );
 }
