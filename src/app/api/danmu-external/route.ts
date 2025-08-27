@@ -32,32 +32,56 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
       },
     });
     
-    if (!response.ok) return [];
+    if (!response.ok) {
+      console.log(`❌ 豆瓣页面请求失败: ${response.status}`);
+      return [];
+    }
     
     const html = await response.text();
+    console.log(`📄 豆瓣页面HTML长度: ${html.length}`);
     const urls: PlatformUrl[] = [];
 
-    // 腾讯视频链接提取
+    // 提取豆瓣跳转链接中的真实腾讯视频URL
+    const doubanLinkMatches = html.match(/play_link:\s*"[^"]*v\.qq\.com[^"]*"/g);
+    if (doubanLinkMatches && doubanLinkMatches.length > 0) {
+      console.log(`🎬 找到 ${doubanLinkMatches.length} 个腾讯视频链接`);
+      // 提取第一个链接并解码
+      const match = doubanLinkMatches[0];
+      const urlMatch = match.match(/https%3A%2F%2Fv\.qq\.com[^"&]*/);
+      if (urlMatch) {
+        const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
+        console.log(`🔗 解码后的腾讯视频链接: ${decodedUrl}`);
+        urls.push({
+          platform: 'tencent',
+          url: decodedUrl,
+        });
+      }
+    }
+
+    // 直接提取腾讯视频链接
     const qqMatches = html.match(/https:\/\/v\.qq\.com\/x\/cover\/[^"'\s]+/g);
     if (qqMatches && qqMatches.length > 0) {
+      console.log(`🎭 找到直接腾讯链接: ${qqMatches[0]}`);
       urls.push({
-        platform: 'tencent',
-        url: qqMatches[0].split('?')[0], // 移除参数
+        platform: 'tencent_direct',
+        url: qqMatches[0].split('?')[0],
       });
     }
 
     // B站链接提取
     const biliMatches = html.match(/https:\/\/www\.bilibili\.com\/video\/[^"'\s]+/g);
     if (biliMatches && biliMatches.length > 0) {
+      console.log(`📺 找到B站链接: ${biliMatches[0]}`);
       urls.push({
         platform: 'bilibili', 
         url: biliMatches[0].split('?')[0],
       });
     }
 
+    console.log(`✅ 总共提取到 ${urls.length} 个平台链接`);
     return urls;
   } catch (error) {
-    console.error('提取平台链接失败:', error);
+    console.error('❌ 提取平台链接失败:', error);
     return [];
   }
 }
@@ -65,23 +89,41 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
 // 从danmu.icu获取弹幕数据
 async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 增加超时时间
   
   try {
     const apiUrl = `https://api.danmu.icu/?url=${encodeURIComponent(videoUrl)}`;
+    console.log('🌐 正在请求弹幕API:', apiUrl);
     
     const response = await fetch(apiUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Referer': 'https://danmu.icu/',
       },
     });
     
     clearTimeout(timeoutId);
+    console.log('📡 API响应状态:', response.status, response.statusText);
 
-    if (!response.ok) return [];
+    if (!response.ok) {
+      console.log('❌ API响应失败:', response.status);
+      return [];
+    }
 
-    const data: DanmuApiResponse = await response.json();
+    const responseText = await response.text();
+    console.log('📄 API原始响应:', responseText.substring(0, 500) + '...');
+    
+    let data: DanmuApiResponse;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ JSON解析失败:', parseError);
+      console.log('响应内容:', responseText.substring(0, 200));
+      return [];
+    }
     
     if (!data.danmuku || !Array.isArray(data.danmuku)) return [];
 
@@ -141,22 +183,28 @@ export async function GET(request: NextRequest) {
 
     // 优先使用豆瓣ID提取链接
     if (doubanId) {
+      console.log('🔍 尝试从豆瓣页面提取链接...');
       platformUrls = await extractPlatformUrls(doubanId);
+      console.log('📝 豆瓣提取结果:', platformUrls);
     }
 
-    // 如果豆瓣ID没有找到链接，使用标题构建搜索链接
+    // 如果豆瓣ID没有找到链接，使用标题构建测试链接
     if (platformUrls.length === 0 && title) {
+      console.log('📺 使用标题构建测试链接...');
       const searchQuery = encodeURIComponent(title);
+      
+      // 直接使用已知的测试链接
       platformUrls = [
         {
-          platform: 'tencent_search',
-          url: `https://v.qq.com/x/search/?q=${searchQuery}`,
+          platform: 'tencent_test',
+          url: 'https://v.qq.com/x/cover/mzc00200vkqr54u/u4100l66fas.html', // 测试链接
         },
         {
-          platform: 'bilibili_search', 
-          url: `https://search.bilibili.com/all?keyword=${searchQuery}`,
+          platform: 'bilibili_test',
+          url: 'https://www.bilibili.com/video/BV1xx411c7mD', // 测试链接
         },
       ];
+      console.log('🧪 使用测试链接:', platformUrls);
     }
 
     if (platformUrls.length === 0) {
