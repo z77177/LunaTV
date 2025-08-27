@@ -232,7 +232,7 @@ function RegisterPageClient() {
           <button
             type='submit'
             disabled={
-              !username || !password || !confirmPassword || loading || success
+              !username || !password || !confirmPassword || loading || !!success
             }
             className='inline-flex w-full justify-center rounded-lg bg-green-600 py-3 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:from-green-600 hover:to-blue-600 disabled:cursor-not-allowed disabled:opacity-50'
           >
