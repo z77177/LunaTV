@@ -1659,18 +1659,29 @@ function PlayPageClient() {
       artPlayerRef.current.on('ready', async () => {
         setError(null);
 
-        // 播放器就绪后，如果外部弹幕已开启，自动加载弹幕
-        if (externalDanmuEnabledRef.current && artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+        // 播放器就绪后，加载外部弹幕数据
+        console.log('播放器已就绪，开始加载外部弹幕');
+        setTimeout(async () => {
           try {
             const externalDanmu = await loadExternalDanmu();
-            if (externalDanmu.length > 0) {
-              artPlayerRef.current.plugins.artplayerPluginDanmuku.load(externalDanmu);
-              console.log('播放器就绪时自动加载外部弹幕:', externalDanmu.length, '条');
+            console.log('外部弹幕加载结果:', externalDanmu);
+            
+            if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+              if (externalDanmu.length > 0) {
+                console.log('向播放器插件加载弹幕数据:', externalDanmu.length, '条');
+                artPlayerRef.current.plugins.artplayerPluginDanmuku.load(externalDanmu);
+                artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
+              } else {
+                console.log('没有弹幕数据可加载');
+                artPlayerRef.current.notice.show = '暂无弹幕数据';
+              }
+            } else {
+              console.error('弹幕插件未找到');
             }
           } catch (error) {
-            console.error('自动加载外部弹幕失败:', error);
+            console.error('加载外部弹幕失败:', error);
           }
-        }
+        }, 1000); // 延迟1秒确保插件完全初始化
 
         // 播放器就绪后，如果正在播放则请求 Wake Lock
         if (artPlayerRef.current && !artPlayerRef.current.paused) {

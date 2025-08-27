@@ -86,19 +86,36 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
     if (!data.danmuku || !Array.isArray(data.danmuku)) return [];
 
     // 转换为Artplayer格式
-    return data.danmuku.map((item: any[]) => {
+    // API返回格式: [时间, 位置, 颜色, "", 文本, "", "", "字号"]
+    console.log(`获取到 ${data.danmuku.length} 条原始弹幕数据`);
+    
+    return data.danmuku.map((item: any[], index: number) => {
       const time = parseFloat(item[0]) || 0;
-      const text = item[4] || '';
+      const text = (item[4] || '').toString().trim();
       const color = item[2] || '#FFFFFF';
-      const mode = item[1] === 'top' ? 1 : item[1] === 'bottom' ? 2 : 0;
+      
+      // 转换位置: top=1顶部, bottom=2底部, right=0滚动
+      let mode = 0;
+      if (item[1] === 'top') mode = 1;
+      else if (item[1] === 'bottom') mode = 2;
+      else mode = 0; // right 或其他都是滚动
+
+      if (index < 5) {
+        console.log(`弹幕 ${index + 1}: 时间=${time}s, 文本="${text}", 颜色=${color}, 模式=${mode}`);
+      }
 
       return {
-        text: text.toString(),
+        text: text,
         time: time,
         color: color,
         mode: mode,
       };
-    }).filter(item => item.text.length > 0); // 过滤空弹幕
+    }).filter(item => {
+      const valid = item.text.length > 0 && 
+                   !item.text.includes('弹幕正在赶来') && 
+                   !item.text.includes('官方弹幕库');
+      return valid;
+    }); // 过滤空弹幕和系统提示
 
   } catch (error) {
     clearTimeout(timeoutId);
