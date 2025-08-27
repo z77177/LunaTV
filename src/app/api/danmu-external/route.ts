@@ -115,17 +115,7 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
 // 处理选中的结果
 async function processSelectedResult(selectedResult: any, episode?: string | null): Promise<PlatformUrl[]> {
   try {
-    const matchType = '最佳匹配';
-    console.log(`✅ 选择匹配结果: "${selectedResult.vod_name}" (${matchType})`);
-    const firstResult: any = selectedResult;
-    
-    if (!selectedResult) {
-      console.log('❌ 未找到合适的匹配结果');
-      return [];
-    }
-    
-    const matchType = exactMatch ? '完全匹配' : '最佳匹配';
-    console.log(`✅ 选择匹配结果: "${selectedResult.vod_name}" (${matchType})`);
+    console.log(`🔄 处理选中的结果: "${selectedResult.vod_name}"`);
     const firstResult: any = selectedResult;
     const detailUrl = `https://www.caiji.cyou/api.php/provide/vod/?ac=detail&ids=${firstResult.vod_id}`;
     
