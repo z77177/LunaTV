@@ -41,20 +41,44 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
     console.log(`📄 豆瓣页面HTML长度: ${html.length}`);
     const urls: PlatformUrl[] = [];
 
-    // 提取豆瓣跳转链接中的真实腾讯视频URL
+    // 提取豆瓣跳转链接中的各种视频平台URL
+    
+    // 腾讯视频
     const doubanLinkMatches = html.match(/play_link:\s*"[^"]*v\.qq\.com[^"]*"/g);
     if (doubanLinkMatches && doubanLinkMatches.length > 0) {
       console.log(`🎬 找到 ${doubanLinkMatches.length} 个腾讯视频链接`);
-      // 提取第一个链接并解码
       const match = doubanLinkMatches[0];
       const urlMatch = match.match(/https%3A%2F%2Fv\.qq\.com[^"&]*/);
       if (urlMatch) {
         const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
-        console.log(`🔗 解码后的腾讯视频链接: ${decodedUrl}`);
-        urls.push({
-          platform: 'tencent',
-          url: decodedUrl,
-        });
+        console.log(`🔗 腾讯视频链接: ${decodedUrl}`);
+        urls.push({ platform: 'tencent', url: decodedUrl });
+      }
+    }
+
+    // 爱奇艺
+    const iqiyiMatches = html.match(/play_link:\s*"[^"]*iqiyi\.com[^"]*"/g);
+    if (iqiyiMatches && iqiyiMatches.length > 0) {
+      console.log(`📺 找到 ${iqiyiMatches.length} 个爱奇艺链接`);
+      const match = iqiyiMatches[0];
+      const urlMatch = match.match(/https?%3A%2F%2F[^"&]*iqiyi\.com[^"&]*/);
+      if (urlMatch) {
+        const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
+        console.log(`🔗 爱奇艺链接: ${decodedUrl}`);
+        urls.push({ platform: 'iqiyi', url: decodedUrl });
+      }
+    }
+
+    // 优酷
+    const youkuMatches = html.match(/play_link:\s*"[^"]*youku\.com[^"]*"/g);
+    if (youkuMatches && youkuMatches.length > 0) {
+      console.log(`🎞️ 找到 ${youkuMatches.length} 个优酷链接`);
+      const match = youkuMatches[0];
+      const urlMatch = match.match(/https?%3A%2F%2F[^"&]*youku\.com[^"&]*/);
+      if (urlMatch) {
+        const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
+        console.log(`🔗 优酷链接: ${decodedUrl}`);
+        urls.push({ platform: 'youku', url: decodedUrl });
       }
     }
 
@@ -131,7 +155,7 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
     // API返回格式: [时间, 位置, 颜色, "", 文本, "", "", "字号"]
     console.log(`获取到 ${data.danmuku.length} 条原始弹幕数据`);
     
-    return data.danmuku.map((item: any[], index: number) => {
+    const danmuList = data.danmuku.map((item: any[], index: number) => {
       // 正确解析时间 - 第一个元素就是时间(秒)
       const time = parseFloat(item[0]) || 0;
       const text = (item[4] || '').toString().trim();
@@ -142,10 +166,6 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
       if (item[1] === 'top') mode = 1;
       else if (item[1] === 'bottom') mode = 2;
       else mode = 0; // right 或其他都是滚动
-
-      if (index < 10) {
-        console.log(`弹幕 ${index + 1}: 时间=${time}s, 文本="${text}", 颜色=${color}, 模式=${mode}`);
-      }
 
       return {
         text: text,
@@ -160,6 +180,20 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
                    item.time >= 0;
       return valid;
     }).sort((a, b) => a.time - b.time); // 按时间排序
+
+    // 显示时间分布统计
+    const timeStats = danmuList.reduce((acc, item) => {
+      const timeRange = Math.floor(item.time / 60); // 按分钟分组
+      acc[timeRange] = (acc[timeRange] || 0) + 1;
+      return acc;
+    }, {} as Record<number, number>);
+    
+    console.log('📊 弹幕时间分布(按分钟):', timeStats);
+    console.log('📋 前10条弹幕:', danmuList.slice(0, 10).map(item => 
+      `${item.time}s: "${item.text.substring(0, 20)}"`
+    ));
+    
+    return danmuList;
 
   } catch (error) {
     clearTimeout(timeoutId);
