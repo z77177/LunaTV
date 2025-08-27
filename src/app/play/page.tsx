@@ -683,6 +683,10 @@ function PlayPageClient() {
         params.append('year', videoYearRef.current);
         console.log('使用年份:', videoYearRef.current);
       }
+      if (currentEpisodeIndexRef.current !== null && currentEpisodeIndexRef.current >= 0) {
+        params.append('episode', (currentEpisodeIndexRef.current + 1).toString());
+        console.log('使用集数:', currentEpisodeIndexRef.current + 1);
+      }
 
       if (!params.toString()) {
         console.log('没有可用的参数获取弹幕');
