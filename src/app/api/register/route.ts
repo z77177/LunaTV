@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
+import { clearConfigCache } from '@/lib/config';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -129,6 +130,21 @@ export async function POST(req: NextRequest) {
 
       // 注册用户
       await db.registerUser(username, password);
+
+      // 获取配置并添加用户到配置中
+      const config = await getConfig();
+      const newUser = {
+        username: username,
+        role: 'user' as const,
+      };
+      
+      config.UserConfig.Users.push(newUser);
+      
+      // 保存更新后的配置
+      await db.saveAdminConfig(config);
+      
+      // 清除缓存，确保下次获取配置时是最新的
+      clearConfigCache();
 
       // 注册成功后自动登录
       const response = NextResponse.json({ 

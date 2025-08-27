@@ -220,6 +220,7 @@ async function getInitConfig(configFile: string, subConfig: {
         process.env.NEXT_PUBLIC_FLUID_SEARCH !== 'false',
     },
     UserConfig: {
+      AllowRegister: true, // 默认允许注册
       Users: [],
     },
     SourceConfig: [],
@@ -313,13 +314,22 @@ export async function getConfig(): Promise<AdminConfig> {
   return cachedConfig;
 }
 
+// 清除配置缓存，强制重新从数据库读取
+export function clearConfigCache(): void {
+  cachedConfig = null as any;
+}
+
 export function configSelfCheck(adminConfig: AdminConfig): AdminConfig {
   // 确保必要的属性存在和初始化
   if (!adminConfig.UserConfig) {
-    adminConfig.UserConfig = { Users: [] };
+    adminConfig.UserConfig = { AllowRegister: true, Users: [] };
   }
   if (!adminConfig.UserConfig.Users || !Array.isArray(adminConfig.UserConfig.Users)) {
     adminConfig.UserConfig.Users = [];
+  }
+  // 确保 AllowRegister 有默认值
+  if (adminConfig.UserConfig.AllowRegister === undefined) {
+    adminConfig.UserConfig.AllowRegister = true;
   }
   if (!adminConfig.SourceConfig || !Array.isArray(adminConfig.SourceConfig)) {
     adminConfig.SourceConfig = [];

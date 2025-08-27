@@ -74,6 +74,7 @@ function RegisterPageClient() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [shouldShowRegister, setShouldShowRegister] = useState(false);
 
@@ -112,6 +113,7 @@ function RegisterPageClient() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
 
     if (!username || !password || !confirmPassword) {
       setError('请填写完整信息');
@@ -136,8 +138,15 @@ function RegisterPageClient() {
       });
 
       if (res.ok) {
-        const redirect = searchParams.get('redirect') || '/';
-        router.replace(redirect);
+        const data = await res.json();
+        // 显示成功消息，稍等一下再跳转
+        setError(null);
+        setSuccess('注册成功！正在跳转...');
+        // 给用户一个成功提示，然后再跳转
+        setTimeout(() => {
+          const redirect = searchParams.get('redirect') || '/';
+          router.replace(redirect);
+        }, 1500); // 1.5秒后跳转，让用户看到成功消息
       } else {
         const data = await res.json();
         setError(data.error ?? '注册失败');
@@ -216,14 +225,18 @@ function RegisterPageClient() {
             <p className='text-sm text-red-600 dark:text-red-400'>{error}</p>
           )}
 
+          {success && (
+            <p className='text-sm text-green-600 dark:text-green-400'>{success}</p>
+          )}
+
           <button
             type='submit'
             disabled={
-              !username || !password || !confirmPassword || loading
+              !username || !password || !confirmPassword || loading || success
             }
             className='inline-flex w-full justify-center rounded-lg bg-green-600 py-3 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:from-green-600 hover:to-blue-600 disabled:cursor-not-allowed disabled:opacity-50'
           >
-            {loading ? '注册中...' : '注册'}
+            {loading ? '注册中...' : success ? '注册成功，正在跳转...' : '注册'}
           </button>
 
           <div className='text-center'>
