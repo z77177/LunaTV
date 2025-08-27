@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getMatchedDanDanPlayComments } from '@/lib/dandanplay.client';
 import { db } from '@/lib/db';
 import { Danmaku } from '@/lib/types';
+import { getMatchedDanDanPlayComments } from '@/lib/dandanplay.client';
 
 export const runtime = 'nodejs';
 

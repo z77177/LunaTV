@@ -239,33 +239,6 @@ export class DbManager {
       throw new Error('存储类型不支持清空数据操作');
     }
   }
-
-  // ---------- 弹幕相关方法 ----------
-  async getDanmakuList(videoId: string): Promise<any[]> {
-    if (typeof (this.storage as any).getDanmakuList === 'function') {
-      return (this.storage as any).getDanmakuList(videoId);
-    }
-    return [];
-  }
-
-  async addDanmaku(danmaku: any): Promise<void> {
-    if (typeof (this.storage as any).addDanmaku === 'function') {
-      await (this.storage as any).addDanmaku(danmaku);
-    }
-  }
-
-  async deleteDanmaku(danmakuId: string): Promise<void> {
-    if (typeof (this.storage as any).deleteDanmaku === 'function') {
-      await (this.storage as any).deleteDanmaku(danmakuId);
-    }
-  }
-
-  async getUserDanmakuList(userId: string, limit: number = 50): Promise<any[]> {
-    if (typeof (this.storage as any).getUserDanmakuList === 'function') {
-      return (this.storage as any).getUserDanmakuList(userId, limit);
-    }
-    return [];
-  }
 }
 
 // 导出默认实例
