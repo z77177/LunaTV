@@ -260,7 +260,7 @@ export class DbManager {
     }
   }
 
-  async getUserDanmakuList(userId: string, limit: number = 50): Promise<any[]> {
+  async getUserDanmakuList(userId: string, limit = 50): Promise<any[]> {
     if (typeof (this.storage as any).getUserDanmakuList === 'function') {
       return (this.storage as any).getUserDanmakuList(userId, limit);
     }
