@@ -369,29 +369,18 @@ export async function GET(request: NextRequest) {
       console.log('📝 豆瓣提取结果:', platformUrls);
     }
 
-    // 如果豆瓣ID没有找到链接，使用标题构建测试链接
-    if (platformUrls.length === 0 && title) {
-      console.log('📺 使用标题构建测试链接...');
-      const searchQuery = encodeURIComponent(title);
-      
-      // 直接使用已知的测试链接
-      platformUrls = [
-        {
-          platform: 'tencent_test',
-          url: 'https://v.qq.com/x/cover/mzc00200vkqr54u/u4100l66fas.html', // 测试链接
-        },
-        {
-          platform: 'bilibili_test',
-          url: 'https://www.bilibili.com/video/BV1xx411c7mD', // 测试链接
-        },
-      ];
-      console.log('🧪 使用测试链接:', platformUrls);
-    }
+    // 如果找不到任何链接，直接返回空结果，不使用测试数据
+    // （删除了不合适的fallback测试链接逻辑）
 
     if (platformUrls.length === 0) {
+      console.log('❌ 未找到任何视频平台链接，返回空弹幕结果');
+      console.log('💡 建议: 检查标题是否正确，或者该内容可能暂不支持弹幕');
+      
       return NextResponse.json({ 
         danmu: [],
-        message: '未找到支持的视频平台链接'
+        platforms: [],
+        total: 0,
+        message: `未找到"${title}"的视频平台链接，无法获取弹幕数据`
       });
     }
 
