@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/lib/db';
-import { Danmaku } from '@/lib/types';
 import { getMatchedDanDanPlayComments } from '@/lib/dandanplay.client';
+import { Danmaku } from '@/lib/types';
 
 export const runtime = 'nodejs';
 

@@ -1,5 +1,6 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 
+import * as crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig, refineConfig } from '@/lib/config';
