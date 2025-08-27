@@ -86,32 +86,33 @@ function RegisterPageClient() {
   useEffect(() => {
     const checkRegistrationAvailable = async () => {
       try {
-        // 尝试调用注册 API 来检测是否支持注册
-        const res = await fetch('/api/register', {
-          method: 'POST',
+        // 调用专门的注册状态检测 API
+        const res = await fetch('/api/register/status', {
+          method: 'GET',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: '', password: '', confirmPassword: '' }),
         });
         
         const data = await res.json();
         
-        // 检查各种不支持注册的情况
-        if (data.error === 'localStorage 模式不支持用户注册') {
-          router.replace('/login');
-          return;
+        if (!data.enabled) {
+          // 注册被禁用
+          if (data.reason === 'localStorage 模式不支持用户注册') {
+            // localStorage 模式直接跳转到登录页
+            router.replace('/login');
+            return;
+          } else {
+            // 其他原因显示禁用页面
+            setRegistrationDisabled(true);
+            setDisabledReason(data.reason || '注册功能暂不可用');
+            setShouldShowRegister(true);
+            return;
+          }
         }
         
-        if (data.error === '管理员已关闭用户注册功能') {
-          setRegistrationDisabled(true);
-          setDisabledReason('管理员已关闭用户注册功能');
-          setShouldShowRegister(true);
-          return;
-        }
-        
-        // 其他情况显示注册表单
+        // 注册可用，显示注册表单
         setShouldShowRegister(true);
       } catch (error) {
-        // 网络错误也显示注册页面
+        // 网络错误也显示注册页面，让用户尝试
         setShouldShowRegister(true);
       }
     };
