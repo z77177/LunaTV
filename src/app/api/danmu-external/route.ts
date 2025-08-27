@@ -132,6 +132,7 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
     console.log(`获取到 ${data.danmuku.length} 条原始弹幕数据`);
     
     return data.danmuku.map((item: any[], index: number) => {
+      // 正确解析时间 - 第一个元素就是时间(秒)
       const time = parseFloat(item[0]) || 0;
       const text = (item[4] || '').toString().trim();
       const color = item[2] || '#FFFFFF';
@@ -142,7 +143,7 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
       else if (item[1] === 'bottom') mode = 2;
       else mode = 0; // right 或其他都是滚动
 
-      if (index < 5) {
+      if (index < 10) {
         console.log(`弹幕 ${index + 1}: 时间=${time}s, 文本="${text}", 颜色=${color}, 模式=${mode}`);
       }
 
@@ -155,9 +156,10 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
     }).filter(item => {
       const valid = item.text.length > 0 && 
                    !item.text.includes('弹幕正在赶来') && 
-                   !item.text.includes('官方弹幕库');
+                   !item.text.includes('官方弹幕库') &&
+                   item.time >= 0;
       return valid;
-    }); // 过滤空弹幕和系统提示
+    }).sort((a, b) => a.time - b.time); // 按时间排序
 
   } catch (error) {
     clearTimeout(timeoutId);
