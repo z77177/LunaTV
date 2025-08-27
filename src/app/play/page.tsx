@@ -97,6 +97,19 @@ function PlayPageClient() {
     blockAdEnabledRef.current = blockAdEnabled;
   }, [blockAdEnabled]);
 
+  // 外部弹幕开关（从 localStorage 继承，默认 false）
+  const [externalDanmuEnabled, setExternalDanmuEnabled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const v = localStorage.getItem('enable_external_danmu');
+      if (v !== null) return v === 'true';
+    }
+    return false;
+  });
+  const externalDanmuEnabledRef = useRef(externalDanmuEnabled);
+  useEffect(() => {
+    externalDanmuEnabledRef.current = externalDanmuEnabled;
+  }, [externalDanmuEnabled]);
+
   // 视频基本信息
   const [videoTitle, setVideoTitle] = useState(searchParams.get('title') || '');
   const [videoYear, setVideoYear] = useState(searchParams.get('year') || '');
@@ -645,6 +658,36 @@ function PlayPageClient() {
       };
     }
   }
+
+  // 加载外部弹幕数据
+  const loadExternalDanmu = async (): Promise<any[]> => {
+    if (!externalDanmuEnabledRef.current) return [];
+    
+    try {
+      const params = new URLSearchParams();
+      if (videoDoubanId && videoDoubanId > 0) {
+        params.append('douban_id', videoDoubanId.toString());
+      }
+      if (videoTitleRef.current) {
+        params.append('title', videoTitleRef.current);
+      }
+      if (videoYearRef.current) {
+        params.append('year', videoYearRef.current);
+      }
+
+      if (!params.toString()) return [];
+
+      const response = await fetch(`/api/danmu-external?${params}`);
+      if (!response.ok) return [];
+
+      const data = await response.json();
+      console.log('外部弹幕加载成功:', data.total, '条');
+      return data.danmu || [];
+    } catch (error) {
+      console.error('加载外部弹幕失败:', error);
+      return [];
+    }
+  };
 
   // 当集数索引变化时自动更新视频地址
   useEffect(() => {
@@ -1407,6 +1450,28 @@ function PlayPageClient() {
             },
           },
           {
+            html: '外部弹幕',
+            icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">外</text>',
+            tooltip: externalDanmuEnabled ? '外部弹幕已开启' : '外部弹幕已关闭',
+            onClick() {
+              const newVal = !externalDanmuEnabled;
+              try {
+                localStorage.setItem('enable_external_danmu', String(newVal));
+                setExternalDanmuEnabled(newVal);
+                
+                // 重新加载弹幕数据
+                if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.load();
+                }
+                
+                console.log('外部弹幕开关:', newVal ? '开启' : '关闭');
+              } catch (error) {
+                console.error('切换外部弹幕开关失败:', error);
+              }
+              return newVal ? '外部弹幕已开启' : '外部弹幕已关闭';
+            },
+          },
+          {
             html: '弹幕开关',
             icon: '<text x="50%" y="50%" font-size="16" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">弹</text>',
             tooltip: '弹幕显示/隐藏',
@@ -1527,7 +1592,11 @@ function PlayPageClient() {
         // 弹幕插件配置
         plugins: [
           artplayerPluginDanmuku({
-            danmuku: [], // 弹幕数据，初始为空
+            danmuku: async () => {
+              // 异步加载弹幕数据
+              const externalDanmu = await loadExternalDanmu();
+              return externalDanmu;
+            },
             speed: 5, // 弹幕持续时间
             opacity: 0.8, // 弹幕透明度
             fontSize: 25, // 弹幕字体大小
