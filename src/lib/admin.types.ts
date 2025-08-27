@@ -18,6 +18,7 @@ export interface AdminConfig {
     FluidSearch: boolean;
   };
   UserConfig: {
+    AllowRegister?: boolean; // 是否允许用户注册，默认 true
     Users: {
       username: string;
       role: 'user' | 'admin' | 'owner';
