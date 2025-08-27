@@ -22,7 +22,7 @@ interface DanmuItem {
 }
 
 // 从caiji.cyou API搜索视频链接
-async function searchFromCaijiAPI(title: string, episode?: string): Promise<PlatformUrl[]> {
+async function searchFromCaijiAPI(title: string, episode?: string | null): Promise<PlatformUrl[]> {
   try {
     console.log(`🔎 在caiji.cyou搜索: "${title}", 集数: ${episode || '未指定'}`);
     
@@ -38,7 +38,7 @@ async function searchFromCaijiAPI(title: string, episode?: string): Promise<Plat
       return [];
     }
     
-    const data = await response.json();
+    const data: any = await response.json();
     if (!data.list || data.list.length === 0) {
       console.log('📭 Caiji API未找到匹配内容');
       return [];
@@ -47,7 +47,7 @@ async function searchFromCaijiAPI(title: string, episode?: string): Promise<Plat
     console.log(`🎬 找到 ${data.list.length} 个匹配结果`);
     
     // 获取第一个匹配结果的详细信息
-    const firstResult = data.list[0];
+    const firstResult: any = data.list[0];
     const detailUrl = `https://www.caiji.cyou/api.php/provide/vod/?ac=detail&ids=${firstResult.vod_id}`;
     
     const detailResponse = await fetch(detailUrl, {
@@ -58,10 +58,10 @@ async function searchFromCaijiAPI(title: string, episode?: string): Promise<Plat
     
     if (!detailResponse.ok) return [];
     
-    const detailData = await detailResponse.json();
+    const detailData: any = await detailResponse.json();
     if (!detailData.list || detailData.list.length === 0) return [];
     
-    const videoInfo = detailData.list[0];
+    const videoInfo: any = detailData.list[0];
     console.log(`🎭 视频详情: "${videoInfo.vod_name}" (${videoInfo.vod_year})`);
     
     const urls: PlatformUrl[] = [];
@@ -75,7 +75,7 @@ async function searchFromCaijiAPI(title: string, episode?: string): Promise<Plat
       let targetUrl = '';
       if (episode && parseInt(episode) > 0) {
         const episodeNum = parseInt(episode);
-        const targetEpisode = playUrls.find(url => url.startsWith(`${episodeNum}$`));
+        const targetEpisode = playUrls.find((url: string) => url.startsWith(`${episodeNum}$`));
         if (targetEpisode) {
           targetUrl = targetEpisode.split('$')[1];
           console.log(`🎯 找到第${episode}集: ${targetUrl}`);
