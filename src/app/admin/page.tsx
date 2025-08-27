@@ -819,7 +819,12 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         
                         if (response.ok) {
                           await refreshConfig();
-                          showAlert('success', config.UserConfig.AllowRegister === false ? '已允许用户注册' : '已禁止用户注册');
+                          showAlert({
+                            type: 'success',
+                            title: '设置已更新',
+                            message: config.UserConfig.AllowRegister === false ? '已允许用户注册' : '已禁止用户注册',
+                            timer: 2000
+                          });
                         } else {
                           throw new Error('更新配置失败');
                         }
