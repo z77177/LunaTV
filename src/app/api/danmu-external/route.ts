@@ -21,6 +21,102 @@ interface DanmuItem {
   mode?: number;
 }
 
+// 从caiji.cyou API搜索视频链接
+async function searchFromCaijiAPI(title: string, episode?: string): Promise<PlatformUrl[]> {
+  try {
+    console.log(`🔎 在caiji.cyou搜索: "${title}", 集数: ${episode || '未指定'}`);
+    
+    const searchUrl = `https://www.caiji.cyou/api.php/provide/vod/?wd=${encodeURIComponent(title)}`;
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+    
+    if (!response.ok) {
+      console.log('❌ Caiji API搜索失败:', response.status);
+      return [];
+    }
+    
+    const data = await response.json();
+    if (!data.list || data.list.length === 0) {
+      console.log('📭 Caiji API未找到匹配内容');
+      return [];
+    }
+    
+    console.log(`🎬 找到 ${data.list.length} 个匹配结果`);
+    
+    // 获取第一个匹配结果的详细信息
+    const firstResult = data.list[0];
+    const detailUrl = `https://www.caiji.cyou/api.php/provide/vod/?ac=detail&ids=${firstResult.vod_id}`;
+    
+    const detailResponse = await fetch(detailUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+    
+    if (!detailResponse.ok) return [];
+    
+    const detailData = await detailResponse.json();
+    if (!detailData.list || detailData.list.length === 0) return [];
+    
+    const videoInfo = detailData.list[0];
+    console.log(`🎭 视频详情: "${videoInfo.vod_name}" (${videoInfo.vod_year})`);
+    
+    const urls: PlatformUrl[] = [];
+    
+    // 解析播放链接
+    if (videoInfo.vod_play_url) {
+      const playUrls = videoInfo.vod_play_url.split('#');
+      console.log(`📺 找到 ${playUrls.length} 集`);
+      
+      // 如果指定了集数，尝试找到对应集数的链接
+      let targetUrl = '';
+      if (episode && parseInt(episode) > 0) {
+        const episodeNum = parseInt(episode);
+        const targetEpisode = playUrls.find(url => url.startsWith(`${episodeNum}$`));
+        if (targetEpisode) {
+          targetUrl = targetEpisode.split('$')[1];
+          console.log(`🎯 找到第${episode}集: ${targetUrl}`);
+        }
+      }
+      
+      // 如果没有指定集数或找不到指定集数，使用第一集
+      if (!targetUrl && playUrls.length > 0) {
+        targetUrl = playUrls[0].split('$')[1];
+        console.log(`📺 使用第1集: ${targetUrl}`);
+      }
+      
+      if (targetUrl) {
+        // 根据URL判断平台
+        let platform = 'unknown';
+        if (targetUrl.includes('bilibili.com')) {
+          platform = 'bilibili_caiji';
+        } else if (targetUrl.includes('v.qq.com')) {
+          platform = 'tencent_caiji';
+        } else if (targetUrl.includes('iqiyi.com')) {
+          platform = 'iqiyi_caiji';
+        } else if (targetUrl.includes('youku.com')) {
+          platform = 'youku_caiji';
+        }
+        
+        urls.push({
+          platform: platform,
+          url: targetUrl,
+        });
+      }
+    }
+    
+    console.log(`✅ Caiji API返回 ${urls.length} 个播放链接`);
+    return urls;
+    
+  } catch (error) {
+    console.error('❌ Caiji API搜索失败:', error);
+    return [];
+  }
+}
+
 // 从豆瓣页面提取平台视频链接
 async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
   if (!doubanId) return [];
@@ -92,14 +188,27 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
       });
     }
 
-    // B站链接提取
+    // B站链接提取（直接链接）
     const biliMatches = html.match(/https:\/\/www\.bilibili\.com\/video\/[^"'\s]+/g);
     if (biliMatches && biliMatches.length > 0) {
-      console.log(`📺 找到B站链接: ${biliMatches[0]}`);
+      console.log(`📺 找到B站直接链接: ${biliMatches[0]}`);
       urls.push({
         platform: 'bilibili', 
         url: biliMatches[0].split('?')[0],
       });
+    }
+
+    // B站链接提取（豆瓣跳转链接）
+    const biliDoubanMatches = html.match(/play_link:\s*"[^"]*bilibili\.com[^"]*"/g);
+    if (biliDoubanMatches && biliDoubanMatches.length > 0) {
+      console.log(`📱 找到 ${biliDoubanMatches.length} 个B站豆瓣链接`);
+      const match = biliDoubanMatches[0];
+      const urlMatch = match.match(/https?%3A%2F%2F[^"&]*bilibili\.com[^"&]*/);
+      if (urlMatch) {
+        const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
+        console.log(`🔗 B站豆瓣链接: ${decodedUrl}`);
+        urls.push({ platform: 'bilibili_douban', url: decodedUrl });
+      }
     }
 
     console.log(`✅ 总共提取到 ${urls.length} 个平台链接`);
@@ -207,6 +316,13 @@ export async function GET(request: NextRequest) {
   const doubanId = searchParams.get('douban_id');
   const title = searchParams.get('title');
   const year = searchParams.get('year');
+  const episode = searchParams.get('episode'); // 新增集数参数
+
+  console.log('=== 弹幕API请求参数 ===');
+  console.log('豆瓣ID:', doubanId);
+  console.log('标题:', title);
+  console.log('年份:', year);
+  console.log('集数:', episode);
 
   if (!doubanId && !title) {
     return NextResponse.json({ 
@@ -217,8 +333,18 @@ export async function GET(request: NextRequest) {
   try {
     let platformUrls: PlatformUrl[] = [];
 
-    // 优先使用豆瓣ID提取链接
-    if (doubanId) {
+    // 优先使用caiji.cyou API搜索内容
+    if (title) {
+      console.log('🔍 使用caiji.cyou API搜索内容...');
+      const caijiUrls = await searchFromCaijiAPI(title, episode);
+      if (caijiUrls.length > 0) {
+        platformUrls = caijiUrls;
+        console.log('📺 Caiji API搜索结果:', platformUrls);
+      }
+    }
+
+    // 如果caiji API没有结果，尝试豆瓣页面提取
+    if (platformUrls.length === 0 && doubanId) {
       console.log('🔍 尝试从豆瓣页面提取链接...');
       platformUrls = await extractPlatformUrls(doubanId);
       console.log('📝 豆瓣提取结果:', platformUrls);
