@@ -1,7 +1,7 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getConfig, clearConfigCache } from '@/lib/config';
+import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -135,7 +135,8 @@ export async function POST(req: NextRequest) {
       // 注册用户
       await db.registerUser(username, password);
 
-      // 添加用户到配置中（重用之前获取的config）
+      // 重新获取配置来添加用户
+      const config = await getConfig();
       const newUser = {
         username: username,
         role: 'user' as const,

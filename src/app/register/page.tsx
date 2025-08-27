@@ -148,7 +148,7 @@ function RegisterPageClient() {
       });
 
       if (res.ok) {
-        const data = await res.json();
+        await res.json(); // 读取响应但不使用
         // 显示成功消息，稍等一下再跳转
         setError(null);
         setSuccess('注册成功！正在跳转...');
