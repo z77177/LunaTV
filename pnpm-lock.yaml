@@ -38,7 +38,7 @@ importers:
       artplayer:
         specifier: ^5.2.5
         version: 5.2.5
-      artplayer-plugin-danmaku:
+      artplayer-plugin-danmuku:
         specifier: ^5.1.8
         version: 5.1.8
       bs58:
@@ -1993,7 +1993,7 @@ packages:
   artplayer@5.2.5:
     resolution: {integrity: sha512-Ogym5rvkAJ4VLncM4Apl3TJ/a/ozM3csvY4IKuuMR++hUmEZgj/HaGsNonwx8r56nsqiZYE7O4vS1HFZl+NBSg==}
 
-  artplayer-plugin-danmaku@5.1.8:
+  artplayer-plugin-danmuku@5.1.8:
     resolution: {integrity: sha512-example-hash-for-artplayer-plugin-danmaku-5.1.8}
 
   assert@2.0.0:
@@ -7489,7 +7489,7 @@ snapshots:
     dependencies:
       option-validator: 2.0.6
 
-  artplayer-plugin-danmaku@5.1.8: {}
+  artplayer-plugin-danmuku@5.1.8: {}
 
   assert@2.0.0:
     dependencies:
