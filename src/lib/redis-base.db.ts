@@ -3,7 +3,7 @@
 import { createClient, RedisClientType } from 'redis';
 
 import { AdminConfig } from './admin.types';
-import { Favorite, IStorage, PlayRecord, SkipConfig } from './types';
+import { Danmaku, Favorite, IStorage, PlayRecord, SkipConfig } from './types';
 
 // 搜索历史最大条数
 const SEARCH_HISTORY_LIMIT = 20;
@@ -462,5 +462,110 @@ export abstract class BaseRedisStorage implements IStorage {
       console.error('清空数据失败:', error);
       throw new Error('清空数据失败');
     }
+  }
+
+  // 弹幕相关方法
+  protected danmakuListKey(videoId: string): string {
+    return `danmaku:list:${videoId}`;
+  }
+
+  protected userDanmakuKey(userId: string): string {
+    return `danmaku:user:${userId}`;
+  }
+
+  // 获取指定视频的弹幕列表
+  async getDanmakuList(videoId: string): Promise<Danmaku[]> {
+    return this.withRetry(async () => {
+      const key = this.danmakuListKey(videoId);
+      const danmakuData = await this.client.lRange(key, 0, -1);
+      
+      return danmakuData.map(data => {
+        try {
+          return JSON.parse(data) as Danmaku;
+        } catch (error) {
+          console.error('解析弹幕数据失败:', error);
+          return null;
+        }
+      }).filter(Boolean) as Danmaku[];
+    });
+  }
+
+  // 添加弹幕
+  async addDanmaku(danmaku: Danmaku): Promise<void> {
+    return this.withRetry(async () => {
+      const videoKey = this.danmakuListKey(danmaku.videoId);
+      const userKey = this.userDanmakuKey(danmaku.userId);
+      const danmakuData = JSON.stringify(danmaku);
+      
+      // 将弹幕添加到视频弹幕列表（按时间排序插入）
+      await this.client.rPush(videoKey, danmakuData);
+      
+      // 将弹幕ID添加到用户弹幕列表
+      await this.client.sAdd(userKey, danmaku.id);
+    });
+  }
+
+  // 删除弹幕
+  async deleteDanmaku(danmakuId: string): Promise<void> {
+    return this.withRetry(async () => {
+      // 这里需要先找到弹幕所属的视频和用户
+      // 为了简化实现，我们可以遍历所有视频的弹幕列表
+      // 在生产环境中，建议建立弹幕ID到视频ID的映射
+      
+      // 获取所有弹幕列表的keys
+      const keys = await this.client.keys('danmaku:list:*');
+      
+      for (const key of keys) {
+        const danmakuData = await this.client.lRange(key, 0, -1);
+        
+        for (let i = 0; i < danmakuData.length; i++) {
+          try {
+            const danmaku = JSON.parse(danmakuData[i]) as Danmaku;
+            if (danmaku.id === danmakuId) {
+              // 从视频弹幕列表中删除
+              await this.client.lRem(key, 1, danmakuData[i]);
+              
+              // 从用户弹幕列表中删除
+              const userKey = this.userDanmakuKey(danmaku.userId);
+              await this.client.sRem(userKey, danmakuId);
+              
+              return;
+            }
+          } catch (error) {
+            console.error('解析弹幕数据失败:', error);
+          }
+        }
+      }
+    });
+  }
+
+  // 获取用户发送的弹幕列表
+  async getUserDanmakuList(userId: string): Promise<Danmaku[]> {
+    return this.withRetry(async () => {
+      const userKey = this.userDanmakuKey(userId);
+      const danmakuIds = await this.client.sMembers(userKey);
+      
+      const danmakuList: Danmaku[] = [];
+      
+      // 获取所有弹幕列表的keys
+      const keys = await this.client.keys('danmaku:list:*');
+      
+      for (const key of keys) {
+        const danmakuData = await this.client.lRange(key, 0, -1);
+        
+        for (const data of danmakuData) {
+          try {
+            const danmaku = JSON.parse(data) as Danmaku;
+            if (danmakuIds.includes(danmaku.id)) {
+              danmakuList.push(danmaku);
+            }
+          } catch (error) {
+            console.error('解析弹幕数据失败:', error);
+          }
+        }
+      }
+      
+      return danmakuList.sort((a, b) => b.createTime - a.createTime);
+    });
   }
 }

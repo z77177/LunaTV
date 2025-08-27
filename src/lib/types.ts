@@ -26,6 +26,25 @@ export interface Favorite {
   origin?: 'vod' | 'live';
 }
 
+// 弹幕数据结构
+export interface Danmaku {
+  id: string;
+  videoId: string; // 视频标识（来源+剧集标识）
+  userId: string; // 发送用户
+  time: number; // 弹幕时间点（秒）
+  text: string; // 弹幕内容
+  color: string; // 颜色 (#FFFFFF)
+  type: number; // 弹幕类型（0-滚动, 1-顶部, 2-底部）
+  createTime: number; // 创建时间戳
+}
+
+// 弹幕列表响应
+export interface DanmakuListResponse {
+  code: number;
+  message: string;
+  data: Danmaku[];
+}
+
 // 存储接口
 export interface IStorage {
   // 播放记录相关
@@ -80,6 +99,12 @@ export interface IStorage {
   ): Promise<void>;
   deleteSkipConfig(userName: string, source: string, id: string): Promise<void>;
   getAllSkipConfigs(userName: string): Promise<{ [key: string]: SkipConfig }>;
+
+  // 弹幕相关
+  getDanmakuList(videoId: string): Promise<Danmaku[]>;
+  addDanmaku(danmaku: Danmaku): Promise<void>;
+  deleteDanmaku(danmakuId: string): Promise<void>;
+  getUserDanmakuList(userId: string): Promise<Danmaku[]>;
 
   // 数据清理相关
   clearAllData(): Promise<void>;
