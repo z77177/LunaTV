@@ -7489,6 +7489,8 @@ snapshots:
     dependencies:
       option-validator: 2.0.6
 
+  artplayer-plugin-danmuku@5.1.8: {}
+
   assert@2.0.0:
     dependencies:
       es6-object-assign: 1.1.0
