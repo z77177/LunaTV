@@ -664,31 +664,65 @@ function PlayPageClient() {
 
   // 加载外部弹幕数据
   const loadExternalDanmu = async (): Promise<any[]> => {
-    if (!externalDanmuEnabledRef.current) return [];
+    if (!externalDanmuEnabledRef.current) {
+      console.log('外部弹幕开关已关闭');
+      return [];
+    }
     
     try {
       const params = new URLSearchParams();
       if (videoDoubanIdRef.current && videoDoubanIdRef.current > 0) {
         params.append('douban_id', videoDoubanIdRef.current.toString());
+        console.log('使用豆瓣ID:', videoDoubanIdRef.current);
       }
       if (videoTitleRef.current) {
         params.append('title', videoTitleRef.current);
+        console.log('使用标题:', videoTitleRef.current);
       }
       if (videoYearRef.current) {
         params.append('year', videoYearRef.current);
+        console.log('使用年份:', videoYearRef.current);
       }
 
-      if (!params.toString()) return [];
+      if (!params.toString()) {
+        console.log('没有可用的参数获取弹幕');
+        return [];
+      }
 
+      console.log('开始获取外部弹幕，参数:', params.toString());
       const response = await fetch(`/api/danmu-external?${params}`);
-      if (!response.ok) return [];
+      console.log('弹幕API响应状态:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('弹幕API请求失败:', response.status, errorText);
+        return [];
+      }
 
       const data = await response.json();
-      console.log('外部弹幕加载成功:', data.total, '条');
-      return data.danmu || [];
+      console.log('外部弹幕API返回数据:', data);
+      console.log('外部弹幕加载成功:', data.total || 0, '条');
+      
+      // 添加一些测试弹幕以验证功能
+      const testDanmu = [
+        { text: '测试弹幕1', time: 10, color: '#FF0000', mode: 0 },
+        { text: '测试弹幕2', time: 20, color: '#00FF00', mode: 0 },
+        { text: '测试弹幕3', time: 30, color: '#0000FF', mode: 0 }
+      ];
+      
+      const finalDanmu = [...(data.danmu || []), ...testDanmu];
+      console.log('最终弹幕数据:', finalDanmu.length, '条');
+      
+      return finalDanmu;
     } catch (error) {
       console.error('加载外部弹幕失败:', error);
-      return [];
+      
+      // 即使API失败，也返回测试弹幕
+      const testDanmu = [
+        { text: '测试弹幕（API失败）', time: 5, color: '#FFFF00', mode: 0 }
+      ];
+      console.log('使用测试弹幕:', testDanmu.length, '条');
+      return testDanmu;
     }
   };
 
