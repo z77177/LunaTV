@@ -93,13 +93,17 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
         let platform = 'unknown';
         if (targetUrl.includes('bilibili.com')) {
           platform = 'bilibili_caiji';
-        } else if (targetUrl.includes('v.qq.com')) {
+        } else if (targetUrl.includes('v.qq.com') || targetUrl.includes('qq.com')) {
           platform = 'tencent_caiji';
         } else if (targetUrl.includes('iqiyi.com')) {
           platform = 'iqiyi_caiji';
-        } else if (targetUrl.includes('youku.com')) {
+        } else if (targetUrl.includes('youku.com') || targetUrl.includes('v.youku.com')) {
           platform = 'youku_caiji';
+        } else if (targetUrl.includes('mgtv.com')) {
+          platform = 'mgtv_caiji';
         }
+        
+        console.log(`🎯 识别平台: ${platform}, URL: ${targetUrl}`);
         
         urls.push({
           platform: platform,
@@ -222,7 +226,17 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
 // 从danmu.icu获取弹幕数据
 async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000); // 增加超时时间
+  
+  // 根据平台设置不同的超时时间
+  let timeout = 20000; // 默认20秒
+  if (videoUrl.includes('iqiyi.com')) {
+    timeout = 30000; // 爱奇艺30秒
+  } else if (videoUrl.includes('youku.com')) {
+    timeout = 25000; // 优酷25秒
+  }
+  
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  console.log(`⏰ 设置超时时间: ${timeout/1000}秒`);
   
   try {
     const apiUrl = `https://api.danmu.icu/?url=${encodeURIComponent(videoUrl)}`;
@@ -306,7 +320,12 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
 
   } catch (error) {
     clearTimeout(timeoutId);
-    console.error('获取弹幕失败:', error);
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.error(`❌ 弹幕API请求超时 (${timeout/1000}秒):`, videoUrl);
+      console.log('💡 建议: 爱奇艺和优酷的弹幕API响应较慢，请稍等片刻');
+    } else {
+      console.error('❌ 获取弹幕失败:', error);
+    }
     return [];
   }
 }
