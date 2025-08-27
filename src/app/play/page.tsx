@@ -1561,20 +1561,9 @@ function PlayPageClient() {
         plugins: [
           artplayerPluginDanmuku({
             danmuku: danmakuList,
-            speed: 5, // 弹幕速度
-            opacity: 1, // 不透明度
-            fontSize: 25, // 字体大小
-            color: '#FFFFFF', // 默认颜色
-            mode: 0, // 模式: 0-滚动, 1-顶部, 2-底部
-            margin: [10, '25%'], // 边距
-            antiOverlap: true, // 防重叠
-            synchronousPlayback: false, // 同步播放
-            filter: (danmu: any) => danmu.text.length < 50, // 过滤长弹幕
-            lockTime: 5, // 锁定时间
-            maxLength: 100, // 最大长度
-            minWidth: 200, // 最小宽度
-            maxWidth: 400, // 最大宽度
-            theme: 'dark', // 主题
+            speed: 5,
+            opacity: 1,
+            fontSize: 25,
           }),
         ],
       });
