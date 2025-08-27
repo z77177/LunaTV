@@ -724,6 +724,31 @@ function PlayPageClient() {
   // 当集数索引变化时自动更新视频地址
   useEffect(() => {
     updateVideoUrl(detail, currentEpisodeIndex);
+    
+    // 如果播放器已经存在且弹幕插件已加载，重新加载弹幕
+    if (artPlayerRef.current && artPlayerRef.current.plugins?.artplayerPluginDanmuku) {
+      console.log('集数变化，重新加载弹幕');
+      setTimeout(async () => {
+        try {
+          const externalDanmu = await loadExternalDanmu();
+          console.log('集数变化后外部弹幕加载结果:', externalDanmu);
+          
+          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+            if (externalDanmu.length > 0) {
+              console.log('向播放器插件重新加载弹幕数据:', externalDanmu.length, '条');
+              artPlayerRef.current.plugins.artplayerPluginDanmuku.load(externalDanmu);
+              artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
+            } else {
+              console.log('集数变化后没有弹幕数据可加载');
+              artPlayerRef.current.plugins.artplayerPluginDanmuku.load([]);
+              artPlayerRef.current.notice.show = '暂无弹幕数据';
+            }
+          }
+        } catch (error) {
+          console.error('集数变化后加载外部弹幕失败:', error);
+        }
+      }, 1000); // 延迟1秒确保视频加载完成
+    }
   }, [detail, currentEpisodeIndex]);
 
   // 进入页面时直接获取全部源信息
