@@ -3,6 +3,7 @@
 'use client';
 
 import Artplayer from 'artplayer';
+import artplayerPluginDanmuku from 'artplayer-plugin-danmuku';
 import Hls from 'hls.js';
 import { Heart } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -1406,6 +1407,24 @@ function PlayPageClient() {
             },
           },
           {
+            html: '弹幕开关',
+            icon: '<text x="50%" y="50%" font-size="16" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">弹</text>',
+            tooltip: '弹幕显示/隐藏',
+            onClick() {
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+                if (plugin.isHide) {
+                  plugin.show();
+                  return '弹幕已显示';
+                } else {
+                  plugin.hide();
+                  return '弹幕已隐藏';
+                }
+              }
+              return '弹幕功能未加载';
+            },
+          },
+          {
             name: '跳过片头片尾',
             html: '跳过片头片尾',
             switch: skipConfigRef.current.enable,
@@ -1485,6 +1504,43 @@ function PlayPageClient() {
               handleNextEpisode();
             },
           },
+          {
+            position: 'right',
+            html: '弹',
+            tooltip: '发送弹幕',
+            click: function () {
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                // 手动弹出输入框发送弹幕
+                const text = prompt('请输入弹幕内容', '');
+                if (text && text.trim()) {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.emit({
+                    text: text.trim(),
+                    time: artPlayerRef.current.currentTime,
+                    color: '#FFFFFF',
+                    mode: 0,
+                  });
+                }
+              }
+            },
+          },
+        ],
+        // 弹幕插件配置
+        plugins: [
+          artplayerPluginDanmuku({
+            danmuku: [], // 弹幕数据，初始为空
+            speed: 5, // 弹幕持续时间
+            opacity: 0.8, // 弹幕透明度
+            fontSize: 25, // 弹幕字体大小
+            color: '#FFFFFF', // 默认弹幕颜色
+            mode: 0, // 默认弹幕模式：滚动
+            margin: [10, '10%'], // 弹幕上下边距
+            antiOverlap: true, // 防重叠
+            visible: true, // 弹幕层可见
+            emitter: true, // 开启弹幕发射器
+            maxLength: 100, // 弹幕最大长度
+            lockTime: 3, // 输入框锁定时间
+            theme: 'dark', // 弹幕主题
+          }),
         ],
       });
 
