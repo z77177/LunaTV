@@ -77,12 +77,14 @@ function RegisterPageClient() {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [shouldShowRegister, setShouldShowRegister] = useState(false);
+  const [registrationDisabled, setRegistrationDisabled] = useState(false);
+  const [disabledReason, setDisabledReason] = useState('');
 
   const { siteName } = useSite();
 
-  // 检查存储类型，通过调用注册 API 来检测
+  // 检查注册是否可用
   useEffect(() => {
-    const checkStorageType = async () => {
+    const checkRegistrationAvailable = async () => {
       try {
         // 尝试调用注册 API 来检测是否支持注册
         const res = await fetch('/api/register', {
@@ -93,13 +95,20 @@ function RegisterPageClient() {
         
         const data = await res.json();
         
-        // 如果返回 localStorage 模式不支持用户注册的错误，跳转到登录页
+        // 检查各种不支持注册的情况
         if (data.error === 'localStorage 模式不支持用户注册') {
           router.replace('/login');
           return;
         }
         
-        // 其他情况都显示注册页面
+        if (data.error === '管理员已关闭用户注册功能') {
+          setRegistrationDisabled(true);
+          setDisabledReason('管理员已关闭用户注册功能');
+          setShouldShowRegister(true);
+          return;
+        }
+        
+        // 其他情况显示注册表单
         setShouldShowRegister(true);
       } catch (error) {
         // 网络错误也显示注册页面
@@ -107,7 +116,7 @@ function RegisterPageClient() {
       }
     };
 
-    checkStorageType();
+    checkRegistrationAvailable();
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -160,6 +169,43 @@ function RegisterPageClient() {
 
   if (!shouldShowRegister) {
     return <div>Loading...</div>;
+  }
+
+  // 如果注册被禁用，显示提示页面
+  if (registrationDisabled) {
+    return (
+      <div className='relative min-h-screen flex items-center justify-center px-4 overflow-hidden'>
+        <div className='absolute top-4 right-4'>
+          <ThemeToggle />
+        </div>
+        <div className='relative z-10 w-full max-w-md rounded-3xl bg-gradient-to-b from-white/90 via-white/70 to-white/40 dark:from-zinc-900/90 dark:via-zinc-900/70 dark:to-zinc-900/40 backdrop-blur-xl shadow-2xl p-10 dark:border dark:border-zinc-800'>
+          <h1 className='text-green-600 tracking-tight text-center text-3xl font-extrabold mb-2 bg-clip-text drop-shadow-sm'>
+            {siteName}
+          </h1>
+          <div className='text-center space-y-6'>
+            <div className='flex items-center justify-center mb-4'>
+              <AlertCircle className='w-16 h-16 text-yellow-500' />
+            </div>
+            <h2 className='text-xl font-semibold text-gray-800 dark:text-gray-200'>
+              注册功能暂不可用
+            </h2>
+            <p className='text-gray-600 dark:text-gray-400 text-sm leading-relaxed'>
+              {disabledReason || '管理员已关闭用户注册功能'}
+            </p>
+            <p className='text-gray-500 dark:text-gray-500 text-xs'>
+              如需注册账户，请联系网站管理员
+            </p>
+            <button
+              onClick={() => router.push('/login')}
+              className='inline-flex w-full justify-center rounded-lg bg-green-600 py-3 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:bg-green-700'
+            >
+              返回登录
+            </button>
+          </div>
+        </div>
+        <VersionDisplay />
+      </div>
+    );
   }
 
   return (
