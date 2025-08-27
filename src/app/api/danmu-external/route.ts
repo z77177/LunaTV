@@ -117,10 +117,18 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
       let targetUrl = '';
       if (episode && parseInt(episode) > 0) {
         const episodeNum = parseInt(episode);
-        const targetEpisode = playUrls.find((url: string) => url.startsWith(`${episodeNum}$`));
+        // 支持多种集数格式: "20$", "第20集$", "E20$", "EP20$" 等
+        const targetEpisode = playUrls.find((url: string) => {
+          return url.startsWith(`${episodeNum}$`) || 
+                 url.startsWith(`第${episodeNum}集$`) ||
+                 url.startsWith(`E${episodeNum}$`) ||
+                 url.startsWith(`EP${episodeNum}$`);
+        });
         if (targetEpisode) {
           targetUrl = targetEpisode.split('$')[1];
           console.log(`🎯 找到第${episode}集: ${targetUrl}`);
+        } else {
+          console.log(`❌ 未找到第${episode}集的链接`);
         }
       }
       
