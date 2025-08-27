@@ -131,8 +131,7 @@ export async function POST(req: NextRequest) {
       // 注册用户
       await db.registerUser(username, password);
 
-      // 获取配置并添加用户到配置中
-      const config = await getConfig();
+      // 添加用户到配置中（重用之前获取的config）
       const newUser = {
         username: username,
         role: 'user' as const,
