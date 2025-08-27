@@ -812,7 +812,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                             ...config,
                             UserConfig: {
                               ...config.UserConfig,
-                              AllowRegister: config.UserConfig.AllowRegister === false
+                              AllowRegister: !(config.UserConfig.AllowRegister !== false)
                             }
                           })
                         });
