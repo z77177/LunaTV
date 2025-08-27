@@ -26,61 +26,98 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
   try {
     console.log(`🔎 在caiji.cyou搜索: "${title}", 集数: ${episode || '未指定'}`);
     
-    const searchUrl = `https://www.caiji.cyou/api.php/provide/vod/?wd=${encodeURIComponent(title)}`;
-    const response = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-    });
+    // 尝试多种标题格式进行搜索
+    const searchTitles = [
+      title, // 原始标题
+      title.replace(/·/g, ''), // 移除中间点
+      title.replace(/·/g, ' '), // 中间点替换为空格
+      title.replace(/·/g, '-'), // 中间点替换为连字符
+    ];
     
-    if (!response.ok) {
-      console.log('❌ Caiji API搜索失败:', response.status);
-      return [];
-    }
+    // 去重
+    const uniqueTitles = [...new Set(searchTitles)];
+    console.log(`🔍 尝试搜索标题变体: ${uniqueTitles.map(t => `"${t}"`).join(', ')}`);
     
-    const data: any = await response.json();
-    if (!data.list || data.list.length === 0) {
-      console.log('📭 Caiji API未找到匹配内容');
-      return [];
-    }
+    for (const searchTitle of uniqueTitles) {
+      console.log(`🔎 搜索标题: "${searchTitle}"`);
+      const searchUrl = `https://www.caiji.cyou/api.php/provide/vod/?wd=${encodeURIComponent(searchTitle)}`;
+      const response = await fetch(searchUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      });
     
-    console.log(`🎬 找到 ${data.list.length} 个匹配结果`);
-    
-    // 智能选择最佳匹配结果
-    let bestMatch: any = null;
-    let exactMatch: any = null;
-    
-    for (const result of data.list) {
-      console.log(`📋 候选: "${result.vod_name}" (类型: ${result.type_name})`);
-      
-      // 标题完全匹配（优先级最高）
-      if (result.vod_name === title) {
-        console.log(`🎯 找到完全匹配: "${result.vod_name}"`);
-        exactMatch = result;
-        break;
+      if (!response.ok) {
+        console.log(`❌ 搜索"${searchTitle}"失败:`, response.status);
+        continue; // 尝试下一个标题
       }
       
-      // 跳过明显不合适的内容
-      const isUnwanted = result.vod_name.includes('解说') || 
-                        result.vod_name.includes('预告') ||
-                        result.vod_name.includes('花絮') ||
-                        result.vod_name.includes('动态漫') ||
-                        result.vod_name.includes('之精彩');
-      
-      if (isUnwanted) {
-        console.log(`❌ 跳过不合适内容: "${result.vod_name}"`);
-        continue;
+      const data: any = await response.json();
+      if (!data.list || data.list.length === 0) {
+        console.log(`📭 搜索"${searchTitle}"未找到内容`);
+        continue; // 尝试下一个标题
       }
       
-      // 选择第一个合适的结果
-      if (!bestMatch) {
-        bestMatch = result;
-        console.log(`✅ 选择为候选: "${result.vod_name}"`);
+      console.log(`🎬 搜索"${searchTitle}"找到 ${data.list.length} 个匹配结果`);
+      
+      // 智能选择最佳匹配结果
+      let bestMatch: any = null;
+      let exactMatch: any = null;
+      
+      for (const result of data.list) {
+        console.log(`📋 候选: "${result.vod_name}" (类型: ${result.type_name})`);
+        
+        // 标题完全匹配（优先级最高）
+        if (result.vod_name === searchTitle || result.vod_name === title) {
+          console.log(`🎯 找到完全匹配: "${result.vod_name}"`);
+          exactMatch = result;
+          break;
+        }
+        
+        // 跳过明显不合适的内容
+        const isUnwanted = result.vod_name.includes('解说') || 
+                          result.vod_name.includes('预告') ||
+                          result.vod_name.includes('花絮') ||
+                          result.vod_name.includes('动态漫') ||
+                          result.vod_name.includes('之精彩');
+        
+        if (isUnwanted) {
+          console.log(`❌ 跳过不合适内容: "${result.vod_name}"`);
+          continue;
+        }
+        
+        // 选择第一个合适的结果
+        if (!bestMatch) {
+          bestMatch = result;
+          console.log(`✅ 选择为候选: "${result.vod_name}"`);
+        }
+      }
+      
+      // 优先使用完全匹配，否则使用最佳匹配
+      const selectedResult = exactMatch || bestMatch;
+      
+      if (selectedResult) {
+        console.log(`✅ 使用搜索结果"${searchTitle}": "${selectedResult.vod_name}"`);
+        // 找到结果就处理并返回，不再尝试其他标题变体
+        return await processSelectedResult(selectedResult, episode);
       }
     }
     
-    // 优先使用完全匹配，否则使用最佳匹配
-    const selectedResult = exactMatch || bestMatch;
+    console.log('📭 所有标题变体都未找到匹配内容');
+    return [];
+    
+  } catch (error) {
+    console.error('❌ Caiji API搜索失败:', error);
+    return [];
+  }
+}
+
+// 处理选中的结果
+async function processSelectedResult(selectedResult: any, episode?: string | null): Promise<PlatformUrl[]> {
+  try {
+    const matchType = '最佳匹配';
+    console.log(`✅ 选择匹配结果: "${selectedResult.vod_name}" (${matchType})`);
+    const firstResult: any = selectedResult;
     
     if (!selectedResult) {
       console.log('❌ 未找到合适的匹配结果');
@@ -149,7 +186,7 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
           platform = 'iqiyi_caiji';
         } else if (targetUrl.includes('youku.com') || targetUrl.includes('v.youku.com')) {
           platform = 'youku_caiji';
-        } else if (targetUrl.includes('mgtv.com')) {
+        } else if (targetUrl.includes('mgtv.com') || targetUrl.includes('w.mgtv.com')) {
           platform = 'mgtv_caiji';
         }
         
@@ -283,6 +320,8 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
     timeout = 30000; // 爱奇艺30秒
   } else if (videoUrl.includes('youku.com')) {
     timeout = 25000; // 优酷25秒
+  } else if (videoUrl.includes('mgtv.com') || videoUrl.includes('w.mgtv.com')) {
+    timeout = 25000; // 芒果TV25秒
   }
   
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -372,7 +411,7 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
     clearTimeout(timeoutId);
     if (error instanceof DOMException && error.name === 'AbortError') {
       console.error(`❌ 弹幕API请求超时 (${timeout/1000}秒):`, videoUrl);
-      console.log('💡 建议: 爱奇艺和优酷的弹幕API响应较慢，请稍等片刻');
+      console.log('💡 建议: 爱奇艺、优酷和芒果TV的弹幕API响应较慢，请稍等片刻');
     } else {
       console.error('❌ 获取弹幕失败:', error);
     }
