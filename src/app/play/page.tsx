@@ -1568,7 +1568,6 @@ function PlayPageClient() {
             mode: 0, // 模式: 0-滚动, 1-顶部, 2-底部
             margin: [10, '25%'], // 边距
             antiOverlap: true, // 防重叠
-            useWorker: true, // 使用web worker
             synchronousPlayback: false, // 同步播放
             filter: (danmu: any) => danmu.text.length < 50, // 过滤长弹幕
             lockTime: 5, // 锁定时间
