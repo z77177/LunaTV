@@ -798,10 +798,10 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 <button
                   type="button"
                   className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
-                    config.UserConfig.AllowRegister !== false ? buttonStyles.toggleOn : buttonStyles.toggleOff
+                    config.UserConfig.AllowRegister ? buttonStyles.toggleOn : buttonStyles.toggleOff
                   }`}
                   role="switch"
-                  aria-checked={config.UserConfig.AllowRegister !== false}
+                  aria-checked={config.UserConfig.AllowRegister}
                   onClick={async () => {
                     await withLoading('toggleAllowRegister', async () => {
                       try {
@@ -812,7 +812,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                             ...config,
                             UserConfig: {
                               ...config.UserConfig,
-                              AllowRegister: !(config.UserConfig.AllowRegister !== false)
+                              AllowRegister: !config.UserConfig.AllowRegister
                             }
                           })
                         });
@@ -822,7 +822,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                           showAlert({
                             type: 'success',
                             title: '设置已更新',
-                            message: config.UserConfig.AllowRegister === false ? '已允许用户注册' : '已禁止用户注册',
+                            message: config.UserConfig.AllowRegister ? '已禁止用户注册' : '已允许用户注册',
                             timer: 2000
                           });
                         } else {
@@ -837,12 +837,12 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                   <span
                     aria-hidden="true"
                     className={`pointer-events-none inline-block h-5 w-5 rounded-full ${buttonStyles.toggleThumb} shadow transform ring-0 transition duration-200 ease-in-out ${
-                      config.UserConfig.AllowRegister !== false ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff
+                      config.UserConfig.AllowRegister ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff
                     }`}
                   />
                 </button>
                 <span className='ml-3 text-sm font-medium text-gray-900 dark:text-gray-100'>
-                  {config.UserConfig.AllowRegister !== false ? '开启' : '关闭'}
+                  {config.UserConfig.AllowRegister ? '开启' : '关闭'}
                 </span>
               </div>
             </div>
