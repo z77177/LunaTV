@@ -64,20 +64,11 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
 
 // 从danmu.icu获取弹幕数据
 async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-  
   try {
     const apiUrl = `https://api.danmu.icu/?url=${encodeURIComponent(videoUrl)}`;
-    
     const response = await fetch(apiUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
+      timeout: 10000,
     });
-    
-    clearTimeout(timeoutId);
 
     if (!response.ok) return [];
 
@@ -101,7 +92,6 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
     }).filter(item => item.text.length > 0); // 过滤空弹幕
 
   } catch (error) {
-    clearTimeout(timeoutId);
     console.error('获取弹幕失败:', error);
     return [];
   }
