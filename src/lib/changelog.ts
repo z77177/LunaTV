@@ -11,28 +11,6 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
-    version: "4.4.0",
-    date: "2025-08-27",
-    added: [
-      "全新弹幕系统支持，提供沉浸式观影体验",
-      "集成 ArtPlayer 弹幕插件，支持滚动、顶部、底部弹幕",
-      "接入 DanDanPlay 免费弹幕API，提供海量弹幕资源",
-      "智能番剧匹配功能，自动获取对应集数弹幕",
-      "用户弹幕发送功能，需登录后可发送个人弹幕",
-      "弹幕存储系统，完美兼容 Redis/Kvrocks/Upstash",
-      "混合弹幕源显示（本地弹幕 + DanDanPlay 弹幕）",
-      "弹幕高级功能：防重叠、内容过滤、自定义颜色和位置"
-    ],
-    changed: [
-      "播放器体验升级，新增弹幕互动功能",
-      "数据库架构扩展，支持弹幕数据存储和管理",
-      "API 系统完善，提供完整弹幕 CRUD 操作"
-    ],
-    fixed: [
-      // 无修复内容
-    ]
-  },
-  {
     version: "4.3.1",
     date: "2025-08-27",
     added: [

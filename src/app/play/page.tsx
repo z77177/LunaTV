@@ -3,7 +3,6 @@
 'use client';
 
 import Artplayer from 'artplayer';
-import artplayerPluginDanmuku from 'artplayer-plugin-danmuku';
 import Hls from 'hls.js';
 import { Heart } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -56,7 +55,6 @@ function PlayPageClient() {
   >('searching');
   const [loadingMessage, setLoadingMessage] = useState('正在搜索播放源...');
   const [error, setError] = useState<string | null>(null);
-  const [danmakuList, setDanmakuList] = useState<any[]>([]);
   const [detail, setDetail] = useState<SearchResult | null>(null);
 
   // 收藏状态
@@ -211,75 +209,6 @@ function PlayPageClient() {
   // -----------------------------------------------------------------------------
   // 工具函数（Utils）
   // -----------------------------------------------------------------------------
-
-  // 弹幕相关函数
-  const loadDanmaku = async (source: string, title: string, episode: number) => {
-    try {
-      const response = await fetch(
-        `/api/danmaku/mixed?source=${encodeURIComponent(source)}&title=${encodeURIComponent(title)}&episode=${episode}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.code === 200) {
-          console.log(`加载弹幕成功: 本地${data.meta.local}条, DanDanPlay${data.meta.dandanplay}条, 总计${data.meta.total}条`);
-          // 转换为ArtPlayer需要的格式
-          const artplayerDanmaku = data.data.map((item: any) => ({
-            text: item.text,
-            time: item.time,
-            color: item.color,
-            type: item.type,
-          }));
-          setDanmakuList(artplayerDanmaku);
-          return artplayerDanmaku;
-        }
-      }
-    } catch (error) {
-      console.error('加载弹幕失败:', error);
-    }
-    return [];
-  };
-
-  // 发送弹幕
-  const sendDanmaku = async (text: string, time: number, color: string = '#FFFFFF', type: number = 0) => {
-    if (!detail || !videoTitleRef.current) return;
-    
-    try {
-      const response = await fetch('/api/danmaku', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          source: detail.source,
-          title: videoTitleRef.current,
-          episode: currentEpisodeIndexRef.current + 1,
-          time,
-          text,
-          color,
-          type,
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.code === 200) {
-          // 添加到本地弹幕列表
-          const newDanmaku = {
-            text: data.data.text,
-            time: data.data.time,
-            color: data.data.color,
-            type: data.data.type,
-          };
-          setDanmakuList(prev => [...prev, newDanmaku]);
-          
-          console.log('弹幕发送成功');
-        }
-      }
-    } catch (error) {
-      console.error('发送弹幕失败:', error);
-    }
-  };
 
   // 播放源优选函数
   const preferBestSource = async (
@@ -1557,48 +1486,11 @@ function PlayPageClient() {
             },
           },
         ],
-        // 弹幕插件配置
-        plugins: [
-          artplayerPluginDanmuku({
-            danmuku: danmakuList,
-            speed: 5, // 弹幕速度
-            opacity: 1, // 不透明度
-            fontSize: 25, // 字体大小
-            color: '#FFFFFF', // 默认颜色
-            mode: 0, // 模式: 0-滚动, 1-顶部, 2-底部
-            margin: [10, '25%'], // 边距
-            antiOverlap: true, // 防重叠
-            useWorker: true, // 使用web worker
-            synchronousPlayback: false, // 同步播放
-            filter: (danmu: any) => danmu.text.length < 50, // 过滤长弹幕
-            lockTime: 5, // 锁定时间
-            maxLength: 100, // 最大长度
-            minWidth: 200, // 最小宽度
-            maxWidth: 400, // 最大宽度
-            theme: 'dark', // 主题
-          }),
-        ],
       });
 
       // 监听播放器事件
-      artPlayerRef.current.on('ready', async () => {
+      artPlayerRef.current.on('ready', () => {
         setError(null);
-
-        // 加载弹幕
-        if (detail && videoTitleRef.current) {
-          const danmaku = await loadDanmaku(
-            detail.source,
-            videoTitleRef.current,
-            currentEpisodeIndexRef.current + 1
-          );
-          
-          // 更新弹幕插件的弹幕数据
-          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku && danmaku.length > 0) {
-            artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-              danmuku: danmaku
-            });
-          }
-        }
 
         // 播放器就绪后，如果正在播放则请求 Wake Lock
         if (artPlayerRef.current && !artPlayerRef.current.paused) {
