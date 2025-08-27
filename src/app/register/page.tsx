@@ -79,16 +79,34 @@ function RegisterPageClient() {
 
   const { siteName } = useSite();
 
-  // 检查存储类型，只有非 localStorage 模式才显示注册页面
+  // 检查存储类型，通过调用注册 API 来检测
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storageType = (window as any).RUNTIME_CONFIG?.STORAGE_TYPE;
-      setShouldShowRegister(storageType && storageType !== 'localstorage');
-      
-      if (!storageType || storageType === 'localstorage') {
-        router.replace('/login');
+    const checkStorageType = async () => {
+      try {
+        // 尝试调用注册 API 来检测是否支持注册
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: '', password: '', confirmPassword: '' }),
+        });
+        
+        const data = await res.json();
+        
+        // 如果返回 localStorage 模式不支持用户注册的错误，跳转到登录页
+        if (data.error === 'localStorage 模式不支持用户注册') {
+          router.replace('/login');
+          return;
+        }
+        
+        // 其他情况都显示注册页面
+        setShouldShowRegister(true);
+      } catch (error) {
+        // 网络错误也显示注册页面
+        setShouldShowRegister(true);
       }
-    }
+    };
+
+    checkStorageType();
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

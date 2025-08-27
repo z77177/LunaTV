@@ -778,6 +778,73 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
 
   return (
     <div className='space-y-6'>
+      {/* 用户注册设置 - 仅站长可见 */}
+      {role === 'owner' && (
+        <div>
+          <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300 mb-3'>
+            注册设置
+          </h4>
+          <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <div className='font-medium text-gray-900 dark:text-gray-100'>
+                  允许用户注册
+                </div>
+                <div className='text-sm text-gray-600 dark:text-gray-400'>
+                  控制是否允许新用户通过注册页面自行注册账户
+                </div>
+              </div>
+              <div className='flex items-center'>
+                <button
+                  type="button"
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
+                    config.UserConfig.AllowRegister !== false ? buttonStyles.toggleOn : buttonStyles.toggleOff
+                  }`}
+                  role="switch"
+                  aria-checked={config.UserConfig.AllowRegister !== false}
+                  onClick={async () => {
+                    await withLoading('toggleAllowRegister', async () => {
+                      try {
+                        const response = await fetch('/api/admin/config', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            ...config,
+                            UserConfig: {
+                              ...config.UserConfig,
+                              AllowRegister: config.UserConfig.AllowRegister === false
+                            }
+                          })
+                        });
+                        
+                        if (response.ok) {
+                          await refreshConfig();
+                          showAlert('success', config.UserConfig.AllowRegister === false ? '已允许用户注册' : '已禁止用户注册');
+                        } else {
+                          throw new Error('更新配置失败');
+                        }
+                      } catch (err) {
+                        showError(err instanceof Error ? err.message : '操作失败', showAlert);
+                      }
+                    });
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full ${buttonStyles.toggleThumb} shadow transform ring-0 transition duration-200 ease-in-out ${
+                      config.UserConfig.AllowRegister !== false ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff
+                    }`}
+                  />
+                </button>
+                <span className='ml-3 text-sm font-medium text-gray-900 dark:text-gray-100'>
+                  {config.UserConfig.AllowRegister !== false ? '开启' : '关闭'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 用户统计 */}
       <div>
         <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300 mb-3'>
