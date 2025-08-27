@@ -35,7 +35,7 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
     ];
     
     // 去重
-    const uniqueTitles = [...new Set(searchTitles)];
+    const uniqueTitles = Array.from(new Set(searchTitles));
     console.log(`🔍 尝试搜索标题变体: ${uniqueTitles.map(t => `"${t}"`).join(', ')}`);
     
     for (const searchTitle of uniqueTitles) {
