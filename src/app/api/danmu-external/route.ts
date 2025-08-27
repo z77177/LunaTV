@@ -50,19 +50,13 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
     let bestMatch: any = null;
     
     for (const result of data.list) {
-      console.log(`📋 候选: "${result.vod_name}" (${result.vod_year})`);
+      console.log(`📋 候选: "${result.vod_name}"`);
       
-      // 精确匹配标题和年份
-      if (result.vod_name === title && result.vod_year === year) {
-        console.log(`🎯 找到精确匹配: "${result.vod_name}" (${result.vod_year})`);
+      // 标题完全匹配（优先级最高）
+      if (result.vod_name === title) {
+        console.log(`🎯 找到标题匹配: "${result.vod_name}"`);
         bestMatch = result;
         break;
-      }
-      
-      // 标题完全匹配但年份不同（优先级较高）
-      if (result.vod_name === title && !bestMatch) {
-        console.log(`📍 找到标题匹配: "${result.vod_name}" (${result.vod_year})`);
-        bestMatch = result;
       }
       
       // 如果没有更好的匹配，避免选择明显不相关的内容
@@ -79,7 +73,7 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
       return [];
     }
     
-    console.log(`✅ 选择匹配结果: "${bestMatch.vod_name}" (${bestMatch.vod_year})`);
+    console.log(`✅ 选择匹配结果: "${bestMatch.vod_name}"`);
     const firstResult: any = bestMatch;
     const detailUrl = `https://www.caiji.cyou/api.php/provide/vod/?ac=detail&ids=${firstResult.vod_id}`;
     

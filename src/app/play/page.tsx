@@ -703,26 +703,17 @@ function PlayPageClient() {
       console.log('外部弹幕API返回数据:', data);
       console.log('外部弹幕加载成功:', data.total || 0, '条');
       
-      // 添加一些测试弹幕以验证功能
-      const testDanmu = [
-        { text: '测试弹幕1', time: 10, color: '#FF0000', mode: 0 },
-        { text: '测试弹幕2', time: 20, color: '#00FF00', mode: 0 },
-        { text: '测试弹幕3', time: 30, color: '#0000FF', mode: 0 }
-      ];
-      
-      const finalDanmu = [...(data.danmu || []), ...testDanmu];
+      // 直接返回API数据，不添加测试弹幕
+      const finalDanmu = data.danmu || [];
       console.log('最终弹幕数据:', finalDanmu.length, '条');
       
       return finalDanmu;
     } catch (error) {
       console.error('加载外部弹幕失败:', error);
       
-      // 即使API失败，也返回测试弹幕
-      const testDanmu = [
-        { text: '测试弹幕（API失败）', time: 5, color: '#FFFF00', mode: 0 }
-      ];
-      console.log('使用测试弹幕:', testDanmu.length, '条');
-      return testDanmu;
+      // API失败时返回空数组，不显示测试弹幕
+      console.log('弹幕加载失败，返回空结果');
+      return [];
     }
   };
 
