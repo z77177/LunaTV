@@ -48,33 +48,48 @@ async function searchFromCaijiAPI(title: string, episode?: string | null): Promi
     
     // 智能选择最佳匹配结果
     let bestMatch: any = null;
+    let exactMatch: any = null;
     
     for (const result of data.list) {
-      console.log(`📋 候选: "${result.vod_name}"`);
+      console.log(`📋 候选: "${result.vod_name}" (类型: ${result.type_name})`);
       
       // 标题完全匹配（优先级最高）
       if (result.vod_name === title) {
-        console.log(`🎯 找到标题匹配: "${result.vod_name}"`);
-        bestMatch = result;
+        console.log(`🎯 找到完全匹配: "${result.vod_name}"`);
+        exactMatch = result;
         break;
       }
       
-      // 如果没有更好的匹配，避免选择明显不相关的内容
-      if (!bestMatch && 
-          !result.vod_name.includes('解说') && 
-          !result.vod_name.includes('预告') &&
-          !result.vod_name.includes('花絮')) {
+      // 跳过明显不合适的内容
+      const isUnwanted = result.vod_name.includes('解说') || 
+                        result.vod_name.includes('预告') ||
+                        result.vod_name.includes('花絮') ||
+                        result.vod_name.includes('动态漫') ||
+                        result.vod_name.includes('之精彩');
+      
+      if (isUnwanted) {
+        console.log(`❌ 跳过不合适内容: "${result.vod_name}"`);
+        continue;
+      }
+      
+      // 选择第一个合适的结果
+      if (!bestMatch) {
         bestMatch = result;
+        console.log(`✅ 选择为候选: "${result.vod_name}"`);
       }
     }
     
-    if (!bestMatch) {
+    // 优先使用完全匹配，否则使用最佳匹配
+    const selectedResult = exactMatch || bestMatch;
+    
+    if (!selectedResult) {
       console.log('❌ 未找到合适的匹配结果');
       return [];
     }
     
-    console.log(`✅ 选择匹配结果: "${bestMatch.vod_name}"`);
-    const firstResult: any = bestMatch;
+    const matchType = exactMatch ? '完全匹配' : '最佳匹配';
+    console.log(`✅ 选择匹配结果: "${selectedResult.vod_name}" (${matchType})`);
+    const firstResult: any = selectedResult;
     const detailUrl = `https://www.caiji.cyou/api.php/provide/vod/?ac=detail&ids=${firstResult.vod_id}`;
     
     const detailResponse = await fetch(detailUrl, {
