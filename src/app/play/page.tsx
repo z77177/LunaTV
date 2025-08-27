@@ -115,23 +115,6 @@ function PlayPageClient() {
   const [videoYear, setVideoYear] = useState(searchParams.get('year') || '');
   const [videoCover, setVideoCover] = useState('');
   const [videoDoubanId, setVideoDoubanId] = useState(0);
-  
-  // 为了让异步函数能访问最新状态，创建ref
-  const videoTitleRef = useRef(videoTitle);
-  const videoYearRef = useRef(videoYear);
-  const videoDoubanIdRef = useRef(videoDoubanId);
-  
-  useEffect(() => {
-    videoTitleRef.current = videoTitle;
-  }, [videoTitle]);
-  
-  useEffect(() => {
-    videoYearRef.current = videoYear;
-  }, [videoYear]);
-  
-  useEffect(() => {
-    videoDoubanIdRef.current = videoDoubanId;
-  }, [videoDoubanId]);
   // 当前源和ID
   const [currentSource, setCurrentSource] = useState(
     searchParams.get('source') || ''
@@ -157,6 +140,7 @@ function PlayPageClient() {
   const currentIdRef = useRef(currentId);
   const videoTitleRef = useRef(videoTitle);
   const videoYearRef = useRef(videoYear);
+  const videoDoubanIdRef = useRef(videoDoubanId);
   const detailRef = useRef<SearchResult | null>(detail);
   const currentEpisodeIndexRef = useRef(currentEpisodeIndex);
 
@@ -168,6 +152,7 @@ function PlayPageClient() {
     currentEpisodeIndexRef.current = currentEpisodeIndex;
     videoTitleRef.current = videoTitle;
     videoYearRef.current = videoYear;
+    videoDoubanIdRef.current = videoDoubanId;
   }, [
     currentSource,
     currentId,
@@ -175,6 +160,7 @@ function PlayPageClient() {
     currentEpisodeIndex,
     videoTitle,
     videoYear,
+    videoDoubanId,
   ]);
 
   // 视频播放地址
