@@ -86,10 +86,11 @@ function RegisterPageClient() {
   useEffect(() => {
     const checkRegistrationAvailable = async () => {
       try {
+        // 用空数据检测，这样不会创建用户但能得到正确的错误信息
         const res = await fetch('/api/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: 'test', password: 'test123', confirmPassword: 'test123' }),
+          body: JSON.stringify({ username: '', password: '', confirmPassword: '' }),
         });
         
         const data = await res.json();

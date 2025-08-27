@@ -79,6 +79,22 @@ export async function POST(req: NextRequest) {
 
     const { username, password, confirmPassword } = await req.json();
 
+    // 先检查配置中是否允许注册（在验证输入之前）
+    try {
+      const config = await getConfig();
+      const allowRegister = config.UserConfig?.AllowRegister !== false; // 默认允许注册
+      
+      if (!allowRegister) {
+        return NextResponse.json(
+          { error: '管理员已关闭用户注册功能' },
+          { status: 403 }
+        );
+      }
+    } catch (err) {
+      console.error('检查注册配置失败', err);
+      return NextResponse.json({ error: '注册失败，请稍后重试' }, { status: 500 });
+    }
+
     // 验证输入
     if (!username || typeof username !== 'string' || username.trim() === '') {
       return NextResponse.json({ error: '用户名不能为空' }, { status: 400 });
@@ -110,17 +126,6 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      // 检查配置中是否允许注册
-      const config = await getConfig();
-      const allowRegister = config.UserConfig?.AllowRegister !== false; // 默认允许注册
-      
-      if (!allowRegister) {
-        return NextResponse.json(
-          { error: '管理员已关闭用户注册功能' },
-          { status: 403 }
-        );
-      }
-
       // 检查用户是否已存在
       const userExists = await db.checkUserExist(username);
       if (userExists) {
