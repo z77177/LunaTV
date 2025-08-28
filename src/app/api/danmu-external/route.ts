@@ -462,8 +462,15 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
     
     console.log(`✅ XML API成功解析 ${filteredDanmu.length} 条有效弹幕`);
     
-    // 显示前几条弹幕作为样例
-    console.log('📋 XML弹幕前5条:', filteredDanmu.slice(0, 5).map(item => 
+    // 显示时间分布统计
+    const timeStats = filteredDanmu.reduce((acc, item) => {
+      const timeRange = Math.floor(item.time / 60); // 按分钟分组
+      acc[timeRange] = (acc[timeRange] || 0) + 1;
+      return acc;
+    }, {} as Record<number, number>);
+    
+    console.log('📊 XML弹幕时间分布(按分钟):', timeStats);
+    console.log('📋 XML弹幕前10条:', filteredDanmu.slice(0, 10).map(item => 
       `${item.time}s: "${item.text.substring(0, 20)}" (${item.color})`
     ));
     
