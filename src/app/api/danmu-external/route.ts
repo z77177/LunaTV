@@ -180,6 +180,13 @@ async function processSelectedResult(selectedResult: any, episode?: string | nul
           platform = 'mgtv_caiji';
         }
         
+        // 统一修复所有平台的链接格式：将.htm转换为.html
+        if (targetUrl.endsWith('.htm')) {
+          targetUrl = targetUrl.replace(/\.htm$/, '.html');
+          console.log(`🔧 修复${platform}链接格式: ${targetUrl}`);
+        }
+        }
+        
         console.log(`🎯 识别平台: ${platform}, URL: ${targetUrl}`);
         
         urls.push({
