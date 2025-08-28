@@ -15,7 +15,7 @@ interface DanmakuConfig {
   opacity: number;
   speed: number;
   margin: [number, string];
-  modes: number[];
+  modes: (0 | 1 | 2)[];
   antiOverlap: boolean;
 }
 
@@ -1933,54 +1933,6 @@ function PlayPageClient() {
               }
             },
           },
-          {
-            position: 'right',
-            html: '弹幕',
-            tooltip: '弹幕开关',
-            style: {
-              color: '#ffffff',
-            },
-            click: function () {
-              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
-                const isCurrentlyVisible = !plugin.isHide;
-                
-                if (isCurrentlyVisible) {
-                  plugin.hide();
-                  artPlayerRef.current.notice.show = '弹幕已隐藏';
-                } else {
-                  plugin.show();
-                  artPlayerRef.current.notice.show = '弹幕已显示';
-                }
-              }
-            },
-          },
-          {
-            position: 'right',
-            html: '设置',
-            tooltip: '弹幕设置',
-            style: {
-              color: '#ffffff',
-              fontSize: '12px',
-            },
-            click: function () {
-              // 手动打开设置面板并聚焦到弹幕设置
-              if (artPlayerRef.current) {
-                artPlayerRef.current.setting.show = true;
-                // 尝试滚动到弹幕相关设置
-                setTimeout(() => {
-                  const settingPanel = artPlayerRef.current.template.$setting;
-                  if (settingPanel) {
-                    // 查找弹幕相关设置项
-                    const danmakuSettings = settingPanel.querySelectorAll('[data-name*="弹幕"]');
-                    if (danmakuSettings.length > 0) {
-                      danmakuSettings[0].scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }
-                }, 100);
-              }
-            },
-          },
         ],
         // 弹幕插件配置
         plugins: [
@@ -1991,7 +1943,7 @@ function PlayPageClient() {
             fontSize: danmakuConfig.fontSize, // 弹幕字体大小
             color: '#FFFFFF', // 默认弹幕颜色
             mode: 0, // 默认弹幕模式：滚动
-            modes: danmakuConfig.modes, // 允许的弹幕模式
+            modes: danmakuConfig.modes as (0 | 1 | 2)[], // 允许的弹幕模式：0滚动 1顶部 2底部
             margin: danmakuConfig.margin, // 弹幕上下边距
             antiOverlap: danmakuConfig.antiOverlap, // 防重叠
             synchronousPlayback: true, // 弹幕与视频播放同步
