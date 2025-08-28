@@ -1546,6 +1546,14 @@ function PlayPageClient() {
                         plugin.load(externalDanmu);
                         plugin.show();
                         console.log('外部弹幕已加载:', externalDanmu.length, '条');
+                        // 显示弹幕加载提示
+                        if (artPlayerRef.current) {
+                          if (externalDanmu.length > 0) {
+                            artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
+                          } else {
+                            artPlayerRef.current.notice.show = '暂无弹幕数据';
+                          }
+                        }
                       }
                     } else {
                       // 关闭外部弹幕：清空数据并隐藏
@@ -1553,6 +1561,10 @@ function PlayPageClient() {
                       plugin.load([]); // 清空弹幕数据
                       plugin.hide();
                       console.log('外部弹幕已关闭并清空');
+                      // 显示关闭提示
+                      if (artPlayerRef.current) {
+                        artPlayerRef.current.notice.show = '外部弹幕已关闭';
+                      }
                     }
                   }
                 } catch (error) {
