@@ -1707,6 +1707,7 @@ function PlayPageClient() {
               {
                 html: '1/4屏幕',
                 value: [10, '75%'], // 顶部10px，底部75%边距
+                default: true,
               },
               {
                 html: '1/2屏幕',
@@ -1715,7 +1716,6 @@ function PlayPageClient() {
               {
                 html: '3/4屏幕',
                 value: [10, '25%'], // 顶部10px，底部25%边距
-                default: true,
               },
               {
                 html: '全屏',
@@ -1926,7 +1926,7 @@ function PlayPageClient() {
             color: '#FFFFFF', // 默认弹幕颜色
             mode: 0, // 默认弹幕模式：滚动
             modes: [0, 1, 2], // 允许所有弹幕模式：滚动、顶部、底部
-            margin: [10, '25%'], // 弹幕上下边距 - 使用百分比更稳定
+            margin: [10, '75%'], // 弹幕上下边距 - 默认1/4屏幕显示
             antiOverlap: true, // 防重叠
             synchronousPlayback: true, // 弹幕与视频播放同步
             visible: true, // 弹幕层可见
