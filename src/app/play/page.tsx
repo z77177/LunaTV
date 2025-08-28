@@ -1978,7 +1978,7 @@ function PlayPageClient() {
         });
 
         // 监听弹幕插件的配置变更事件，自动保存所有设置到localStorage
-        artPlayerRef.current.on('artplayerPluginDanmuku:config', (option) => {
+        artPlayerRef.current.on('artplayerPluginDanmuku:config', (option: any) => {
           try {
             // 保存所有弹幕配置到localStorage
             if (typeof option.fontSize !== 'undefined') {
