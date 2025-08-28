@@ -402,37 +402,22 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
     const responseText = await response.text();
     console.log('📄 XML API原始响应长度:', responseText.length);
     
-    // 解析XML
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(responseText, 'text/xml');
-    
-    // 检查解析错误
-    const parseError = xmlDoc.querySelector('parsererror');
-    if (parseError) {
-      console.error('❌ XML解析失败:', parseError.textContent);
-      return [];
-    }
-    
-    const danmakuElements = xmlDoc.querySelectorAll('d');
-    console.log(`📊 找到 ${danmakuElements.length} 条XML弹幕数据`);
-    
-    if (danmakuElements.length === 0) {
-      console.log('📭 XML API未返回弹幕数据');
-      return [];
-    }
-    
+    // 使用正则表达式解析XML（Node.js兼容）
+    const danmakuRegex = /<d p="([^"]*)"[^>]*>([^<]*)<\/d>/g;
     const danmuList: DanmuItem[] = [];
+    let match;
+    let count = 0;
     
-    danmakuElements.forEach((element, index) => {
+    while ((match = danmakuRegex.exec(responseText)) !== null && count < 10000) {
       try {
-        const pAttr = element.getAttribute('p');
-        const text = element.textContent;
+        const pAttr = match[1];
+        const text = match[2];
         
-        if (!pAttr || !text) return;
+        if (!pAttr || !text) continue;
         
         // XML格式: p="时间,模式,字号,颜色,时间戳,池,用户ID,ID"
         const params = pAttr.split(',');
-        if (params.length < 4) return;
+        if (params.length < 4) continue;
         
         const time = parseFloat(params[0]) || 0;
         const mode = parseInt(params[1]) || 0;
@@ -452,10 +437,20 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
           color: color,
           mode: artplayerMode,
         });
+        
+        count++;
       } catch (error) {
-        console.error(`❌ 解析第${index}条XML弹幕失败:`, error);
+        console.error(`❌ 解析第${count}条XML弹幕失败:`, error);
       }
-    });
+    }
+    
+    console.log(`📊 找到 ${danmuList.length} 条XML弹幕数据`);
+    
+    if (danmuList.length === 0) {
+      console.log('📭 XML API未返回弹幕数据');
+      console.log('🔍 XML响应前500字符:', responseText.substring(0, 500));
+      return [];
+    }
     
     // 过滤和排序
     const filteredDanmu = danmuList.filter(item => 
