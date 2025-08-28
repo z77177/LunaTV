@@ -207,6 +207,34 @@ function PlayPageClient() {
     Map<string, { quality: string; loadSpeed: string; pingTime: number }>
   >(new Map());
 
+  // 弹幕缓存：避免重复请求相同的弹幕数据，支持页面刷新持久化
+  const DANMU_CACHE_DURATION = 30 * 60 * 1000; // 30分钟缓存
+  const DANMU_CACHE_KEY = 'lunatv_danmu_cache';
+  
+  // 获取弹幕缓存
+  const getDanmuCache = (): Map<string, { data: any[]; timestamp: number }> => {
+    try {
+      const cached = localStorage.getItem(DANMU_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return new Map(Object.entries(parsed));
+      }
+    } catch (error) {
+      console.warn('读取弹幕缓存失败:', error);
+    }
+    return new Map();
+  };
+  
+  // 保存弹幕缓存
+  const setDanmuCache = (cache: Map<string, { data: any[]; timestamp: number }>) => {
+    try {
+      const obj = Object.fromEntries(cache.entries());
+      localStorage.setItem(DANMU_CACHE_KEY, JSON.stringify(obj));
+    } catch (error) {
+      console.warn('保存弹幕缓存失败:', error);
+    }
+  };
+
   // 折叠状态（仅在 lg 及以上屏幕有效）
   const [isEpisodeSelectorCollapsed, setIsEpisodeSelectorCollapsed] =
     useState(false);
@@ -666,7 +694,7 @@ function PlayPageClient() {
     }
   }
 
-  // 加载外部弹幕数据
+  // 加载外部弹幕数据（带缓存）
   const loadExternalDanmu = async (): Promise<any[]> => {
     if (!externalDanmuEnabledRef.current) {
       console.log('外部弹幕开关已关闭');
@@ -675,26 +703,63 @@ function PlayPageClient() {
     
     try {
       const params = new URLSearchParams();
-      if (videoDoubanIdRef.current && videoDoubanIdRef.current > 0) {
-        params.append('douban_id', videoDoubanIdRef.current.toString());
-        console.log('使用豆瓣ID:', videoDoubanIdRef.current);
+      
+      // 使用当前最新的state值而不是ref值
+      const currentVideoTitle = videoTitle;
+      const currentVideoYear = videoYear; 
+      const currentVideoDoubanId = videoDoubanId;
+      const currentEpisodeNum = currentEpisodeIndex + 1;
+      
+      if (currentVideoDoubanId && currentVideoDoubanId > 0) {
+        params.append('douban_id', currentVideoDoubanId.toString());
       }
-      if (videoTitleRef.current) {
-        params.append('title', videoTitleRef.current);
-        console.log('使用标题:', videoTitleRef.current);
+      if (currentVideoTitle) {
+        params.append('title', currentVideoTitle);
       }
-      if (videoYearRef.current) {
-        params.append('year', videoYearRef.current);
-        console.log('使用年份:', videoYearRef.current);
+      if (currentVideoYear) {
+        params.append('year', currentVideoYear);
       }
-      if (currentEpisodeIndexRef.current !== null && currentEpisodeIndexRef.current >= 0) {
-        params.append('episode', (currentEpisodeIndexRef.current + 1).toString());
-        console.log('使用集数:', currentEpisodeIndexRef.current + 1);
+      if (currentEpisodeIndex !== null && currentEpisodeIndex >= 0) {
+        params.append('episode', currentEpisodeNum.toString());
       }
 
       if (!params.toString()) {
         console.log('没有可用的参数获取弹幕');
         return [];
+      }
+
+      // 生成缓存键（使用state值确保准确性）
+      const cacheKey = `${currentVideoTitle}_${currentVideoYear}_${currentVideoDoubanId}_${currentEpisodeNum}`;
+      const now = Date.now();
+      
+      console.log('🔑 弹幕缓存调试信息:');
+      console.log('- 缓存键:', cacheKey);
+      console.log('- 当前时间:', now);
+      console.log('- 视频标题:', currentVideoTitle);
+      console.log('- 视频年份:', currentVideoYear);
+      console.log('- 豆瓣ID:', currentVideoDoubanId);
+      console.log('- 集数:', currentEpisodeNum);
+      
+      // 从localStorage获取缓存
+      const danmuCache = getDanmuCache();
+      console.log('- 缓存Map大小:', danmuCache.size);
+
+      // 检查缓存
+      const cached = danmuCache.get(cacheKey);
+      if (cached) {
+        console.log('📦 找到缓存数据:');
+        console.log('- 缓存时间:', cached.timestamp);
+        console.log('- 时间差:', now - cached.timestamp, 'ms');
+        console.log('- 缓存有效期:', DANMU_CACHE_DURATION, 'ms');
+        console.log('- 是否过期:', (now - cached.timestamp) >= DANMU_CACHE_DURATION);
+      } else {
+        console.log('❌ 未找到缓存数据');
+      }
+      
+      if (cached && (now - cached.timestamp) < DANMU_CACHE_DURATION) {
+        console.log('✅ 使用弹幕缓存数据，缓存键:', cacheKey);
+        console.log('📊 缓存弹幕数量:', cached.data.length);
+        return cached.data;
       }
 
       console.log('开始获取外部弹幕，参数:', params.toString());
@@ -711,15 +776,37 @@ function PlayPageClient() {
       console.log('外部弹幕API返回数据:', data);
       console.log('外部弹幕加载成功:', data.total || 0, '条');
       
-      // 直接返回API数据，不添加测试弹幕
       const finalDanmu = data.danmu || [];
       console.log('最终弹幕数据:', finalDanmu.length, '条');
+      
+      // 缓存结果
+      console.log('💾 保存弹幕到缓存:');
+      console.log('- 缓存键:', cacheKey);
+      console.log('- 弹幕数量:', finalDanmu.length);
+      console.log('- 保存时间:', now);
+      
+      const updatedCache = getDanmuCache();
+      updatedCache.set(cacheKey, {
+        data: finalDanmu,
+        timestamp: now
+      });
+      
+      // 清理过期缓存
+      updatedCache.forEach((value, key) => {
+        if (now - value.timestamp >= DANMU_CACHE_DURATION) {
+          console.log('🗑️ 清理过期缓存:', key);
+          updatedCache.delete(key);
+        }
+      });
+      
+      // 保存到localStorage
+      setDanmuCache(updatedCache);
+      
+      console.log('✅ 缓存保存完成，当前缓存大小:', updatedCache.size);
       
       return finalDanmu;
     } catch (error) {
       console.error('加载外部弹幕失败:', error);
-      
-      // API失败时返回空数组，不显示测试弹幕
       console.log('弹幕加载失败，返回空结果');
       return [];
     }
@@ -1368,8 +1455,35 @@ function PlayPageClient() {
       typeof window !== 'undefined' &&
       typeof (window as any).webkitConvertPointFromNodeToPage === 'function';
 
-    // 非WebKit浏览器且播放器已存在，使用switch方法切换
+    // 统一弹幕重新加载处理（切源时）
     if (!isWebkit && artPlayerRef.current) {
+      // 清空当前弹幕
+      if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+        artPlayerRef.current.plugins.artplayerPluginDanmuku.load();
+        console.log('已清空弹幕数据');
+        
+        // 延迟重新加载弹幕，确保视频切换完成
+        setTimeout(async () => {
+          try {
+            const externalDanmu = await loadExternalDanmu();
+            console.log('切源后重新加载弹幕结果:', externalDanmu);
+            
+            if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+              if (externalDanmu.length > 0) {
+                console.log('切源后向播放器插件加载弹幕数据:', externalDanmu.length, '条');
+                artPlayerRef.current.plugins.artplayerPluginDanmuku.load(externalDanmu);
+                artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
+              } else {
+                console.log('切源后没有弹幕数据可加载');
+                artPlayerRef.current.notice.show = '暂无弹幕数据';
+              }
+            }
+          } catch (error) {
+            console.error('切源后重新加载外部弹幕失败:', error);
+          }
+        }, 1500);
+      }
+      
       artPlayerRef.current.switch = videoUrl;
       artPlayerRef.current.title = `${videoTitle} - 第${currentEpisodeIndex + 1
         }集`;
