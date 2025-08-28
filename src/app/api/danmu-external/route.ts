@@ -335,7 +335,7 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
       // 优酷移动版转PC版
       if (convertedUrl.includes('m.youku.com/alipay_video/id_')) {
         convertedUrl = convertedUrl.replace(
-          /https:\/\/m\.youku\.com\/alipay_video\/id_([^\.]+)\.html/,
+          /https:\/\/m\.youku\.com\/alipay_video\/id_([^.]+)\.html/,
           'https://v.youku.com/v_show/id_$1.html'
         );
         console.log(`🔄 优酷移动版转PC版: ${convertedUrl}`);
@@ -429,7 +429,7 @@ async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
     // API返回格式: [时间, 位置, 颜色, "", 文本, "", "", "字号"]
     console.log(`获取到 ${data.danmuku.length} 条原始弹幕数据`);
     
-    const danmuList = data.danmuku.map((item: any[], index: number) => {
+    const danmuList = data.danmuku.map((item: any[]) => {
       // 正确解析时间 - 第一个元素就是时间(秒)
       const time = parseFloat(item[0]) || 0;
       const text = (item[4] || '').toString().trim();
@@ -547,7 +547,7 @@ export async function GET(request: NextRequest) {
     let allDanmu: DanmuItem[] = [];
     const platformInfo: any[] = [];
 
-    results.forEach((result, index) => {
+    results.forEach((result) => {
       if (result.status === 'fulfilled' && result.value.danmu.length > 0) {
         allDanmu = allDanmu.concat(result.value.danmu);
         platformInfo.push({
