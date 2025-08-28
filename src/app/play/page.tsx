@@ -875,7 +875,8 @@ function PlayPageClient() {
       setVideoYear(detailData.year);
       setVideoTitle(detailData.title || videoTitleRef.current);
       setVideoCover(detailData.poster);
-      setVideoDoubanId(detailData.douban_id || 0);
+      // 优先保留URL参数中的豆瓣ID，如果URL中没有则使用详情数据中的
+      setVideoDoubanId(videoDoubanIdRef.current || detailData.douban_id || 0);
       setDetail(detailData);
       if (currentEpisodeIndex >= detailData.episodes.length) {
         setCurrentEpisodeIndex(0);
@@ -1029,7 +1030,8 @@ function PlayPageClient() {
       setVideoTitle(newDetail.title || newTitle);
       setVideoYear(newDetail.year);
       setVideoCover(newDetail.poster);
-      setVideoDoubanId(newDetail.douban_id || 0);
+      // 优先保留URL参数中的豆瓣ID，如果URL中没有则使用详情数据中的
+      setVideoDoubanId(videoDoubanIdRef.current || newDetail.douban_id || 0);
       setCurrentSource(newSource);
       setCurrentId(newId);
       setDetail(newDetail);
