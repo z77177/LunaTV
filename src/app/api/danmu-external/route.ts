@@ -382,13 +382,13 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
   // 尝试每个API URL
   for (let i = 0; i < xmlApiUrls.length; i++) {
     const baseUrl = xmlApiUrls[i];
+    const apiName = i === 0 ? '主用XML API' : `备用XML API ${i}`;
     const controller = new AbortController();
     const timeout = 15000; // 15秒超时
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     
     try {
       const apiUrl = `${baseUrl}/?url=${encodeURIComponent(videoUrl)}`;
-      const apiName = i === 0 ? '主用XML API' : `备用XML API ${i}`;
       console.log(`🌐 正在请求${apiName}:`, apiUrl);
       
       const response = await fetch(apiUrl, {
