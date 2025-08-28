@@ -665,10 +665,8 @@ function PlayPageClient() {
   }
 
   // 加载外部弹幕数据
-  const loadExternalDanmu = async (forceEnabled?: boolean): Promise<any[]> => {
-    const isEnabled = forceEnabled !== undefined ? forceEnabled : externalDanmuEnabledRef.current;
-    
-    if (!isEnabled) {
+  const loadExternalDanmu = async (): Promise<any[]> => {
+    if (!externalDanmuEnabledRef.current) {
       console.log('外部弹幕开关已关闭');
       return [];
     }
@@ -1524,6 +1522,9 @@ function PlayPageClient() {
               console.log('外部弹幕开关切换:', item.switch, '->', nextState);
               
               try {
+                // 立即同步更新ref，避免异步延迟
+                externalDanmuEnabledRef.current = nextState;
+                
                 // 更新状态
                 localStorage.setItem('enable_external_danmu', String(nextState));
                 setExternalDanmuEnabled(nextState);
@@ -1540,7 +1541,7 @@ function PlayPageClient() {
                       visible: true
                     });
                     
-                    const externalDanmu = await loadExternalDanmu(true);
+                    const externalDanmu = await loadExternalDanmu(); // ref已经更新
                     plugin.load(externalDanmu);
                     console.log('外部弹幕已加载:', externalDanmu.length, '条');
                   } else {
