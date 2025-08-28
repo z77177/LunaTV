@@ -319,8 +319,18 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
     const biliDoubanMatches = html.match(/play_link:\s*"[^"]*bilibili\.com[^"]*"/g);
     if (biliDoubanMatches && biliDoubanMatches.length > 0) {
       console.log(`📱 找到 ${biliDoubanMatches.length} 个B站豆瓣链接`);
-      const match = biliDoubanMatches[0];
-      const urlMatch = match.match(/https?%3A%2F%2F[^"&]*bilibili\.com[^"&]*/);
+      
+      // 如果指定了集数，尝试找到对应集数的链接
+      let selectedMatch = biliDoubanMatches[0]; // 默认使用第一个
+      if (episode && biliDoubanMatches.length > 1) {
+        const episodeNum = parseInt(episode);
+        if (episodeNum > 0 && episodeNum <= biliDoubanMatches.length) {
+          selectedMatch = biliDoubanMatches[episodeNum - 1];
+          console.log(`🎯 选择第${episode}集B站豆瓣链接`);
+        }
+      }
+      
+      const urlMatch = selectedMatch.match(/https?%3A%2F%2F[^"&]*bilibili\.com[^"&]*/);
       if (urlMatch) {
         const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
         console.log(`🔗 B站豆瓣链接: ${decodedUrl}`);
