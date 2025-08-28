@@ -1941,11 +1941,9 @@ function PlayPageClient() {
                 
                 if (isCurrentlyVisible) {
                   plugin.hide();
-                  this.style.opacity = '0.5';
                   artPlayerRef.current.notice.show = '弹幕已隐藏';
                 } else {
                   plugin.show();
-                  this.style.opacity = '1';
                   artPlayerRef.current.notice.show = '弹幕已显示';
                 }
               }
