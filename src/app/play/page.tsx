@@ -1928,6 +1928,7 @@ function PlayPageClient() {
             modes: [0, 1, 2], // 允许所有弹幕模式：滚动、顶部、底部
             margin: [10, '25%'], // 弹幕上下边距 - 使用百分比更稳定
             antiOverlap: true, // 防重叠
+            synchronousPlayback: true, // 弹幕与视频播放同步
             visible: true, // 弹幕层可见
             emitter: true, // 开启弹幕发射器
             maxLength: 100, // 弹幕最大长度
