@@ -1822,34 +1822,42 @@ function PlayPageClient() {
             },
           },
           {
-            name: '弹幕模式',
-            html: '弹幕模式',
-            icon: '<text x="50%" y="50%" font-size="12" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">模</text>',
+            name: '按类型蒙蔽',
+            html: '按类型蒙蔽',
+            icon: '<text x="50%" y="50%" font-size="11" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">蒙</text>',
             selector: [
               {
-                html: '滚动弹幕',
-                value: 0,
+                html: '显示全部',
+                value: [0, 1, 2], // 显示所有类型
                 default: true,
               },
               {
-                html: '顶部固定',
-                value: 1,
+                html: '蒙蔽滚动',
+                value: [1, 2], // 只显示顶部和底部
               },
               {
-                html: '底部固定',
-                value: 2,
+                html: '蒙蔽顶部',
+                value: [0, 2], // 只显示滚动和底部
+              },
+              {
+                html: '蒙蔽底部',
+                value: [0, 1], // 只显示滚动和顶部
+              },
+              {
+                html: '只显示滚动',
+                value: [0], // 只显示滚动
               },
             ],
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                    mode: item.value
+                    modes: item.value
                   });
-                  artPlayerRef.current.notice.show = `弹幕模式已调整: ${item.html}`;
+                  artPlayerRef.current.notice.show = `弹幕类型已调整: ${item.html}`;
                 } catch (error) {
-                  console.error('调整弹幕模式失败:', error);
-                  artPlayerRef.current.notice.show = '弹幕模式调整失败';
+                  console.error('调整弹幕类型失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕类型调整失败';
                 }
               }
               return item.html;
