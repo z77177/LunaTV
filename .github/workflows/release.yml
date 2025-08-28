@@ -1,10 +1,10 @@
-name: Release by VERSION.txt
+name: Release by VERSION.txt & CHANGELOG
 
 on:
-  workflow_dispatch:   # 手动触发
   push:
-    branches:
-      - main           # 当 main 分支更新时自动触发
+    paths:
+      - "VERSION.txt"   # 只有 VERSION.txt 变化时触发
+  workflow_dispatch:     # 也可以手动触发
 
 jobs:
   release:
@@ -25,9 +25,43 @@ jobs:
       - name: Check if tag already exists
         run: |
           if git rev-parse ${{ env.VERSION }} >/dev/null 2>&1; then
-            echo "Tag ${{ env.VERSION }} already exists. Skip."
+            echo "⚠️ Tag ${{ env.VERSION }} already exists. Skip."
             exit 0
           fi
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION=${{ env.VERSION }}
+          if [ ! -f CHANGELOG ]; then
+            echo "❌ CHANGELOG file not found!"
+            exit 1
+          fi
+          NOTES=$(awk "/^## $VERSION/{flag=1;next}/^## /{flag=0}flag" CHANGELOG | sed '/^$/d')
+          if [ -z "$NOTES" ]; then
+            echo "❌ No changelog entry found for $VERSION"
+            exit 1
+          fi
+          echo "NOTES<<EOF" >> $GITHUB_ENV
+          echo "$NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Generate commit log since last tag
+        id: commits
+        run: |
+          VERSION=${{ env.VERSION }}
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)")
+          else
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)")
+          fi
+          if [ -z "$COMMITS" ]; then
+            COMMITS="(无新的提交记录)"
+          fi
+          echo "COMMITS<<EOF" >> $GITHUB_ENV
+          echo "$COMMITS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Create new tag
         run: |
@@ -40,7 +74,12 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.VERSION }}
-          name: "Release ${{ env.VERSION }}"
-          body: "版本号来自 VERSION.txt"
+          name: "🎉 版本 ${{ env.VERSION }} 更新"
+          body: |
+            ## 更新内容
+            ${{ env.NOTES }}
+
+            ## 提交记录
+            ${{ env.COMMITS }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
