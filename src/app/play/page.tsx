@@ -1661,6 +1661,82 @@ function PlayPageClient() {
               }
             },
           },
+          {
+            name: '弹幕字号',
+            html: '弹幕字号',
+            icon: '<text x="50%" y="50%" font-size="12" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">字</text>',
+            selector: [
+              {
+                html: '小号 (18px)',
+                value: 18,
+              },
+              {
+                html: '默认 (25px)',
+                value: 25,
+                default: true,
+              },
+              {
+                html: '大号 (32px)',
+                value: 32,
+              },
+              {
+                html: '特大 (40px)',
+                value: 40,
+              },
+            ],
+            onSelect: function (item) {
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    fontSize: item.value
+                  });
+                  artPlayerRef.current.notice.show = `弹幕字号已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕字号失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕字号调整失败';
+                }
+              }
+              return item.html;
+            },
+          },
+          {
+            name: '弹幕区域',
+            html: '弹幕区域',
+            icon: '<text x="50%" y="50%" font-size="12" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">区</text>',
+            selector: [
+              {
+                html: '1/4屏幕',
+                value: '25%',
+              },
+              {
+                html: '1/2屏幕',
+                value: '50%',
+              },
+              {
+                html: '3/4屏幕',
+                value: '75%',
+                default: true,
+              },
+              {
+                html: '全屏',
+                value: '100%',
+              },
+            ],
+            onSelect: function (item) {
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    margin: [10, item.value]
+                  });
+                  artPlayerRef.current.notice.show = `弹幕区域已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕区域失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕区域调整失败';
+                }
+              }
+              return item.html;
+            },
+          },
         ],
         // 控制栏配置
         controls: [
@@ -1702,7 +1778,7 @@ function PlayPageClient() {
             fontSize: 25, // 弹幕字体大小
             color: '#FFFFFF', // 默认弹幕颜色
             mode: 0, // 默认弹幕模式：滚动
-            margin: [10, '10%'], // 弹幕上下边距
+            margin: [10, '25%'], // 弹幕上下边距 - 使用百分比更稳定
             antiOverlap: true, // 防重叠
             visible: true, // 弹幕层可见
             emitter: true, // 开启弹幕发射器
