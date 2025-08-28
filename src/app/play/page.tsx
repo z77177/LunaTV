@@ -1897,7 +1897,8 @@ function PlayPageClient() {
             },
           },
           {
-            position: 'right',
+            position: 'left',
+            index: 14,
             html: '弹',
             tooltip: '发送弹幕',
             click: function () {
