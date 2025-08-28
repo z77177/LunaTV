@@ -1520,6 +1520,14 @@ function PlayPageClient() {
                 localStorage.setItem('enable_external_danmu', String(newVal));
                 setExternalDanmuEnabled(newVal);
                 
+                // 动态更新tooltip
+                if (artPlayerRef.current?.setting) {
+                  artPlayerRef.current.setting.update({
+                    html: '外部弹幕',
+                    tooltip: newVal ? '外部弹幕已开启' : '外部弹幕已关闭',
+                  });
+                }
+                
                 // 重新加载弹幕数据
                 if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                   if (newVal) {
@@ -1528,8 +1536,10 @@ function PlayPageClient() {
                     artPlayerRef.current.plugins.artplayerPluginDanmuku.load(externalDanmu);
                     console.log('外部弹幕已加载:', externalDanmu.length, '条');
                   } else {
-                    // 关闭外部弹幕：清空弹幕
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.load([]);
+                    // 关闭外部弹幕：彻底清空弹幕
+                    const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+                    plugin.load([]);  // 清空弹幕数据源
+                    plugin.reset();   // 清空当前显示的弹幕
                     console.log('外部弹幕已清空');
                   }
                 }
