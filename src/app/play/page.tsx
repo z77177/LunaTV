@@ -1952,7 +1952,7 @@ function PlayPageClient() {
             maxLength: 100, // 弹幕最大长度
             lockTime: 3, // 输入框锁定时间
             theme: 'dark', // 弹幕主题
-            width: 512, // 屏幕宽度小于512px时，弹幕输入框移到底部（默认值）
+            width: 300, // 屏幕宽度小于300px时，弹幕控件移到播放器主体
           }),
         ],
       });
