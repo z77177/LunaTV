@@ -1706,20 +1706,20 @@ function PlayPageClient() {
             selector: [
               {
                 html: '1/4屏幕',
-                value: '25%',
+                value: '75%', // 底部留75%空白，只用上1/4显示弹幕
               },
               {
                 html: '1/2屏幕',
-                value: '50%',
+                value: '50%', // 底部留50%空白，用上1/2显示弹幕
               },
               {
                 html: '3/4屏幕',
-                value: '75%',
+                value: '25%', // 底部留25%空白，用上3/4显示弹幕
                 default: true,
               },
               {
                 html: '全屏',
-                value: '100%',
+                value: '0%', // 底部不留空白，全屏显示弹幕
               },
             ],
             onSelect: function (item) {
@@ -1735,6 +1735,145 @@ function PlayPageClient() {
                 }
               }
               return item.html;
+            },
+          },
+          {
+            name: '弹幕速度',
+            html: '弹幕速度',
+            icon: '<text x="50%" y="50%" font-size="12" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">速</text>',
+            selector: [
+              {
+                html: '极慢 (10秒)',
+                value: 10,
+              },
+              {
+                html: '慢速 (7秒)',
+                value: 7,
+              },
+              {
+                html: '默认 (5秒)',
+                value: 5,
+                default: true,
+              },
+              {
+                html: '快速 (3秒)',
+                value: 3,
+              },
+              {
+                html: '极快 (1秒)',
+                value: 1,
+              },
+            ],
+            onSelect: function (item) {
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    speed: item.value
+                  });
+                  artPlayerRef.current.notice.show = `弹幕速度已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕速度失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕速度调整失败';
+                }
+              }
+              return item.html;
+            },
+          },
+          {
+            name: '弹幕透明度',
+            html: '弹幕透明度',
+            icon: '<text x="50%" y="50%" font-size="11" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">透</text>',
+            selector: [
+              {
+                html: '完全透明 (10%)',
+                value: 0.1,
+              },
+              {
+                html: '半透明 (30%)',
+                value: 0.3,
+              },
+              {
+                html: '较淡 (50%)',
+                value: 0.5,
+              },
+              {
+                html: '默认 (80%)',
+                value: 0.8,
+                default: true,
+              },
+              {
+                html: '完全不透明 (100%)',
+                value: 1.0,
+              },
+            ],
+            onSelect: function (item) {
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    opacity: item.value
+                  });
+                  artPlayerRef.current.notice.show = `弹幕透明度已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕透明度失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕透明度调整失败';
+                }
+              }
+              return item.html;
+            },
+          },
+          {
+            name: '弹幕模式',
+            html: '弹幕模式',
+            icon: '<text x="50%" y="50%" font-size="12" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">模</text>',
+            selector: [
+              {
+                html: '滚动弹幕',
+                value: 0,
+                default: true,
+              },
+              {
+                html: '顶部固定',
+                value: 1,
+              },
+              {
+                html: '底部固定',
+                value: 2,
+              },
+            ],
+            onSelect: function (item) {
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    mode: item.value
+                  });
+                  artPlayerRef.current.notice.show = `弹幕模式已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕模式失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕模式调整失败';
+                }
+              }
+              return item.html;
+            },
+          },
+          {
+            name: '防重叠',
+            html: '防重叠',
+            icon: '<text x="50%" y="50%" font-size="12" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">防</text>',
+            switch: true,
+            onSwitch: function (item) {
+              const nextState = !item.switch;
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    antiOverlap: nextState
+                  });
+                  artPlayerRef.current.notice.show = nextState ? '弹幕防重叠已开启' : '弹幕防重叠已关闭';
+                } catch (error) {
+                  console.error('调整弹幕防重叠失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕防重叠调整失败';
+                }
+              }
+              return nextState;
             },
           },
         ],
