@@ -205,7 +205,7 @@ async function processSelectedResult(selectedResult: any, episode?: string | nul
 }
 
 // 从豆瓣页面提取平台视频链接
-async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
+async function extractPlatformUrls(doubanId: string, episode?: string | null): Promise<PlatformUrl[]> {
   if (!doubanId) return [];
 
   try {
@@ -230,8 +230,18 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
     const doubanLinkMatches = html.match(/play_link:\s*"[^"]*v\.qq\.com[^"]*"/g);
     if (doubanLinkMatches && doubanLinkMatches.length > 0) {
       console.log(`🎬 找到 ${doubanLinkMatches.length} 个腾讯视频链接`);
-      const match = doubanLinkMatches[0];
-      const urlMatch = match.match(/https%3A%2F%2Fv\.qq\.com[^"&]*/);
+      
+      // 如果指定了集数，尝试找到对应集数的链接
+      let selectedMatch = doubanLinkMatches[0]; // 默认使用第一个
+      if (episode && doubanLinkMatches.length > 1) {
+        const episodeNum = parseInt(episode);
+        if (episodeNum > 0 && episodeNum <= doubanLinkMatches.length) {
+          selectedMatch = doubanLinkMatches[episodeNum - 1];
+          console.log(`🎯 选择第${episode}集腾讯视频链接`);
+        }
+      }
+      
+      const urlMatch = selectedMatch.match(/https%3A%2F%2Fv\.qq\.com[^"&]*/);
       if (urlMatch) {
         const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
         console.log(`🔗 腾讯视频链接: ${decodedUrl}`);
@@ -243,8 +253,18 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
     const iqiyiMatches = html.match(/play_link:\s*"[^"]*iqiyi\.com[^"]*"/g);
     if (iqiyiMatches && iqiyiMatches.length > 0) {
       console.log(`📺 找到 ${iqiyiMatches.length} 个爱奇艺链接`);
-      const match = iqiyiMatches[0];
-      const urlMatch = match.match(/https?%3A%2F%2F[^"&]*iqiyi\.com[^"&]*/);
+      
+      // 如果指定了集数，尝试找到对应集数的链接
+      let selectedMatch = iqiyiMatches[0]; // 默认使用第一个
+      if (episode && iqiyiMatches.length > 1) {
+        const episodeNum = parseInt(episode);
+        if (episodeNum > 0 && episodeNum <= iqiyiMatches.length) {
+          selectedMatch = iqiyiMatches[episodeNum - 1];
+          console.log(`🎯 选择第${episode}集爱奇艺链接`);
+        }
+      }
+      
+      const urlMatch = selectedMatch.match(/https?%3A%2F%2F[^"&]*iqiyi\.com[^"&]*/);
       if (urlMatch) {
         const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
         console.log(`🔗 爱奇艺链接: ${decodedUrl}`);
@@ -256,8 +276,18 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
     const youkuMatches = html.match(/play_link:\s*"[^"]*youku\.com[^"]*"/g);
     if (youkuMatches && youkuMatches.length > 0) {
       console.log(`🎞️ 找到 ${youkuMatches.length} 个优酷链接`);
-      const match = youkuMatches[0];
-      const urlMatch = match.match(/https?%3A%2F%2F[^"&]*youku\.com[^"&]*/);
+      
+      // 如果指定了集数，尝试找到对应集数的链接
+      let selectedMatch = youkuMatches[0]; // 默认使用第一个
+      if (episode && youkuMatches.length > 1) {
+        const episodeNum = parseInt(episode);
+        if (episodeNum > 0 && episodeNum <= youkuMatches.length) {
+          selectedMatch = youkuMatches[episodeNum - 1];
+          console.log(`🎯 选择第${episode}集优酷链接`);
+        }
+      }
+      
+      const urlMatch = selectedMatch.match(/https?%3A%2F%2F[^"&]*youku\.com[^"&]*/);
       if (urlMatch) {
         const decodedUrl = decodeURIComponent(urlMatch[0]).split('?')[0];
         console.log(`🔗 优酷链接: ${decodedUrl}`);
@@ -298,8 +328,44 @@ async function extractPlatformUrls(doubanId: string): Promise<PlatformUrl[]> {
       }
     }
 
-    console.log(`✅ 总共提取到 ${urls.length} 个平台链接`);
-    return urls;
+    // 转换移动版链接为PC版链接（弹幕库API需要PC版）
+    const convertedUrls = urls.map(urlObj => {
+      let convertedUrl = urlObj.url;
+      
+      // 优酷移动版转PC版
+      if (convertedUrl.includes('m.youku.com/alipay_video/id_')) {
+        convertedUrl = convertedUrl.replace(
+          /https:\/\/m\.youku\.com\/alipay_video\/id_([^\.]+)\.html/,
+          'https://v.youku.com/v_show/id_$1.html'
+        );
+        console.log(`🔄 优酷移动版转PC版: ${convertedUrl}`);
+      }
+      
+      // 爱奇艺移动版转PC版
+      if (convertedUrl.includes('m.iqiyi.com/')) {
+        convertedUrl = convertedUrl.replace('m.iqiyi.com', 'www.iqiyi.com');
+        console.log(`🔄 爱奇艺移动版转PC版: ${convertedUrl}`);
+      }
+      
+      // 腾讯视频移动版转PC版
+      if (convertedUrl.includes('m.v.qq.com/')) {
+        convertedUrl = convertedUrl.replace('m.v.qq.com', 'v.qq.com');
+        console.log(`🔄 腾讯移动版转PC版: ${convertedUrl}`);
+      }
+      
+      // B站移动版转PC版
+      if (convertedUrl.includes('m.bilibili.com/')) {
+        convertedUrl = convertedUrl.replace('m.bilibili.com', 'www.bilibili.com');
+        // 移除豆瓣来源参数
+        convertedUrl = convertedUrl.split('?')[0];
+        console.log(`🔄 B站移动版转PC版: ${convertedUrl}`);
+      }
+      
+      return { ...urlObj, url: convertedUrl };
+    });
+
+    console.log(`✅ 总共提取到 ${convertedUrls.length} 个平台链接`);
+    return convertedUrls;
   } catch (error) {
     console.error('❌ 提取平台链接失败:', error);
     return [];
@@ -437,21 +503,21 @@ export async function GET(request: NextRequest) {
   try {
     let platformUrls: PlatformUrl[] = [];
 
-    // 优先使用caiji.cyou API搜索内容
-    if (title) {
-      console.log('🔍 使用caiji.cyou API搜索内容...');
+    // 优先从豆瓣页面提取链接
+    if (doubanId) {
+      console.log('🔍 优先从豆瓣页面提取链接...');
+      platformUrls = await extractPlatformUrls(doubanId, episode);
+      console.log('📝 豆瓣提取结果:', platformUrls);
+    }
+
+    // 如果豆瓣没有结果，使用caiji.cyou API作为备用
+    if (platformUrls.length === 0 && title) {
+      console.log('🔍 豆瓣未找到链接，使用Caiji API备用搜索...');
       const caijiUrls = await searchFromCaijiAPI(title, episode);
       if (caijiUrls.length > 0) {
         platformUrls = caijiUrls;
-        console.log('📺 Caiji API搜索结果:', platformUrls);
+        console.log('📺 Caiji API备用结果:', platformUrls);
       }
-    }
-
-    // 如果caiji API没有结果，尝试豆瓣页面提取
-    if (platformUrls.length === 0 && doubanId) {
-      console.log('🔍 尝试从豆瓣页面提取链接...');
-      platformUrls = await extractPlatformUrls(doubanId);
-      console.log('📝 豆瓣提取结果:', platformUrls);
     }
 
     // 如果找不到任何链接，直接返回空结果，不使用测试数据
