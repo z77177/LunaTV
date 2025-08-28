@@ -1691,13 +1691,15 @@ function PlayPageClient() {
                   localStorage.setItem('danmaku_fontSize', item.value.toString());
                   
                   // 使用防抖优化性能
-                  if (window.danmakuConfigTimeout) {
-                    clearTimeout(window.danmakuConfigTimeout);
+                  if ((window as any).danmakuConfigTimeout) {
+                    clearTimeout((window as any).danmakuConfigTimeout);
                   }
-                  window.danmakuConfigTimeout = setTimeout(() => {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                      fontSize: item.value
-                    });
+                  (window as any).danmakuConfigTimeout = setTimeout(() => {
+                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                        fontSize: item.value
+                      });
+                    }
                   }, 100);
                   
                   artPlayerRef.current.notice.show = `弹幕字号已调整: ${item.html}`;
@@ -1922,6 +1924,56 @@ function PlayPageClient() {
                     mode: 0,
                   });
                 }
+              }
+            },
+          },
+          {
+            position: 'right',
+            html: '弹幕',
+            tooltip: '弹幕开关',
+            style: {
+              color: '#ffffff',
+            },
+            click: function () {
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+                const isCurrentlyVisible = !plugin.isHide;
+                
+                if (isCurrentlyVisible) {
+                  plugin.hide();
+                  this.style.opacity = '0.5';
+                  artPlayerRef.current.notice.show = '弹幕已隐藏';
+                } else {
+                  plugin.show();
+                  this.style.opacity = '1';
+                  artPlayerRef.current.notice.show = '弹幕已显示';
+                }
+              }
+            },
+          },
+          {
+            position: 'right',
+            html: '设置',
+            tooltip: '弹幕设置',
+            style: {
+              color: '#ffffff',
+              fontSize: '12px',
+            },
+            click: function () {
+              // 手动打开设置面板并聚焦到弹幕设置
+              if (artPlayerRef.current) {
+                artPlayerRef.current.setting.show = true;
+                // 尝试滚动到弹幕相关设置
+                setTimeout(() => {
+                  const settingPanel = artPlayerRef.current.template.$setting;
+                  if (settingPanel) {
+                    // 查找弹幕相关设置项
+                    const danmakuSettings = settingPanel.querySelectorAll('[data-name*="弹幕"]');
+                    if (danmakuSettings.length > 0) {
+                      danmakuSettings[0].scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }
+                }, 100);
               }
             },
           },
