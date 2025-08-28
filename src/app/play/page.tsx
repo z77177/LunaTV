@@ -1930,7 +1930,7 @@ function PlayPageClient() {
             antiOverlap: true, // 防重叠
             synchronousPlayback: true, // 弹幕与视频播放同步
             visible: true, // 弹幕层可见
-            emitter: true, // 开启弹幕发射器
+            emitter: false, // 关闭弹幕发射器，节省工具栏空间
             maxLength: 100, // 弹幕最大长度
             lockTime: 3, // 输入框锁定时间
             theme: 'dark', // 弹幕主题
