@@ -1739,6 +1739,9 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
+                  // 保存到localStorage
+                  localStorage.setItem('danmaku_margin', JSON.stringify(item.value));
+                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     margin: item.value
                   });
@@ -1781,6 +1784,9 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
+                  // 保存到localStorage
+                  localStorage.setItem('danmaku_speed', item.value.toString());
+                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     speed: item.value
                   });
@@ -1823,6 +1829,9 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
+                  // 保存到localStorage
+                  localStorage.setItem('danmaku_opacity', item.value.toString());
+                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     opacity: item.value
                   });
@@ -1865,6 +1874,9 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
+                  // 保存到localStorage
+                  localStorage.setItem('danmaku_modes', JSON.stringify(item.value));
+                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     modes: item.value
                   });
@@ -1886,6 +1898,9 @@ function PlayPageClient() {
               const nextState = !item.switch;
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
+                  // 保存到localStorage
+                  localStorage.setItem('danmaku_antiOverlap', nextState.toString());
+                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     antiOverlap: nextState
                   });
@@ -1910,38 +1925,19 @@ function PlayPageClient() {
               handleNextEpisode();
             },
           },
-          {
-            position: 'right',
-            html: '弹',
-            tooltip: '发送弹幕',
-            click: function () {
-              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                // 手动弹出输入框发送弹幕
-                const text = prompt('请输入弹幕内容', '');
-                if (text && text.trim()) {
-                  artPlayerRef.current.plugins.artplayerPluginDanmuku.emit({
-                    text: text.trim(),
-                    time: artPlayerRef.current.currentTime,
-                    color: '#FFFFFF',
-                    mode: 0,
-                  });
-                }
-              }
-            },
-          },
         ],
         // 弹幕插件配置
         plugins: [
           artplayerPluginDanmuku({
             danmuku: [], // 初始为空数组，后续通过load方法加载
-            speed: 5, // 弹幕持续时间
-            opacity: 0.8, // 弹幕透明度
+            speed: parseInt(localStorage.getItem('danmaku_speed') || '5'), // 弹幕持续时间（从localStorage读取）
+            opacity: parseFloat(localStorage.getItem('danmaku_opacity') || '0.8'), // 弹幕透明度（从localStorage读取）
             fontSize: parseInt(localStorage.getItem('danmaku_fontSize') || '25'), // 弹幕字体大小（从localStorage读取）
             color: '#FFFFFF', // 默认弹幕颜色
             mode: 0, // 默认弹幕模式：滚动
-            modes: [0, 1, 2], // 允许所有弹幕模式：滚动、顶部、底部
-            margin: [10, '75%'], // 弹幕上下边距 - 默认1/4屏幕显示
-            antiOverlap: true, // 防重叠
+            modes: JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]'), // 允许的弹幕模式（从localStorage读取）
+            margin: JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]'), // 弹幕上下边距（从localStorage读取）
+            antiOverlap: localStorage.getItem('danmaku_antiOverlap') !== 'false', // 防重叠（从localStorage读取，默认true）
             synchronousPlayback: true, // 弹幕与视频播放同步
             visible: true, // 弹幕层可见
             emitter: false, // 关闭弹幕发射器，节省工具栏空间
