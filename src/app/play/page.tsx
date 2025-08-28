@@ -1692,19 +1692,26 @@ function PlayPageClient() {
                   // 保存到localStorage
                   localStorage.setItem('danmaku_fontSize', item.value.toString());
                   
-                  // 使用防抖优化性能
+                  // 显示处理中状态
+                  artPlayerRef.current.notice.show = '弹幕字号调整中...';
+                  
+                  // 增加防抖延迟，优化性能
                   if ((window as any).danmakuConfigTimeout) {
                     clearTimeout((window as any).danmakuConfigTimeout);
                   }
                   (window as any).danmakuConfigTimeout = setTimeout(() => {
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                        fontSize: item.value
-                      });
+                      const currentFontSize = artPlayerRef.current.plugins.artplayerPluginDanmuku.fontSize;
+                      
+                      // 只有字体大小真正改变时才更新
+                      if (currentFontSize !== item.value) {
+                        artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                          fontSize: item.value
+                        });
+                        artPlayerRef.current.notice.show = `弹幕字号已调整: ${item.html}`;
+                      }
                     }
-                  }, 100);
-                  
-                  artPlayerRef.current.notice.show = `弹幕字号已调整: ${item.html}`;
+                  }, 200); // 增加到200ms
                 } catch (error) {
                   console.error('调整弹幕字号失败:', error);
                   artPlayerRef.current.notice.show = '弹幕字号调整失败';
