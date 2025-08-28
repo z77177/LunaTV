@@ -1586,9 +1586,13 @@ function PlayPageClient() {
                 const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
                 if (plugin.isHide) {
                   plugin.show();
+                  // 保存弹幕显示状态到localStorage
+                  localStorage.setItem('danmaku_visible', 'true');
                   return '弹幕已显示';
                 } else {
                   plugin.hide();
+                  // 保存弹幕隐藏状态到localStorage
+                  localStorage.setItem('danmaku_visible', 'false');
                   return '弹幕已隐藏';
                 }
               }
@@ -1946,7 +1950,7 @@ function PlayPageClient() {
             margin: JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]'), // 弹幕上下边距（从localStorage读取）
             antiOverlap: localStorage.getItem('danmaku_antiOverlap') !== 'false', // 防重叠（从localStorage读取，默认true）
             synchronousPlayback: true, // 弹幕与视频播放同步
-            visible: true, // 弹幕层可见
+            visible: localStorage.getItem('danmaku_visible') !== 'false', // 弹幕层可见状态（从localStorage读取，默认true）
             emitter: false, // 关闭弹幕发射器，节省工具栏空间
             maxLength: 100, // 弹幕最大长度
             lockTime: 3, // 输入框锁定时间
@@ -1983,6 +1987,17 @@ function PlayPageClient() {
             console.error('加载外部弹幕失败:', error);
           }
         }, 1000); // 延迟1秒确保插件完全初始化
+
+        // 监听弹幕插件的显示/隐藏事件，自动保存状态到localStorage
+        artPlayerRef.current.on('artplayerPluginDanmuku:show', () => {
+          localStorage.setItem('danmaku_visible', 'true');
+          console.log('弹幕显示状态已保存');
+        });
+        
+        artPlayerRef.current.on('artplayerPluginDanmuku:hide', () => {
+          localStorage.setItem('danmaku_visible', 'false');
+          console.log('弹幕隐藏状态已保存');
+        });
 
         // 播放器就绪后，如果正在播放则请求 Wake Lock
         if (artPlayerRef.current && !artPlayerRef.current.paused) {
