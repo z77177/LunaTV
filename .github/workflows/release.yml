@@ -1,10 +1,10 @@
-name: Auto Tag and Release
+name: Release by VERSION.txt
 
 on:
   workflow_dispatch:   # 手动触发
   push:
     branches:
-      - main           # 监听 main 分支
+      - main           # 当 main 分支更新时自动触发
 
 jobs:
   release:
@@ -15,18 +15,32 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Read version from VERSION.txt
+        id: version
+        run: |
+          VERSION=$(cat VERSION.txt | tr -d ' \n')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        run: |
+          if git rev-parse ${{ env.VERSION }} >/dev/null 2>&1; then
+            echo "Tag ${{ env.VERSION }} already exists. Skip."
+            exit 0
+          fi
+
       - name: Create new tag
         run: |
-          VERSION="v1.0.$(date +'%Y%m%d%H%M')"   # 根据时间自动生成版本号
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          git tag $VERSION
-          git push origin $VERSION
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag ${{ env.VERSION }}
+          git push origin ${{ env.VERSION }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.VERSION }}
           name: "Release ${{ env.VERSION }}"
-          body: "这是自动生成的发行版"
+          body: "版本号来自 VERSION.txt"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
