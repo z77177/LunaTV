@@ -1516,70 +1516,51 @@ function PlayPageClient() {
             icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">外</text>',
             tooltip: externalDanmuEnabled ? '外部弹幕已开启' : '外部弹幕已关闭',
             switch: externalDanmuEnabled,
-            onSwitch: async function (item) {
+            onSwitch: function (item) {
               const nextState = !item.switch;
               
-              console.log('外部弹幕开关切换:', item.switch, '->', nextState);
+              // 立即同步更新所有状态（确保UI响应速度）
+              externalDanmuEnabledRef.current = nextState;
+              setExternalDanmuEnabled(nextState);
+              item.tooltip = nextState ? '外部弹幕已开启' : '外部弹幕已关闭';
               
+              // 同步localStorage操作（快速）
               try {
-                // 立即同步更新ref，避免异步延迟
-                externalDanmuEnabledRef.current = nextState;
-                
-                // 更新状态
                 localStorage.setItem('enable_external_danmu', String(nextState));
-                setExternalDanmuEnabled(nextState);
-                
-                // 处理弹幕数据
-                if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                  if (nextState) {
-                    // 开启外部弹幕
-                    console.log('开启外部弹幕，开始加载数据...');
-                    const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
-                    
-                    // 重新启用弹幕显示
-                    plugin.config({
-                      visible: true
-                    });
-                    
-                    const externalDanmu = await loadExternalDanmu(); // ref已经更新
-                    plugin.load(externalDanmu);
-                    console.log('外部弹幕已加载:', externalDanmu.length, '条');
-                  } else {
-                    // 关闭外部弹幕 - 使用最彻底的清空方法
-                    console.log('关闭外部弹幕，彻底清空...');
-                    const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
-                    
-                    // 1. 先隐藏弹幕层
-                    plugin.hide();
-                    
-                    // 2. 清空当前显示的弹幕
-                    plugin.reset();
-                    
-                    // 3. 清空弹幕数据源
-                    plugin.load([]);
-                    
-                    // 4. 通过config彻底禁用
-                    plugin.config({
-                      visible: false,
-                      danmuku: []
-                    });
-                    
-                    // 5. 重新显示（但已被禁用）
-                    plugin.show();
-                    
-                    console.log('外部弹幕已彻底清空');
-                  }
-                }
-                
-                // 更新tooltip
-                item.tooltip = nextState ? '外部弹幕已开启' : '外部弹幕已关闭';
-                
-                console.log('外部弹幕开关操作完成:', nextState ? '开启' : '关闭');
-                return nextState;
-              } catch (error) {
-                console.error('切换外部弹幕开关失败:', error);
-                return item.switch; // 保持原状态
+              } catch (e) {
+                console.warn('localStorage设置失败:', e);
               }
+              
+              // 异步处理弹幕数据（完全非阻塞）
+              Promise.resolve().then(async () => {
+                try {
+                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                    const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+                    
+                    if (nextState) {
+                      // 开启外部弹幕：清空当前数据再加载新数据
+                      console.log('开启外部弹幕，清空并加载新数据...');
+                      plugin.load([]); // 先清空
+                      const externalDanmu = await loadExternalDanmu();
+                      if (externalDanmuEnabledRef.current) { // 再次检查状态，防止快速切换
+                        plugin.load(externalDanmu);
+                        plugin.show();
+                        console.log('外部弹幕已加载:', externalDanmu.length, '条');
+                      }
+                    } else {
+                      // 关闭外部弹幕：清空数据并隐藏
+                      console.log('关闭外部弹幕，清空数据并隐藏...');
+                      plugin.load([]); // 清空弹幕数据
+                      plugin.hide();
+                      console.log('外部弹幕已关闭并清空');
+                    }
+                  }
+                } catch (error) {
+                  console.error('异步处理外部弹幕失败:', error);
+                }
+              });
+              
+              return nextState; // 立即返回新状态
             },
           },
           {
