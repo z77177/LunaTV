@@ -1706,27 +1706,27 @@ function PlayPageClient() {
             selector: [
               {
                 html: '1/4屏幕',
-                value: '75%', // 底部留75%空白，只用上1/4显示弹幕
+                value: [10, '75%'], // 顶部10px，底部75%边距
               },
               {
                 html: '1/2屏幕',
-                value: '50%', // 底部留50%空白，用上1/2显示弹幕
+                value: [10, '50%'], // 顶部10px，底部50%边距
               },
               {
                 html: '3/4屏幕',
-                value: '25%', // 底部留25%空白，用上3/4显示弹幕
+                value: [10, '25%'], // 顶部10px，底部25%边距
                 default: true,
               },
               {
                 html: '全屏',
-                value: '0%', // 底部不留空白，全屏显示弹幕
+                value: [10, '5%'], // 顶部10px，底部5%边距（留点安全区域）
               },
             ],
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                    margin: [10, item.value]
+                    margin: item.value
                   });
                   artPlayerRef.current.notice.show = `弹幕区域已调整: ${item.html}`;
                 } catch (error) {
@@ -1917,6 +1917,7 @@ function PlayPageClient() {
             fontSize: 25, // 弹幕字体大小
             color: '#FFFFFF', // 默认弹幕颜色
             mode: 0, // 默认弹幕模式：滚动
+            modes: [0, 1, 2], // 允许所有弹幕模式：滚动、顶部、底部
             margin: [10, '25%'], // 弹幕上下边距 - 使用百分比更稳定
             antiOverlap: true, // 防重叠
             visible: true, // 弹幕层可见
