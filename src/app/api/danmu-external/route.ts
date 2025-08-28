@@ -372,6 +372,119 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
   }
 }
 
+// 从fc.lyz05.cn获取XML格式弹幕数据
+async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
+  const controller = new AbortController();
+  const timeout = 15000; // 15秒超时
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const apiUrl = `https://fc.lyz05.cn/?url=${encodeURIComponent(videoUrl)}`;
+    console.log('🌐 正在请求XML弹幕API:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'application/xml, text/xml, */*',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+      },
+    });
+    
+    clearTimeout(timeoutId);
+    console.log('📡 XML API响应状态:', response.status, response.statusText);
+
+    if (!response.ok) {
+      console.log('❌ XML API响应失败:', response.status);
+      return [];
+    }
+
+    const responseText = await response.text();
+    console.log('📄 XML API原始响应长度:', responseText.length);
+    
+    // 解析XML
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(responseText, 'text/xml');
+    
+    // 检查解析错误
+    const parseError = xmlDoc.querySelector('parsererror');
+    if (parseError) {
+      console.error('❌ XML解析失败:', parseError.textContent);
+      return [];
+    }
+    
+    const danmakuElements = xmlDoc.querySelectorAll('d');
+    console.log(`📊 找到 ${danmakuElements.length} 条XML弹幕数据`);
+    
+    if (danmakuElements.length === 0) {
+      console.log('📭 XML API未返回弹幕数据');
+      return [];
+    }
+    
+    const danmuList: DanmuItem[] = [];
+    
+    danmakuElements.forEach((element, index) => {
+      try {
+        const pAttr = element.getAttribute('p');
+        const text = element.textContent;
+        
+        if (!pAttr || !text) return;
+        
+        // XML格式: p="时间,模式,字号,颜色,时间戳,池,用户ID,ID"
+        const params = pAttr.split(',');
+        if (params.length < 4) return;
+        
+        const time = parseFloat(params[0]) || 0;
+        const mode = parseInt(params[1]) || 0;
+        const colorInt = parseInt(params[3]) || 16777215; // 默认白色
+        
+        // 将整数颜色转换为十六进制
+        const color = '#' + colorInt.toString(16).padStart(6, '0').toUpperCase();
+        
+        // XML模式转换: 1-3滚动, 4顶部, 5底部
+        let artplayerMode = 0; // 默认滚动
+        if (mode === 4) artplayerMode = 1; // 顶部
+        else if (mode === 5) artplayerMode = 2; // 底部
+        
+        danmuList.push({
+          text: text.trim(),
+          time: time,
+          color: color,
+          mode: artplayerMode,
+        });
+      } catch (error) {
+        console.error(`❌ 解析第${index}条XML弹幕失败:`, error);
+      }
+    });
+    
+    // 过滤和排序
+    const filteredDanmu = danmuList.filter(item => 
+      item.text.length > 0 && 
+      !item.text.includes('弹幕正在赶来') && 
+      !item.text.includes('官方弹幕库') &&
+      item.time >= 0
+    ).sort((a, b) => a.time - b.time);
+    
+    console.log(`✅ XML API成功解析 ${filteredDanmu.length} 条有效弹幕`);
+    
+    // 显示前几条弹幕作为样例
+    console.log('📋 XML弹幕前5条:', filteredDanmu.slice(0, 5).map(item => 
+      `${item.time}s: "${item.text.substring(0, 20)}" (${item.color})`
+    ));
+    
+    return filteredDanmu;
+
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.error(`❌ XML弹幕API请求超时 (${timeout/1000}秒):`, videoUrl);
+    } else {
+      console.error('❌ XML弹幕API请求失败:', error);
+    }
+    return [];
+  }
+}
+
 // 从danmu.icu获取弹幕数据
 async function fetchDanmuFromAPI(videoUrl: string): Promise<DanmuItem[]> {
   const controller = new AbortController();
@@ -535,9 +648,28 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 并发获取多个平台的弹幕
+    // 并发获取多个平台的弹幕（使用JSON API + XML API备用）
     const danmuPromises = platformUrls.map(async ({ platform, url }) => {
-      const danmu = await fetchDanmuFromAPI(url);
+      console.log(`🔄 处理平台: ${platform}, URL: ${url}`);
+      
+      // 首先尝试JSON API
+      let danmu = await fetchDanmuFromAPI(url);
+      console.log(`📊 ${platform} JSON API获取到 ${danmu.length} 条弹幕`);
+      
+      // 如果JSON API失败或结果很少，尝试XML API作为备用
+      if (danmu.length === 0) {
+        console.log(`🔄 ${platform} JSON API无结果，尝试XML API备用...`);
+        const xmlDanmu = await fetchDanmuFromXMLAPI(url);
+        console.log(`📊 ${platform} XML API获取到 ${xmlDanmu.length} 条弹幕`);
+        
+        if (xmlDanmu.length > 0) {
+          danmu = xmlDanmu;
+          console.log(`✅ ${platform} 使用XML API备用数据: ${danmu.length} 条弹幕`);
+        }
+      } else {
+        console.log(`✅ ${platform} 使用JSON API数据: ${danmu.length} 条弹幕`);
+      }
+      
       return { platform, danmu, url };
     });
 
