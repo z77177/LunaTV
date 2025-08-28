@@ -734,7 +734,7 @@ function PlayPageClient() {
       console.log('集数变化，重新加载弹幕');
       setTimeout(async () => {
         try {
-          const externalDanmu = await loadExternalDanmu();
+          const externalDanmu = await loadExternalDanmu(); // 这里会检查开关状态
           console.log('集数变化后外部弹幕加载结果:', externalDanmu);
           
           if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
@@ -744,7 +744,7 @@ function PlayPageClient() {
               artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
             } else {
               console.log('集数变化后没有弹幕数据可加载');
-              artPlayerRef.current.plugins.artplayerPluginDanmuku.load([]);
+              // 不要自动load([])，保持当前状态
               artPlayerRef.current.notice.show = '暂无弹幕数据';
             }
           }
@@ -1727,7 +1727,7 @@ function PlayPageClient() {
         console.log('播放器已就绪，开始加载外部弹幕');
         setTimeout(async () => {
           try {
-            const externalDanmu = await loadExternalDanmu();
+            const externalDanmu = await loadExternalDanmu(); // 这里会检查开关状态
             console.log('外部弹幕加载结果:', externalDanmu);
             
             if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
@@ -1737,7 +1737,7 @@ function PlayPageClient() {
                 artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
               } else {
                 console.log('没有弹幕数据可加载');
-                artPlayerRef.current.notice.show = '暂无弹幕数据';
+                // 不显示提示，保持安静
               }
             } else {
               console.error('弹幕插件未找到');
