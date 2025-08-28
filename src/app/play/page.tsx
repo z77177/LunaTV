@@ -1687,9 +1687,19 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
-                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                    fontSize: item.value
-                  });
+                  // 保存到localStorage
+                  localStorage.setItem('danmaku_fontSize', item.value.toString());
+                  
+                  // 使用防抖优化性能
+                  if (window.danmakuConfigTimeout) {
+                    clearTimeout(window.danmakuConfigTimeout);
+                  }
+                  window.danmakuConfigTimeout = setTimeout(() => {
+                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                      fontSize: item.value
+                    });
+                  }, 100);
+                  
                   artPlayerRef.current.notice.show = `弹幕字号已调整: ${item.html}`;
                 } catch (error) {
                   console.error('调整弹幕字号失败:', error);
@@ -1922,7 +1932,7 @@ function PlayPageClient() {
             danmuku: [], // 初始为空数组，后续通过load方法加载
             speed: 5, // 弹幕持续时间
             opacity: 0.8, // 弹幕透明度
-            fontSize: 25, // 弹幕字体大小
+            fontSize: parseInt(localStorage.getItem('danmaku_fontSize') || '25'), // 弹幕字体大小（从localStorage读取）
             color: '#FFFFFF', // 默认弹幕颜色
             mode: 0, // 默认弹幕模式：滚动
             modes: [0, 1, 2], // 允许所有弹幕模式：滚动、顶部、底部
@@ -1934,7 +1944,7 @@ function PlayPageClient() {
             maxLength: 100, // 弹幕最大长度
             lockTime: 3, // 输入框锁定时间
             theme: 'dark', // 弹幕主题
-            width: 768, // 屏幕宽度小于768px时，弹幕输入框移到底部
+            width: 512, // 屏幕宽度小于512px时，弹幕输入框移到底部（默认值）
           }),
         ],
       });
