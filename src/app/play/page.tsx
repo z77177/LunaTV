@@ -1731,7 +1731,7 @@ function PlayPageClient() {
                 artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
               } else {
                 console.log('没有弹幕数据可加载');
-                // 不显示提示，保持安静
+                artPlayerRef.current.notice.show = '暂无弹幕数据';
               }
             } else {
               console.error('弹幕插件未找到');
