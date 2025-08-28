@@ -372,119 +372,133 @@ async function extractPlatformUrls(doubanId: string, episode?: string | null): P
   }
 }
 
-// 从fc.lyz05.cn获取XML格式弹幕数据
+// 从XML API获取弹幕数据（支持多个备用URL）
 async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
-  const controller = new AbortController();
-  const timeout = 15000; // 15秒超时
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  const xmlApiUrls = [
+    'https://fc.lyz05.cn',
+    'https://danmu.smone.us'
+  ];
   
-  try {
-    const apiUrl = `https://fc.lyz05.cn/?url=${encodeURIComponent(videoUrl)}`;
-    console.log('🌐 正在请求XML弹幕API:', apiUrl);
+  // 尝试每个API URL
+  for (let i = 0; i < xmlApiUrls.length; i++) {
+    const baseUrl = xmlApiUrls[i];
+    const controller = new AbortController();
+    const timeout = 15000; // 15秒超时
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     
-    const response = await fetch(apiUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'application/xml, text/xml, */*',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-      },
-    });
-    
-    clearTimeout(timeoutId);
-    console.log('📡 XML API响应状态:', response.status, response.statusText);
+    try {
+      const apiUrl = `${baseUrl}/?url=${encodeURIComponent(videoUrl)}`;
+      const apiName = i === 0 ? '主用XML API' : `备用XML API ${i}`;
+      console.log(`🌐 正在请求${apiName}:`, apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'application/xml, text/xml, */*',
+          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        },
+      });
+      
+      clearTimeout(timeoutId);
+      console.log(`📡 ${apiName}响应状态:`, response.status, response.statusText);
 
-    if (!response.ok) {
-      console.log('❌ XML API响应失败:', response.status);
-      return [];
-    }
-
-    const responseText = await response.text();
-    console.log('📄 XML API原始响应长度:', responseText.length);
-    
-    // 使用正则表达式解析XML（Node.js兼容）
-    const danmakuRegex = /<d p="([^"]*)"[^>]*>([^<]*)<\/d>/g;
-    const danmuList: DanmuItem[] = [];
-    let match;
-    let count = 0;
-    
-    while ((match = danmakuRegex.exec(responseText)) !== null && count < 10000) {
-      try {
-        const pAttr = match[1];
-        const text = match[2];
-        
-        if (!pAttr || !text) continue;
-        
-        // XML格式: p="时间,模式,字号,颜色,时间戳,池,用户ID,ID"
-        const params = pAttr.split(',');
-        if (params.length < 4) continue;
-        
-        const time = parseFloat(params[0]) || 0;
-        const mode = parseInt(params[1]) || 0;
-        const colorInt = parseInt(params[3]) || 16777215; // 默认白色
-        
-        // 将整数颜色转换为十六进制
-        const color = '#' + colorInt.toString(16).padStart(6, '0').toUpperCase();
-        
-        // XML模式转换: 1-3滚动, 4顶部, 5底部
-        let artplayerMode = 0; // 默认滚动
-        if (mode === 4) artplayerMode = 1; // 顶部
-        else if (mode === 5) artplayerMode = 2; // 底部
-        
-        danmuList.push({
-          text: text.trim(),
-          time: time,
-          color: color,
-          mode: artplayerMode,
-        });
-        
-        count++;
-      } catch (error) {
-        console.error(`❌ 解析第${count}条XML弹幕失败:`, error);
+      if (!response.ok) {
+        console.log(`❌ ${apiName}响应失败:`, response.status);
+        continue; // 尝试下一个API
       }
-    }
-    
-    console.log(`📊 找到 ${danmuList.length} 条XML弹幕数据`);
-    
-    if (danmuList.length === 0) {
-      console.log('📭 XML API未返回弹幕数据');
-      console.log('🔍 XML响应前500字符:', responseText.substring(0, 500));
-      return [];
-    }
-    
-    // 过滤和排序
-    const filteredDanmu = danmuList.filter(item => 
-      item.text.length > 0 && 
-      !item.text.includes('弹幕正在赶来') && 
-      !item.text.includes('官方弹幕库') &&
-      item.time >= 0
-    ).sort((a, b) => a.time - b.time);
-    
-    console.log(`✅ XML API成功解析 ${filteredDanmu.length} 条有效弹幕`);
-    
-    // 显示时间分布统计
-    const timeStats = filteredDanmu.reduce((acc, item) => {
-      const timeRange = Math.floor(item.time / 60); // 按分钟分组
-      acc[timeRange] = (acc[timeRange] || 0) + 1;
-      return acc;
-    }, {} as Record<number, number>);
-    
-    console.log('📊 XML弹幕时间分布(按分钟):', timeStats);
-    console.log('📋 XML弹幕前10条:', filteredDanmu.slice(0, 10).map(item => 
-      `${item.time}s: "${item.text.substring(0, 20)}" (${item.color})`
-    ));
-    
-    return filteredDanmu;
 
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      console.error(`❌ XML弹幕API请求超时 (${timeout/1000}秒):`, videoUrl);
-    } else {
-      console.error('❌ XML弹幕API请求失败:', error);
+      const responseText = await response.text();
+      console.log(`📄 ${apiName}原始响应长度:`, responseText.length);
+      
+      // 使用正则表达式解析XML（Node.js兼容）
+      const danmakuRegex = /<d p="([^"]*)"[^>]*>([^<]*)<\/d>/g;
+      const danmuList: DanmuItem[] = [];
+      let match;
+      let count = 0;
+      
+      while ((match = danmakuRegex.exec(responseText)) !== null && count < 10000) {
+        try {
+          const pAttr = match[1];
+          const text = match[2];
+          
+          if (!pAttr || !text) continue;
+          
+          // XML格式: p="时间,模式,字号,颜色,时间戳,池,用户ID,ID"
+          const params = pAttr.split(',');
+          if (params.length < 4) continue;
+          
+          const time = parseFloat(params[0]) || 0;
+          const mode = parseInt(params[1]) || 0;
+          const colorInt = parseInt(params[3]) || 16777215; // 默认白色
+          
+          // 将整数颜色转换为十六进制
+          const color = '#' + colorInt.toString(16).padStart(6, '0').toUpperCase();
+          
+          // XML模式转换: 1-3滚动, 4顶部, 5底部
+          let artplayerMode = 0; // 默认滚动
+          if (mode === 4) artplayerMode = 1; // 顶部
+          else if (mode === 5) artplayerMode = 2; // 底部
+          
+          danmuList.push({
+            text: text.trim(),
+            time: time,
+            color: color,
+            mode: artplayerMode,
+          });
+          
+          count++;
+        } catch (error) {
+          console.error(`❌ 解析第${count}条XML弹幕失败:`, error);
+        }
+      }
+      
+      console.log(`📊 ${apiName}找到 ${danmuList.length} 条弹幕数据`);
+      
+      if (danmuList.length === 0) {
+        console.log(`📭 ${apiName}未返回弹幕数据`);
+        console.log(`🔍 ${apiName}响应前500字符:`, responseText.substring(0, 500));
+        continue; // 尝试下一个API
+      }
+      
+      // 过滤和排序
+      const filteredDanmu = danmuList.filter(item => 
+        item.text.length > 0 && 
+        !item.text.includes('弹幕正在赶来') && 
+        !item.text.includes('官方弹幕库') &&
+        item.time >= 0
+      ).sort((a, b) => a.time - b.time);
+      
+      console.log(`✅ ${apiName}成功解析 ${filteredDanmu.length} 条有效弹幕`);
+      
+      // 显示时间分布统计
+      const timeStats = filteredDanmu.reduce((acc, item) => {
+        const timeRange = Math.floor(item.time / 60); // 按分钟分组
+        acc[timeRange] = (acc[timeRange] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+      
+      console.log(`📊 ${apiName}弹幕时间分布(按分钟):`, timeStats);
+      console.log(`📋 ${apiName}弹幕前10条:`, filteredDanmu.slice(0, 10).map(item => 
+        `${item.time}s: "${item.text.substring(0, 20)}" (${item.color})`
+      ));
+      
+      return filteredDanmu; // 成功获取弹幕，直接返回
+
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.error(`❌ ${apiName}请求超时 (${timeout/1000}秒):`, videoUrl);
+      } else {
+        console.error(`❌ ${apiName}请求失败:`, error);
+      }
+      // 继续尝试下一个API
     }
-    return [];
   }
+  
+  // 所有API都失败了
+  console.log('❌ 所有XML API都无法获取弹幕数据');
+  return [];
 }
 
 // 从danmu.icu获取弹幕数据
@@ -650,26 +664,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 并发获取多个平台的弹幕（使用JSON API + XML API备用）
+    // 并发获取多个平台的弹幕（使用XML API + JSON API备用）
     const danmuPromises = platformUrls.map(async ({ platform, url }) => {
       console.log(`🔄 处理平台: ${platform}, URL: ${url}`);
       
-      // 首先尝试JSON API
-      let danmu = await fetchDanmuFromAPI(url);
-      console.log(`📊 ${platform} JSON API获取到 ${danmu.length} 条弹幕`);
+      // 首先尝试XML API (主用)
+      let danmu = await fetchDanmuFromXMLAPI(url);
+      console.log(`📊 ${platform} XML API获取到 ${danmu.length} 条弹幕`);
       
-      // 如果JSON API失败或结果很少，尝试XML API作为备用
+      // 如果XML API失败或结果很少，尝试JSON API作为备用
       if (danmu.length === 0) {
-        console.log(`🔄 ${platform} JSON API无结果，尝试XML API备用...`);
-        const xmlDanmu = await fetchDanmuFromXMLAPI(url);
-        console.log(`📊 ${platform} XML API获取到 ${xmlDanmu.length} 条弹幕`);
+        console.log(`🔄 ${platform} XML API无结果，尝试JSON API备用...`);
+        const jsonDanmu = await fetchDanmuFromAPI(url);
+        console.log(`📊 ${platform} JSON API获取到 ${jsonDanmu.length} 条弹幕`);
         
-        if (xmlDanmu.length > 0) {
-          danmu = xmlDanmu;
-          console.log(`✅ ${platform} 使用XML API备用数据: ${danmu.length} 条弹幕`);
+        if (jsonDanmu.length > 0) {
+          danmu = jsonDanmu;
+          console.log(`✅ ${platform} 使用JSON API备用数据: ${danmu.length} 条弹幕`);
         }
       } else {
-        console.log(`✅ ${platform} 使用JSON API数据: ${danmu.length} 条弹幕`);
+        console.log(`✅ ${platform} 使用XML API数据: ${danmu.length} 条弹幕`);
       }
       
       return { platform, danmu, url };
