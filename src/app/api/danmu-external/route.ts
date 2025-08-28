@@ -185,7 +185,6 @@ async function processSelectedResult(selectedResult: any, episode?: string | nul
           targetUrl = targetUrl.replace(/\.htm$/, '.html');
           console.log(`🔧 修复${platform}链接格式: ${targetUrl}`);
         }
-        }
         
         console.log(`🎯 识别平台: ${platform}, URL: ${targetUrl}`);
         
