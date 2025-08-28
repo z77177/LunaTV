@@ -1689,9 +1689,6 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
-                  // 保存到localStorage
-                  localStorage.setItem('danmaku_fontSize', item.value.toString());
-                  
                   // 显示处理中状态
                   artPlayerRef.current.notice.show = '弹幕字号调整中...';
                   
@@ -1703,7 +1700,7 @@ function PlayPageClient() {
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                       const currentFontSize = artPlayerRef.current.plugins.artplayerPluginDanmuku.fontSize;
                       
-                      // 只有字体大小真正改变时才更新
+                      // 只有字体大小真正改变时才更新（配置变更会自动触发保存）
                       if (currentFontSize !== item.value) {
                         artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                           fontSize: item.value
@@ -1746,9 +1743,6 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
-                  // 保存到localStorage
-                  localStorage.setItem('danmaku_margin', JSON.stringify(item.value));
-                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     margin: item.value
                   });
@@ -1791,9 +1785,6 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
-                  // 保存到localStorage
-                  localStorage.setItem('danmaku_speed', item.value.toString());
-                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     speed: item.value
                   });
@@ -1836,9 +1827,6 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
-                  // 保存到localStorage
-                  localStorage.setItem('danmaku_opacity', item.value.toString());
-                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     opacity: item.value
                   });
@@ -1881,9 +1869,6 @@ function PlayPageClient() {
             onSelect: function (item) {
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
-                  // 保存到localStorage
-                  localStorage.setItem('danmaku_modes', JSON.stringify(item.value));
-                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     modes: item.value
                   });
@@ -1905,9 +1890,6 @@ function PlayPageClient() {
               const nextState = !item.switch;
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                 try {
-                  // 保存到localStorage
-                  localStorage.setItem('danmaku_antiOverlap', nextState.toString());
-                  
                   artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
                     antiOverlap: nextState
                   });
@@ -1946,7 +1928,7 @@ function PlayPageClient() {
             margin: JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]'), // 弹幕上下边距（从localStorage读取）
             antiOverlap: localStorage.getItem('danmaku_antiOverlap') !== 'false', // 防重叠（从localStorage读取，默认true）
             synchronousPlayback: true, // 弹幕与视频播放同步
-            visible: true, // 弹幕层可见
+            visible: localStorage.getItem('danmaku_visible') !== 'false', // 弹幕层可见状态（从localStorage读取，默认true）
             emitter: false, // 关闭弹幕发射器，节省工具栏空间
             maxLength: 100, // 弹幕最大长度
             lockTime: 3, // 输入框锁定时间
@@ -1983,6 +1965,48 @@ function PlayPageClient() {
             console.error('加载外部弹幕失败:', error);
           }
         }, 1000); // 延迟1秒确保插件完全初始化
+
+        // 监听弹幕插件的显示/隐藏事件，自动保存状态到localStorage
+        artPlayerRef.current.on('artplayerPluginDanmuku:show', () => {
+          localStorage.setItem('danmaku_visible', 'true');
+          console.log('弹幕显示状态已保存');
+        });
+        
+        artPlayerRef.current.on('artplayerPluginDanmuku:hide', () => {
+          localStorage.setItem('danmaku_visible', 'false');
+          console.log('弹幕隐藏状态已保存');
+        });
+
+        // 监听弹幕插件的配置变更事件，自动保存所有设置到localStorage
+        artPlayerRef.current.on('artplayerPluginDanmuku:config', (option: any) => {
+          try {
+            // 保存所有弹幕配置到localStorage
+            if (typeof option.fontSize !== 'undefined') {
+              localStorage.setItem('danmaku_fontSize', option.fontSize.toString());
+            }
+            if (typeof option.opacity !== 'undefined') {
+              localStorage.setItem('danmaku_opacity', option.opacity.toString());
+            }
+            if (typeof option.speed !== 'undefined') {
+              localStorage.setItem('danmaku_speed', option.speed.toString());
+            }
+            if (typeof option.margin !== 'undefined') {
+              localStorage.setItem('danmaku_margin', JSON.stringify(option.margin));
+            }
+            if (typeof option.modes !== 'undefined') {
+              localStorage.setItem('danmaku_modes', JSON.stringify(option.modes));
+            }
+            if (typeof option.antiOverlap !== 'undefined') {
+              localStorage.setItem('danmaku_antiOverlap', option.antiOverlap.toString());
+            }
+            if (typeof option.visible !== 'undefined') {
+              localStorage.setItem('danmaku_visible', option.visible.toString());
+            }
+            console.log('弹幕配置已自动保存:', option);
+          } catch (error) {
+            console.error('保存弹幕配置失败:', error);
+          }
+        });
 
         // 播放器就绪后，如果正在播放则请求 Wake Lock
         if (artPlayerRef.current && !artPlayerRef.current.paused) {
