@@ -1533,16 +1533,40 @@ function PlayPageClient() {
                   if (nextState) {
                     // 开启外部弹幕
                     console.log('开启外部弹幕，开始加载数据...');
+                    const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+                    
+                    // 重新启用弹幕显示
+                    plugin.config({
+                      visible: true
+                    });
+                    
                     const externalDanmu = await loadExternalDanmu(true);
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.load(externalDanmu);
+                    plugin.load(externalDanmu);
                     console.log('外部弹幕已加载:', externalDanmu.length, '条');
                   } else {
-                    // 关闭外部弹幕
-                    console.log('关闭外部弹幕，清空数据...');
+                    // 关闭外部弹幕 - 使用最彻底的清空方法
+                    console.log('关闭外部弹幕，彻底清空...');
                     const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
-                    plugin.load([]);
+                    
+                    // 1. 先隐藏弹幕层
+                    plugin.hide();
+                    
+                    // 2. 清空当前显示的弹幕
                     plugin.reset();
-                    console.log('外部弹幕已清空');
+                    
+                    // 3. 清空弹幕数据源
+                    plugin.load([]);
+                    
+                    // 4. 通过config彻底禁用
+                    plugin.config({
+                      visible: false,
+                      danmuku: []
+                    });
+                    
+                    // 5. 重新显示（但已被禁用）
+                    plugin.show();
+                    
+                    console.log('外部弹幕已彻底清空');
                   }
                 }
                 
