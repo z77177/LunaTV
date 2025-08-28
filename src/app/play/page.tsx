@@ -114,7 +114,9 @@ function PlayPageClient() {
   const [videoTitle, setVideoTitle] = useState(searchParams.get('title') || '');
   const [videoYear, setVideoYear] = useState(searchParams.get('year') || '');
   const [videoCover, setVideoCover] = useState('');
-  const [videoDoubanId, setVideoDoubanId] = useState(0);
+  const [videoDoubanId, setVideoDoubanId] = useState(
+    parseInt(searchParams.get('douban_id') || '0') || 0
+  );
   // 当前源和ID
   const [currentSource, setCurrentSource] = useState(
     searchParams.get('source') || ''
