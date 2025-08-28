@@ -9,15 +9,6 @@ import { Heart } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 
-// 弹幕配置接口
-interface DanmakuConfig {
-  fontSize: number;
-  opacity: number;
-  speed: number;
-  margin: [number, string];
-  modes: (0 | 1 | 2)[];
-  antiOverlap: boolean;
-}
 
 import {
   deleteFavorite,
@@ -120,55 +111,6 @@ function PlayPageClient() {
     externalDanmuEnabledRef.current = externalDanmuEnabled;
   }, [externalDanmuEnabled]);
 
-  // 统一弹幕配置管理
-  const [danmakuConfig, setDanmakuConfig] = useState<DanmakuConfig>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('danmaku_config');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.warn('弹幕配置解析失败:', e);
-        }
-      }
-    }
-    // 默认配置
-    return {
-      fontSize: 25,
-      opacity: 0.8,
-      speed: 5,
-      margin: [10, '75%'] as [number, string],
-      modes: [0, 1, 2],
-      antiOverlap: true,
-    };
-  });
-  const danmakuConfigRef = useRef(danmakuConfig);
-  useEffect(() => {
-    danmakuConfigRef.current = danmakuConfig;
-  }, [danmakuConfig]);
-
-  // 统一弹幕配置更新函数（带防抖）
-  const updateDanmakuConfig = (updates: Partial<DanmakuConfig>) => {
-    const newConfig = { ...danmakuConfigRef.current, ...updates };
-    setDanmakuConfig(newConfig);
-    
-    // 保存到localStorage
-    try {
-      localStorage.setItem('danmaku_config', JSON.stringify(newConfig));
-    } catch (e) {
-      console.warn('弹幕配置保存失败:', e);
-    }
-
-    // 防抖更新播放器配置
-    if ((window as any).danmakuConfigTimeout) {
-      clearTimeout((window as any).danmakuConfigTimeout);
-    }
-    (window as any).danmakuConfigTimeout = setTimeout(() => {
-      if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-        artPlayerRef.current.plugins.artplayerPluginDanmuku.config(newConfig);
-      }
-    }, 100);
-  };
 
   // 视频基本信息
   const [videoTitle, setVideoTitle] = useState(searchParams.get('title') || '');
@@ -1745,9 +1687,28 @@ function PlayPageClient() {
               },
             ],
             onSelect: function (item) {
-              updateDanmakuConfig({ fontSize: item.value });
-              if (artPlayerRef.current) {
-                artPlayerRef.current.notice.show = `弹幕字号已调整: ${item.html}`;
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  // 保存到localStorage
+                  localStorage.setItem('danmaku_fontSize', item.value.toString());
+                  
+                  // 使用防抖优化性能
+                  if ((window as any).danmakuConfigTimeout) {
+                    clearTimeout((window as any).danmakuConfigTimeout);
+                  }
+                  (window as any).danmakuConfigTimeout = setTimeout(() => {
+                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                        fontSize: item.value
+                      });
+                    }
+                  }, 100);
+                  
+                  artPlayerRef.current.notice.show = `弹幕字号已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕字号失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕字号调整失败';
+                }
               }
               return item.html;
             },
@@ -1776,9 +1737,16 @@ function PlayPageClient() {
               },
             ],
             onSelect: function (item) {
-              updateDanmakuConfig({ margin: item.value });
-              if (artPlayerRef.current) {
-                artPlayerRef.current.notice.show = `弹幕区域已调整: ${item.html}`;
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    margin: item.value
+                  });
+                  artPlayerRef.current.notice.show = `弹幕区域已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕区域失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕区域调整失败';
+                }
               }
               return item.html;
             },
@@ -1811,9 +1779,16 @@ function PlayPageClient() {
               },
             ],
             onSelect: function (item) {
-              updateDanmakuConfig({ speed: item.value });
-              if (artPlayerRef.current) {
-                artPlayerRef.current.notice.show = `弹幕速度已调整: ${item.html}`;
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    speed: item.value
+                  });
+                  artPlayerRef.current.notice.show = `弹幕速度已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕速度失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕速度调整失败';
+                }
               }
               return item.html;
             },
@@ -1846,9 +1821,16 @@ function PlayPageClient() {
               },
             ],
             onSelect: function (item) {
-              updateDanmakuConfig({ opacity: item.value });
-              if (artPlayerRef.current) {
-                artPlayerRef.current.notice.show = `弹幕透明度已调整: ${item.html}`;
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    opacity: item.value
+                  });
+                  artPlayerRef.current.notice.show = `弹幕透明度已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕透明度失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕透明度调整失败';
+                }
               }
               return item.html;
             },
@@ -1881,9 +1863,16 @@ function PlayPageClient() {
               },
             ],
             onSelect: function (item) {
-              updateDanmakuConfig({ modes: item.value });
-              if (artPlayerRef.current) {
-                artPlayerRef.current.notice.show = `弹幕类型已调整: ${item.html}`;
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    modes: item.value
+                  });
+                  artPlayerRef.current.notice.show = `弹幕类型已调整: ${item.html}`;
+                } catch (error) {
+                  console.error('调整弹幕类型失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕类型调整失败';
+                }
               }
               return item.html;
             },
@@ -1895,9 +1884,16 @@ function PlayPageClient() {
             switch: true,
             onSwitch: function (item) {
               const nextState = !item.switch;
-              updateDanmakuConfig({ antiOverlap: nextState });
-              if (artPlayerRef.current) {
-                artPlayerRef.current.notice.show = nextState ? '弹幕防重叠已开启' : '弹幕防重叠已关闭';
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                try {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                    antiOverlap: nextState
+                  });
+                  artPlayerRef.current.notice.show = nextState ? '弹幕防重叠已开启' : '弹幕防重叠已关闭';
+                } catch (error) {
+                  console.error('调整弹幕防重叠失败:', error);
+                  artPlayerRef.current.notice.show = '弹幕防重叠调整失败';
+                }
               }
               return nextState;
             },
@@ -1938,14 +1934,14 @@ function PlayPageClient() {
         plugins: [
           artplayerPluginDanmuku({
             danmuku: [], // 初始为空数组，后续通过load方法加载
-            speed: danmakuConfig.speed, // 弹幕持续时间
-            opacity: danmakuConfig.opacity, // 弹幕透明度
-            fontSize: danmakuConfig.fontSize, // 弹幕字体大小
+            speed: 5, // 弹幕持续时间
+            opacity: 0.8, // 弹幕透明度
+            fontSize: parseInt(localStorage.getItem('danmaku_fontSize') || '25'), // 弹幕字体大小（从localStorage读取）
             color: '#FFFFFF', // 默认弹幕颜色
             mode: 0, // 默认弹幕模式：滚动
-            modes: danmakuConfig.modes as (0 | 1 | 2)[], // 允许的弹幕模式：0滚动 1顶部 2底部
-            margin: danmakuConfig.margin, // 弹幕上下边距
-            antiOverlap: danmakuConfig.antiOverlap, // 防重叠
+            modes: [0, 1, 2], // 允许所有弹幕模式：滚动、顶部、底部
+            margin: [10, '75%'], // 弹幕上下边距 - 默认1/4屏幕显示
+            antiOverlap: true, // 防重叠
             synchronousPlayback: true, // 弹幕与视频播放同步
             visible: true, // 弹幕层可见
             emitter: false, // 关闭弹幕发射器，节省工具栏空间
