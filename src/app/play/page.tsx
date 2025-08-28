@@ -1897,8 +1897,7 @@ function PlayPageClient() {
             },
           },
           {
-            position: 'left',
-            index: 14,
+            position: 'right',
             html: '弹',
             tooltip: '发送弹幕',
             click: function () {
@@ -1935,6 +1934,7 @@ function PlayPageClient() {
             maxLength: 100, // 弹幕最大长度
             lockTime: 3, // 输入框锁定时间
             theme: 'dark', // 弹幕主题
+            width: 768, // 屏幕宽度小于768px时，弹幕输入框移到底部
           }),
         ],
       });
