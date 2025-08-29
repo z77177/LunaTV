@@ -254,7 +254,6 @@ export async function getVideoResolutionFromM3u8(m3u8Url: string): Promise<{
     throw new Error(`测速失败: ${error}`);
   }
 }
-}
 
 export function cleanHtmlTags(text: string): string {
   if (!text) return '';
