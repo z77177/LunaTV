@@ -2324,6 +2324,22 @@ function PlayPageClient() {
           }
         });
 
+        // 监听播放进度跳转，触发弹幕重置
+        artPlayerRef.current.on('seek', (currentTime) => {
+          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+            artPlayerRef.current.plugins.artplayerPluginDanmuku.reset();
+            console.log('进度跳转，弹幕已重置');
+          }
+        });
+
+        // 监听播放器窗口尺寸变化，触发弹幕重置（双重保障）
+        artPlayerRef.current.on('resize', () => {
+          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+            artPlayerRef.current.plugins.artplayerPluginDanmuku.reset();
+            console.log('窗口尺寸变化，弹幕已重置');
+          }
+        });
+
         // 播放器就绪后，如果正在播放则请求 Wake Lock
         if (artPlayerRef.current && !artPlayerRef.current.paused) {
           requestWakeLock();
