@@ -2091,12 +2091,135 @@ function PlayPageClient() {
             .artplayer-plugin-danmuku .apd-emitter {
               display: none !important;
             }
+            
+            /* 弹幕配置面板自动适配定位 - 完全模仿ArtPlayer设置面板 */
+            .artplayer-plugin-danmuku .apd-config {
+              /* 确保相对定位容器不影响面板定位 */
+              position: relative;
+            }
+            
+            .artplayer-plugin-danmuku .apd-config-panel {
+              /* 改为绝对定位，相对于播放器容器 */
+              position: fixed !important;
+              left: auto !important;
+              right: 10px !important; /* 与ArtPlayer --art-padding 一致 */
+              transform: none !important; /* 移除任何变换 */
+              z-index: 91 !important; /* 比ArtPlayer设置面板(90)稍高 */
+            }
           `;
           document.head.appendChild(style);
         };
         
         // 应用CSS优化
         optimizeDanmukuControlsCSS();
+
+        // 移动端弹幕配置按钮点击切换支持 - 基于ArtPlayer设置按钮原理
+        const addMobileDanmakuToggle = () => {
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          
+          setTimeout(() => {
+            const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config');
+            const configPanel = document.querySelector('.artplayer-plugin-danmuku .apd-config-panel');
+            
+            if (!configButton || !configPanel) {
+              console.warn('弹幕配置按钮或面板未找到');
+              return;
+            }
+            
+            console.log('设备类型:', isMobile ? '移动端' : '桌面端');
+            
+            if (isMobile) {
+              // 移动端：添加点击切换支持 + 持久位置修正
+              console.log('为移动端添加弹幕配置按钮点击切换功能');
+              
+              let isConfigVisible = false;
+              
+              // 弹幕面板位置修正函数 - 完全模仿ArtPlayer设置面板算法
+              const adjustPanelPosition = () => {
+                const player = document.querySelector('.artplayer');
+                if (!player || !configButton || !configPanel) return;
+                
+                try {
+                  const panelElement = configPanel as HTMLElement;
+                  
+                  // 始终清除内联样式，使用CSS默认定位
+                  panelElement.style.left = '';
+                  panelElement.style.right = '';
+                  panelElement.style.transform = '';
+                  
+                  console.log('弹幕面板：使用CSS默认定位，自动适配屏幕方向');
+                } catch (error) {
+                  console.warn('弹幕面板位置调整失败:', error);
+                }
+              };
+              
+              // 添加点击事件监听器
+              configButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                isConfigVisible = !isConfigVisible;
+                
+                if (isConfigVisible) {
+                  (configPanel as HTMLElement).style.display = 'block';
+                  // 显示后立即调整位置
+                  setTimeout(adjustPanelPosition, 10);
+                  console.log('移动端弹幕配置面板：显示');
+                } else {
+                  (configPanel as HTMLElement).style.display = 'none';
+                  console.log('移动端弹幕配置面板：隐藏');
+                }
+              });
+              
+              // 监听ArtPlayer的resize事件，在每次resize后重新调整弹幕面板位置
+              if (artPlayerRef.current) {
+                artPlayerRef.current.on('resize', () => {
+                  if (isConfigVisible) {
+                    console.log('检测到ArtPlayer resize事件，重新调整弹幕面板位置');
+                    setTimeout(adjustPanelPosition, 50); // 短暂延迟确保resize完成
+                  }
+                });
+                console.log('已监听ArtPlayer resize事件，实现自动适配');
+              }
+              
+              // 额外监听屏幕方向变化事件，确保完全自动适配
+              const handleOrientationChange = () => {
+                if (isConfigVisible) {
+                  console.log('检测到屏幕方向变化，重新调整弹幕面板位置');
+                  setTimeout(adjustPanelPosition, 100); // 稍长延迟等待方向变化完成
+                }
+              };
+              
+              window.addEventListener('orientationchange', handleOrientationChange);
+              window.addEventListener('resize', handleOrientationChange);
+              
+              // 清理函数
+              const cleanup = () => {
+                window.removeEventListener('orientationchange', handleOrientationChange);
+                window.removeEventListener('resize', handleOrientationChange);
+              };
+              
+              // 点击其他地方自动隐藏
+              document.addEventListener('click', (e) => {
+                if (isConfigVisible && 
+                    !configButton.contains(e.target as Node) && 
+                    !configPanel.contains(e.target as Node)) {
+                  isConfigVisible = false;
+                  (configPanel as HTMLElement).style.display = 'none';
+                  console.log('点击外部区域，隐藏弹幕配置面板');
+                }
+              });
+              
+              console.log('移动端弹幕配置切换功能已激活');
+            } else {
+              // 桌面端：保持原有hover机制
+              console.log('桌面端保持原有hover机制');
+            }
+          }, 2000); // 延迟2秒确保弹幕插件完全初始化
+        };
+        
+        // 启用移动端弹幕配置切换
+        addMobileDanmakuToggle();
 
         // 播放器就绪后，加载外部弹幕数据
         console.log('播放器已就绪，开始加载外部弹幕');
