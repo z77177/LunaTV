@@ -2325,7 +2325,7 @@ function PlayPageClient() {
         });
 
         // 监听播放进度跳转，触发弹幕重置
-        artPlayerRef.current.on('seek', (currentTime) => {
+        artPlayerRef.current.on('seek', (currentTime: number) => {
           if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
             artPlayerRef.current.plugins.artplayerPluginDanmuku.reset();
             console.log('进度跳转，弹幕已重置');
