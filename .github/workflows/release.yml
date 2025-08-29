@@ -1,10 +1,10 @@
-name: Release
+name: Release by VERSION.txt
 
 on:
+  workflow_dispatch:   # 手动触发
   push:
-    paths:
-      - "VERSION.txt"   # 只有 VERSION.txt 变化时才触发
-  workflow_dispatch:     # 也可以手动触发
+    branches:
+      - main           # 当 main 分支更新时自动触发
 
 jobs:
   release:
@@ -29,24 +29,6 @@ jobs:
             exit 0
           fi
 
-      - name: Extract changelog for this version
-        id: changelog
-        run: |
-          VERSION=${{ env.VERSION }}
-          if [ ! -f CHANGELOG ]; then
-            echo "CHANGELOG file not found!"
-            exit 1
-          fi
-          # 提取 CHANGELOG 中对应版本的说明
-          NOTES=$(awk "/^## $VERSION/{flag=1;next}/^## /{flag=0}flag" CHANGELOG | sed '/^$/d')
-          if [ -z "$NOTES" ]; then
-            echo "No changelog entry found for $VERSION"
-            exit 1
-          fi
-          echo "NOTES<<EOF" >> $GITHUB_ENV
-          echo "$NOTES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
       - name: Create new tag
         run: |
           git config user.name "github-actions[bot]"
@@ -54,11 +36,22 @@ jobs:
           git tag ${{ env.VERSION }}
           git push origin ${{ env.VERSION }}
 
+      - name: Extract changelog for version
+        id: changelog
+        run: |
+          VERSION=${{ env.VERSION }}
+          # 提取 CHANGELOG 中对应版本的内容
+          CHANGELOG=$(awk "/^## $VERSION/{flag=1;next}/^## /{flag=0}flag" CHANGELOG | sed '/^$/d')
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          echo "body=$CHANGELOG" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.VERSION }}
           name: "Release ${{ env.VERSION }}"
-          body: ${{ env.NOTES }}
+          body: ${{ steps.changelog.outputs.body }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
