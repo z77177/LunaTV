@@ -1,4 +1,4 @@
-name: Release by VERSION.txt & CHANGELOG
+name: Release
 
 on:
   push:
