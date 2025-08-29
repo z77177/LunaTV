@@ -4,7 +4,7 @@ on:
   workflow_dispatch:   # 手动触发
   push:
     branches:
-      - main           # 当 main 分支更新时自动触发
+      - main           # main 分支更新时触发
 
 jobs:
   release:
@@ -40,8 +40,15 @@ jobs:
         id: changelog
         run: |
           VERSION=${{ env.VERSION }}
+
           # 提取 CHANGELOG 中对应版本的内容
-          CHANGELOG=$(awk "/^## $VERSION/{flag=1;next}/^## /{flag=0}flag" CHANGELOG | sed '/^$/d')
+          # 例如 VERSION=4.3.5，则匹配 "## [4.3.5]" 开头的段落
+          CHANGELOG=$(awk "/^## \\[$VERSION\\]/{flag=1;next}/^## \\[/{flag=0}flag" CHANGELOG | sed '/^$/d')
+
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="⚠️ 未找到 $VERSION 的更新记录，请检查 CHANGELOG 文件。"
+          fi
+
           echo "CHANGELOG<<EOF" >> $GITHUB_ENV
           echo "$CHANGELOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
