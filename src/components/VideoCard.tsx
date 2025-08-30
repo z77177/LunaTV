@@ -223,21 +223,18 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   );
 
   const handleClick = useCallback(() => {
-    // 构建豆瓣ID参数
-    const doubanIdParam = actualDoubanId && actualDoubanId > 0 ? `&douban_id=${actualDoubanId}` : '';
-    
     if (origin === 'live' && actualSource && actualId) {
       // 直播内容跳转到直播页面
       const url = `/live?source=${actualSource.replace('live_', '')}&id=${actualId.replace('live_', '')}`;
       router.push(url);
     } else if (from === 'douban' || (isAggregate && !actualSource && !actualId)) {
       const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${actualYear ? `&year=${actualYear}` : ''
-        }${doubanIdParam}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}`;
+        }${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}`;
       router.push(url);
     } else if (actualSource && actualId) {
       const url = `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
         actualTitle
-      )}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${isAggregate ? '&prefer=true' : ''
+      )}${actualYear ? `&year=${actualYear}` : ''}${isAggregate ? '&prefer=true' : ''
         }${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
         }${actualSearchType ? `&stype=${actualSearchType}` : ''}`;
       router.push(url);
@@ -253,25 +250,21 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     isAggregate,
     actualQuery,
     actualSearchType,
-    actualDoubanId,
   ]);
 
   // 新标签页播放处理函数
   const handlePlayInNewTab = useCallback(() => {
-    // 构建豆瓣ID参数
-    const doubanIdParam = actualDoubanId && actualDoubanId > 0 ? `&douban_id=${actualDoubanId}` : '';
-    
     if (origin === 'live' && actualSource && actualId) {
       // 直播内容跳转到直播页面
       const url = `/live?source=${actualSource.replace('live_', '')}&id=${actualId.replace('live_', '')}`;
       window.open(url, '_blank');
     } else if (from === 'douban' || (isAggregate && !actualSource && !actualId)) {
-      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}`;
+      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${actualYear ? `&year=${actualYear}` : ''}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}`;
       window.open(url, '_blank');
     } else if (actualSource && actualId) {
       const url = `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
         actualTitle
-      )}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${isAggregate ? '&prefer=true' : ''
+      )}${actualYear ? `&year=${actualYear}` : ''}${isAggregate ? '&prefer=true' : ''
         }${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
         }${actualSearchType ? `&stype=${actualSearchType}` : ''}`;
       window.open(url, '_blank');
@@ -286,7 +279,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     isAggregate,
     actualQuery,
     actualSearchType,
-    actualDoubanId,
   ]);
 
   // 检查搜索结果的收藏状态
