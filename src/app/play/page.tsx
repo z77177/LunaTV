@@ -2060,35 +2060,125 @@ function PlayPageClient() {
             },
           },
         ],
-        // 弹幕插件配置 - 禁用控制栏按钮，通过设置菜单控制
+        // 🚀 性能优化的弹幕插件配置 - 保持弹幕数量，优化渲染性能
         plugins: [
-          artplayerPluginDanmuku({
-            danmuku: [], // 初始为空数组，后续通过load方法加载
-            speed: parseInt(localStorage.getItem('danmaku_speed') || '6'), // 弹幕持续时间，稍微加快减少同屏数量
-            opacity: parseFloat(localStorage.getItem('danmaku_opacity') || '0.8'), // 弹幕透明度（从localStorage读取）
-            fontSize: parseInt(localStorage.getItem('danmaku_fontSize') || '25'), // 弹幕字体大小（从localStorage读取）
-            color: '#FFFFFF', // 默认弹幕颜色
-            mode: 0, // 默认弹幕模式：滚动
-            modes: JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]'), // 允许的弹幕模式（从localStorage读取）
-            margin: JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]'), // 弹幕上下边距（从localStorage读取）
-            antiOverlap: localStorage.getItem('danmaku_antiOverlap') !== 'false', // 防重叠（从localStorage读取，默认true）
-            synchronousPlayback: true, // 弹幕与视频播放同步
-            visible: localStorage.getItem('danmaku_visible') !== 'false', // 弹幕层可见状态（从localStorage读取，默认true）
-            emitter: false, // 关闭弹幕发射器，节省工具栏空间
-            maxLength: 50, // 减少弹幕最大长度，过长弹幕影响性能
-            lockTime: 3, // 输入框锁定时间
-            theme: 'dark', // 弹幕主题
-            width: 300, // 当播放器宽度小于此值时，弹幕控件置于播放器底部，确保移动端正常显示
-            // 添加弹幕过滤器，过滤掉可能影响性能的弹幕
-            filter: (danmu) => {
-              // 过滤过长的弹幕（影响渲染性能）
-              if (danmu.text.length > 50) return false;
-              // 过滤特殊字符过多的弹幕（可能导致渲染问题）
-              if (/[^\u4e00-\u9fa5a-zA-Z0-9\s.,!?；，。！？]/g.test(danmu.text) && 
-                  (danmu.text.match(/[^\u4e00-\u9fa5a-zA-Z0-9\s.,!?；，。！？]/g) || []).length > 5) return false;
-              return true;
-            },
-          }),
+          artplayerPluginDanmuku((() => {
+            // 🎯 设备性能检测
+            const getDevicePerformance = () => {
+              const hardwareConcurrency = navigator.hardwareConcurrency || 2
+              const memory = (performance as any).memory?.jsHeapSizeLimit || 0
+              
+              // 简单性能评分（0-1）
+              let score = 0
+              score += Math.min(hardwareConcurrency / 4, 1) * 0.5 // CPU核心数权重
+              score += Math.min(memory / (1024 * 1024 * 1024), 1) * 0.3 // 内存权重
+              score += (isMobile ? 0.2 : 0.5) * 0.2 // 设备类型权重
+              
+              if (score > 0.7) return 'high'
+              if (score > 0.4) return 'medium' 
+              return 'low'
+            }
+            
+            const devicePerformance = getDevicePerformance()
+            console.log(`🎯 设备性能等级: ${devicePerformance}`)
+            
+            // 🚀 根据设备性能调整弹幕渲染策略（不减少数量）
+            const getOptimizedConfig = () => {
+              const baseConfig = {
+                danmuku: [], // 初始为空数组，后续通过load方法加载
+                speed: parseInt(localStorage.getItem('danmaku_speed') || '6'),
+                opacity: parseFloat(localStorage.getItem('danmaku_opacity') || '0.8'),
+                fontSize: parseInt(localStorage.getItem('danmaku_fontSize') || '25'),
+                color: '#FFFFFF',
+                mode: 0,
+                modes: JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]'),
+                margin: JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]'),
+                visible: localStorage.getItem('danmaku_visible') !== 'false',
+                emitter: false,
+                maxLength: 50,
+                lockTime: 3,
+                theme: 'dark',
+                width: 300,
+                
+                // 🧠 智能过滤器 - 只过滤有问题的弹幕，不减少数量
+                filter: (danmu: any) => {
+                  // 过滤空弹幕
+                  if (!danmu.text || !danmu.text.trim()) return false
+                  
+                  // 过滤超长弹幕（影响性能）
+                  if (danmu.text.length > 100) return false
+                  
+                  // 过滤可能导致渲染问题的特殊字符
+                  const specialCharCount = (danmu.text.match(/[^\u4e00-\u9fa5a-zA-Z0-9\s.,!?；，。！？]/g) || []).length
+                  if (specialCharCount > 10) return false
+                  
+                  return true // 保持尽可能多的弹幕
+                },
+                
+                // 🎯 保持原有的 beforeVisible 逻辑，只添加性能优化
+                beforeVisible: (danmu: any) => {
+                  return new Promise((resolve) => {
+                    // 低性能设备添加CSS动画优化
+                    if (devicePerformance === 'low' && danmu.$ref && danmu.mode === 0) {
+                      // 添加硬件加速样式
+                      danmu.$ref.classList.add('art-danmuku-optimized')
+                      danmu.$ref.style.willChange = 'transform'
+                      danmu.$ref.style.backfaceVisibility = 'hidden'
+                    }
+                    resolve(true)
+                  })
+                },
+              }
+              
+              // 根据设备性能调整核心配置
+              switch (devicePerformance) {
+                case 'high': // 高性能设备 - 完整功能
+                  return {
+                    ...baseConfig,
+                    antiOverlap: true, // 开启防重叠
+                    synchronousPlayback: true, // 开启同步播放
+                  }
+                
+                case 'medium': // 中等性能设备 - 适度优化
+                  return {
+                    ...baseConfig,
+                    antiOverlap: !isMobile, // 移动端关闭防重叠
+                    synchronousPlayback: false, // 关闭同步播放计算
+                  }
+                
+                case 'low': // 低性能设备 - 激进优化
+                  return {
+                    ...baseConfig,
+                    antiOverlap: false, // 关闭复杂的防重叠算法
+                    synchronousPlayback: false, // 关闭同步播放
+                  }
+              }
+            }
+            
+            const config = getOptimizedConfig()
+            
+            // 🎨 为低性能设备添加CSS硬件加速样式
+            if (devicePerformance === 'low') {
+              // 创建CSS动画样式（硬件加速）
+              if (!document.getElementById('danmaku-performance-css')) {
+                const style = document.createElement('style')
+                style.id = 'danmaku-performance-css'
+                style.textContent = `
+                  /* 🚀 硬件加速的弹幕优化 */
+                  .art-danmuku-optimized {
+                    will-change: transform !important;
+                    backface-visibility: hidden !important;
+                    transform: translateZ(0) !important;
+                    transition: transform linear !important;
+                  }
+                `
+                document.head.appendChild(style)
+                console.log('🎨 已加载CSS硬件加速优化')
+              }
+            }
+            
+            return config
+          })()),
           // Chromecast 插件加载策略：
           // 只在 Chrome 浏览器中显示 Chromecast（排除 iOS Chrome）
           // Safari 和 iOS：不显示 Chromecast（用原生 AirPlay）
