@@ -2,15 +2,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
-
-const Grid = dynamic(
-  () => import('react-window').then(mod => ({ default: mod.Grid })),
-  { 
-    ssr: false,
-    loading: () => <div className="animate-pulse h-96 bg-gray-200 dark:bg-gray-800 rounded-lg" />
-  }
-);
+import { FixedSizeGrid as Grid } from 'react-window';
 
 import { SearchResult } from '@/lib/types';
 import { useResponsiveGrid } from '@/hooks/useResponsiveGrid';
@@ -115,51 +107,47 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
   // 网格行数计算
   const rowCount = Math.ceil(displayItemCount / columnCount);
 
-  // 渲染单个网格项 - react-window 2.0.0 新API格式
+  // 渲染单个网格项 - 优化版本，减少 props 传递
   const CellComponent = useCallback(({ 
     columnIndex, 
     rowIndex, 
-    style,
-    displayData: cellDisplayData,
-    viewMode: cellViewMode,
-    searchQuery: cellSearchQuery,
-    columnCount: cellColumnCount,
-    displayItemCount: cellDisplayItemCount,
-    groupStatsRef: cellGroupStatsRef,
-    getGroupRef: cellGetGroupRef,
-    computeGroupStats: cellComputeGroupStats,
-  }: any) => {
-    const index = rowIndex * cellColumnCount + columnIndex;
+    style
+  }: {
+    columnIndex: number;
+    rowIndex: number;
+    style: React.CSSProperties;
+  }) => {
+    const index = rowIndex * columnCount + columnIndex;
     
     // 如果超出显示范围，返回空
-    if (index >= cellDisplayItemCount) {
+    if (index >= displayItemCount) {
       return <div style={style} />;
     }
 
-    const item = cellDisplayData[index];
+    const item = displayData[index];
     
     if (!item) {
       return <div style={style} />;
     }
 
     // 根据视图模式渲染不同内容
-    if (cellViewMode === 'agg') {
+    if (viewMode === 'agg') {
       const [mapKey, group] = item as [string, SearchResult[]];
       const title = group[0]?.title || '';
       const poster = group[0]?.poster || '';
       const year = group[0]?.year || 'unknown';
-      const { episodes, source_names, douban_id } = cellComputeGroupStats(group);
+      const { episodes, source_names, douban_id } = computeGroupStats(group);
       const type = episodes === 1 ? 'movie' : 'tv';
 
       // 如果该聚合第一次出现，写入初始统计
-      if (!cellGroupStatsRef.current.has(mapKey)) {
-        cellGroupStatsRef.current.set(mapKey, { episodes, source_names, douban_id });
+      if (!groupStatsRef.current.has(mapKey)) {
+        groupStatsRef.current.set(mapKey, { episodes, source_names, douban_id });
       }
 
       return (
         <div style={{ ...style, padding: '8px' }}>
           <VideoCard
-            ref={cellGetGroupRef(mapKey)}
+            ref={getGroupRef(mapKey)}
             from='search'
             isAggregate={true}
             title={title}
@@ -168,7 +156,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
             episodes={episodes}
             source_names={source_names}
             douban_id={douban_id}
-            query={cellSearchQuery.trim() !== title ? cellSearchQuery.trim() : ''}
+            query={searchQuery.trim() !== title ? searchQuery.trim() : ''}
             type={type}
           />
         </div>
@@ -185,7 +173,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
             source={searchItem.source}
             source_name={searchItem.source_name}
             douban_id={searchItem.douban_id}
-            query={cellSearchQuery.trim() !== searchItem.title ? cellSearchQuery.trim() : ''}
+            query={searchQuery.trim() !== searchItem.title ? searchQuery.trim() : ''}
             year={searchItem.year}
             from='search'
             type={searchItem.episodes.length > 1 ? 'tv' : 'movie'}
@@ -193,7 +181,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
         </div>
       );
     }
-  }, []);
+  }, [displayData, viewMode, searchQuery, columnCount, displayItemCount, groupStatsRef, getGroupRef, computeGroupStats]);
 
   // 计算网格高度
   const gridHeight = Math.min(
@@ -222,39 +210,30 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
         </div>
       ) : (
         <Grid
-          key={`grid-${containerWidth}-${columnCount}`}
-          cellComponent={CellComponent}
-          cellProps={{
-            displayData,
-            viewMode,
-            searchQuery,
-            columnCount,
-            displayItemCount,
-            groupStatsRef,
-            getGroupRef,
-            computeGroupStats,
-          }}
+          key={`grid-${Math.floor(containerWidth / 100) * 100}-${columnCount}`}
           columnCount={columnCount}
           columnWidth={itemWidth + 16}
-          defaultHeight={gridHeight}
-          defaultWidth={containerWidth}
+          height={gridHeight}
           rowCount={rowCount}
           rowHeight={itemHeight + 16}
-          overscanCount={1}
+          width={containerWidth}
+          overscanRowCount={3}
+          overscanColumnCount={1}
           style={{
             overflowX: 'hidden',
             overflowY: 'auto',
-            // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
           }}
-          onCellsRendered={({ rowStartIndex, rowStopIndex }) => {
-            const visibleStopIndex = rowStopIndex;
+          onItemsRendered={({ visibleRowStartIndex, visibleRowStopIndex }) => {
+            const visibleStopIndex = visibleRowStopIndex;
             
-            if (visibleStopIndex >= rowCount - LOAD_MORE_THRESHOLD && hasNextPage && !isLoadingMore) {
+            if (visibleStopIndex >= rowCount - loadMoreThreshold && hasNextPage && !isLoadingMore) {
               loadMoreItems();
             }
           }}
-        />
+        >
+          {CellComponent}
+        </Grid>
       )}
       
       {/* 加载更多指示器 */}
