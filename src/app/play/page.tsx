@@ -962,7 +962,7 @@ function PlayPageClient() {
           console.log('HLS实例已销毁');
         }
 
-        // 3. 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
+        // 3. 销毁ArtPlayer实例 - 使用false参数避免清空DOM导致的错误
         artPlayerRef.current.destroy(false);
         artPlayerRef.current = null;
 
@@ -1987,7 +1987,8 @@ function PlayPageClient() {
       // 创建新的播放器实例
       Artplayer.PLAYBACK_RATE = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
       Artplayer.USE_RAF = true;
-      Artplayer.REMOVE_SRC_WHEN_DESTROY = false; // v5.3.0修复: 禁用destroy时移除src，避免'run'错误
+      // 重新启用5.3.0内存优化功能，但使用false参数避免清空DOM
+      Artplayer.REMOVE_SRC_WHEN_DESTROY = true;
 
       artPlayerRef.current = new Artplayer({
         container: artRef.current,
@@ -2110,6 +2111,7 @@ function PlayPageClient() {
                   ) {
                     artPlayerRef.current.video.hls.destroy();
                   }
+                  // 使用false参数避免清空DOM导致的错误
                   artPlayerRef.current.destroy(false);
                   artPlayerRef.current = null;
                 }
