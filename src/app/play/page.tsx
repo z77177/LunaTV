@@ -4,13 +4,15 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 
-import { useRouter, useSearchParams } from 'next/navigation';
 import Hls from 'hls.js';
 import { Heart } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
+import EpisodeSelector from '@/components/EpisodeSelector';
+import NetDiskSearchResults from '@/components/NetDiskSearchResults';
+import PageLayout from '@/components/PageLayout';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
-
-
+import { ClientCache } from '@/lib/client-cache';
 import {
   deleteFavorite,
   deletePlayRecord,
@@ -24,14 +26,9 @@ import {
   saveSkipConfig,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
-import { ClientCache } from '@/lib/client-cache';
 import { getDoubanDetails } from '@/lib/douban.client';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
-
-import EpisodeSelector from '@/components/EpisodeSelector';
-import PageLayout from '@/components/PageLayout';
-import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 
 // 扩展 HTMLVideoElement 类型以支持 hls 属性
 declare global {
@@ -472,6 +469,58 @@ function PlayPageClient() {
       console.log('Failed to fetch bangumi details:', error);
     }
     return null;
+  };
+
+  /**
+   * 生成搜索查询的多种变体，提高搜索命中率
+   * @param originalQuery 原始查询
+   * @returns 按优先级排序的搜索变体数组
+   */
+  const generateSearchVariants = (originalQuery: string): string[] => {
+    const variants: string[] = [];
+    const trimmed = originalQuery.trim();
+    
+    // 1. 原始查询（最高优先级）
+    variants.push(trimmed);
+    
+    // 如果包含空格，生成额外变体
+    if (trimmed.includes(' ')) {
+      // 2. 去除所有空格
+      const noSpaces = trimmed.replace(/\s+/g, '');
+      if (noSpaces !== trimmed) {
+        variants.push(noSpaces);
+      }
+      
+      // 3. 标准化空格（多个空格合并为一个）
+      const normalizedSpaces = trimmed.replace(/\s+/g, ' ');
+      if (normalizedSpaces !== trimmed && !variants.includes(normalizedSpaces)) {
+        variants.push(normalizedSpaces);
+      }
+      
+      // 4. 提取关键词组合（针对"中餐厅 第九季"这种情况）
+      const keywords = trimmed.split(/\s+/);
+      if (keywords.length >= 2) {
+        // 主要关键词 + 季/集等后缀
+        const mainKeyword = keywords[0];
+        const lastKeyword = keywords[keywords.length - 1];
+        
+        // 如果最后一个词包含"第"、"季"、"集"等，尝试组合
+        if (/第|季|集|部|篇|章/.test(lastKeyword)) {
+          const combined = mainKeyword + lastKeyword;
+          if (!variants.includes(combined)) {
+            variants.push(combined);
+          }
+        }
+        
+        // 仅使用主关键词搜索
+        if (!variants.includes(mainKeyword)) {
+          variants.push(mainKeyword);
+        }
+      }
+    }
+    
+    // 去重并返回
+    return Array.from(new Set(variants));
   };
 
   // 网盘搜索函数
@@ -1300,32 +1349,68 @@ function PlayPageClient() {
       }
     };
     const fetchSourcesData = async (query: string): Promise<SearchResult[]> => {
-      // 根据搜索词获取全部源信息
+      // 使用智能搜索变体获取全部源信息
       try {
-        const response = await fetch(
-          `/api/search?q=${encodeURIComponent(query.trim())}`
-        );
-        if (!response.ok) {
-          throw new Error('搜索失败');
+        console.log('开始智能搜索，原始查询:', query);
+        const searchVariants = generateSearchVariants(query.trim());
+        console.log('生成的搜索变体:', searchVariants);
+        
+        const allResults: SearchResult[] = [];
+        let bestResults: SearchResult[] = [];
+        
+        // 依次尝试每个搜索变体
+        for (const variant of searchVariants) {
+          console.log('尝试搜索变体:', variant);
+          
+          const response = await fetch(
+            `/api/search?q=${encodeURIComponent(variant)}`
+          );
+          if (!response.ok) {
+            console.warn(`搜索变体 "${variant}" 失败:`, response.statusText);
+            continue;
+          }
+          const data = await response.json();
+          
+          if (data.results && data.results.length > 0) {
+            allResults.push(...data.results);
+            
+            // 处理搜索结果，根据规则过滤
+            const filteredResults = data.results.filter(
+              (result: SearchResult) => {
+                const titleMatch = result.title.replaceAll(' ', '').toLowerCase() ===
+                  videoTitleRef.current.replaceAll(' ', '').toLowerCase();
+                const yearMatch = videoYearRef.current
+                  ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
+                  : true;
+                const typeMatch = searchType
+                  ? (searchType === 'tv' && result.episodes.length > 1) ||
+                    (searchType === 'movie' && result.episodes.length === 1)
+                  : true;
+                
+                return titleMatch && yearMatch && typeMatch;
+              }
+            );
+            
+            if (filteredResults.length > 0) {
+              console.log(`变体 "${variant}" 找到 ${filteredResults.length} 个匹配结果`);
+              bestResults = filteredResults;
+              break; // 找到精确匹配就停止
+            }
+          }
         }
-        const data = await response.json();
-
-        // 处理搜索结果，根据规则过滤
-        const results = data.results.filter(
-          (result: SearchResult) =>
-            result.title.replaceAll(' ', '').toLowerCase() ===
-            videoTitleRef.current.replaceAll(' ', '').toLowerCase() &&
-            (videoYearRef.current
-              ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
-              : true) &&
-            (searchType
-              ? (searchType === 'tv' && result.episodes.length > 1) ||
-              (searchType === 'movie' && result.episodes.length === 1)
-              : true)
-        );
-        setAvailableSources(results);
-        return results;
+        
+        // 如果没有精确匹配，返回所有结果让用户选择
+        const finalResults = bestResults.length > 0 ? bestResults : 
+          // 去重所有结果
+          Array.from(
+            new Map(allResults.map(item => [`${item.source}-${item.id}`, item])).values()
+          );
+          
+        console.log(`智能搜索完成，最终返回 ${finalResults.length} 个结果`);
+        setAvailableSources(finalResults);
+        return finalResults;
       } catch (err) {
+        console.error('智能搜索失败:', err);
         setSourceSearchError(err instanceof Error ? err.message : '搜索失败');
         setAvailableSources([]);
         return [];
