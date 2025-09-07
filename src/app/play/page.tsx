@@ -957,12 +957,12 @@ function PlayPageClient() {
         }
 
         // 2. 销毁HLS实例
-        if (artPlayerRef.current.video && artPlayerRef.current.video.hls) {
+        if (artPlayerRef.current.video.hls) {
           artPlayerRef.current.video.hls.destroy();
           console.log('HLS实例已销毁');
         }
 
-        // 3. 销毁ArtPlayer实例 - 使用false参数避免清空DOM导致的错误
+        // 3. 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
         artPlayerRef.current.destroy(false);
         artPlayerRef.current = null;
 
@@ -2105,13 +2105,9 @@ function PlayPageClient() {
                 localStorage.setItem('enable_blockad', String(newVal));
                 if (artPlayerRef.current) {
                   resumeTimeRef.current = artPlayerRef.current.currentTime;
-                  if (
-                    artPlayerRef.current.video &&
-                    artPlayerRef.current.video.hls
-                  ) {
+                  if (artPlayerRef.current.video.hls) {
                     artPlayerRef.current.video.hls.destroy();
                   }
-                  // 使用false参数避免清空DOM导致的错误
                   artPlayerRef.current.destroy(false);
                   artPlayerRef.current = null;
                 }
