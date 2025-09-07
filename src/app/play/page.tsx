@@ -5,9 +5,8 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-// 移除静态导入，改为动态导入避免SSR问题
-// import Artplayer from 'artplayer';
-// import artplayerPluginDanmuku from 'artplayer-plugin-danmuku';
+import Artplayer from 'artplayer';
+import artplayerPluginDanmuku from 'artplayer-plugin-danmuku';
 import Hls from 'hls.js';
 import { Heart } from 'lucide-react';
 
@@ -1985,12 +1984,6 @@ function PlayPageClient() {
     }
 
     try {
-      // 动态导入ArtPlayer避免SSR问题
-      const [{ default: Artplayer }, { default: artplayerPluginDanmuku }] = await Promise.all([
-        import('artplayer'),
-        import('artplayer-plugin-danmuku')
-      ]);
-
       // 创建新的播放器实例
       Artplayer.PLAYBACK_RATE = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
       Artplayer.USE_RAF = true;
