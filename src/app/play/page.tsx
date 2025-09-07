@@ -1778,13 +1778,10 @@ function PlayPageClient() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-        // 清理事件监听器
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-      };
+      // 清理事件监听器
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-
-    initPlayer();
   }, [currentEpisodeIndex, detail, artPlayerRef.current]);
 
   // 清理定时器
@@ -1862,16 +1859,16 @@ function PlayPageClient() {
   };
 
   useEffect(() => {
-    const initPlayer = async () => {
-      if (
-        !Hls ||
-        !videoUrl ||
-        loading ||
-        currentEpisodeIndex === null ||
-        !artRef.current
-      ) {
-        return;
-      }
+    if (
+      !Artplayer ||
+      !Hls ||
+      !videoUrl ||
+      loading ||
+      currentEpisodeIndex === null ||
+      !artRef.current
+    ) {
+      return;
+    }
 
     // 确保选集索引有效
     if (
