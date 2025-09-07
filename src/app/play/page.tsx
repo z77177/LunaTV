@@ -1773,9 +1773,9 @@ function PlayPageClient() {
       }
     };
 
-      // 添加事件监听器
-      window.addEventListener('beforeunload', handleBeforeUnload);
-      document.addEventListener('visibilitychange', handleVisibilityChange);
+    // 添加事件监听器
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     };
 
     initPlayer();
