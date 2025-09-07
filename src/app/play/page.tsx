@@ -2685,17 +2685,17 @@ function PlayPageClient() {
         // 监听拖拽状态 - v5.2.0优化: 在拖拽期间暂停弹幕更新以减少闪烁
         artPlayerRef.current.on('video:seeking', () => {
           isDraggingProgressRef.current = true;
-          // v5.2.0新增: 拖拽时暂停弹幕动画，减少CPU占用和闪烁
-          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-            artPlayerRef.current.plugins.artplayerPluginDanmuku.stop();
+          // v5.2.0新增: 拖拽时隐藏弹幕，减少CPU占用和闪烁
+          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku && !artPlayerRef.current.plugins.artplayerPluginDanmuku.isHide) {
+            artPlayerRef.current.plugins.artplayerPluginDanmuku.hide();
           }
         });
 
         artPlayerRef.current.on('video:seeked', () => {
           isDraggingProgressRef.current = false;
-          // v5.2.0优化: 拖拽结束后恢复弹幕播放并重置位置
+          // v5.2.0优化: 拖拽结束后恢复弹幕显示并重置位置
           if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-            artPlayerRef.current.plugins.artplayerPluginDanmuku.start(); // 先恢复播放
+            artPlayerRef.current.plugins.artplayerPluginDanmuku.show(); // 先恢复显示
             setTimeout(() => {
               // 延迟重置以确保播放状态稳定
               if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
