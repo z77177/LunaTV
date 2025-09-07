@@ -4,7 +4,6 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 
-import Artplayer from 'artplayer';
 import Hls from 'hls.js';
 import { Heart, Radio, Search, Tv, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -934,9 +933,9 @@ function LivePageClient() {
 
   // 播放器初始化
   useEffect(() => {
-    const preload = async () => {
+    // 异步初始化播放器，避免SSR问题
+    const initPlayer = async () => {
       if (
-        !Artplayer ||
         !Hls ||
         !videoUrl ||
         !artRef.current ||
@@ -978,6 +977,9 @@ function LivePageClient() {
       const customType = { m3u8: m3u8Loader };
       const targetUrl = `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;
       try {
+        // 使用动态导入的 Artplayer
+        const Artplayer = (window as any).DynamicArtplayer;
+        
         // 创建新的播放器实例
         Artplayer.USE_RAF = true;
 
@@ -1062,9 +1064,25 @@ function LivePageClient() {
         console.error('创建播放器失败:', err);
         // 不设置错误，只记录日志
       }
-    }
-    preload();
-  }, [Artplayer, Hls, videoUrl, currentChannel, loading]);
+    }; // 结束 initPlayer 函数
+
+    // 动态导入 ArtPlayer 并初始化
+    const loadAndInit = async () => {
+      try {
+        const { default: Artplayer } = await import('artplayer');
+        
+        // 将导入的模块设置为全局变量供 initPlayer 使用
+        (window as any).DynamicArtplayer = Artplayer;
+        
+        await initPlayer();
+      } catch (error) {
+        console.error('动态导入 ArtPlayer 失败:', error);
+        // 不设置错误，只记录日志
+      }
+    };
+
+    loadAndInit();
+  }, [Hls, videoUrl, currentChannel, loading]);
 
   // 清理播放器资源
   useEffect(() => {
