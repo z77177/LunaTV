@@ -140,6 +140,8 @@ export async function searchFromApi(
   query: string
 ): Promise<SearchResult[]> {
   try {
+    const apiBaseUrl = apiSite.api;
+    
     // 智能搜索：生成多种查询变体
     const searchVariants = generateSearchVariants(query);
     let results: SearchResult[] = [];
@@ -147,7 +149,6 @@ export async function searchFromApi(
     
     // 依次尝试每种搜索变体，找到第一个有结果的就停止
     for (const variant of searchVariants) {
-      const apiBaseUrl = apiSite.api;
       const apiUrl =
         apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(variant);
 
