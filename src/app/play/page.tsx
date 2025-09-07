@@ -1773,18 +1773,18 @@ function PlayPageClient() {
       }
     };
 
-      // 添加事件监听器
-      window.addEventListener('beforeunload', handleBeforeUnload);
-      document.addEventListener('visibilitychange', handleVisibilityChange);
+    // 添加事件监听器
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      return () => {
+        // 清理事件监听器
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     };
 
     initPlayer();
-    
-    // 返回清理函数
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
   }, [currentEpisodeIndex, detail, artPlayerRef.current]);
 
   // 清理定时器
