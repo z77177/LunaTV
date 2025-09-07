@@ -963,7 +963,11 @@ function PlayPageClient() {
         }
 
         // 3. 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
-        artPlayerRef.current.destroy(false);
+        if (artPlayerRef.current.video) {
+          artPlayerRef.current.destroy(false);
+        } else {
+          console.warn('Video element not ready, skipping destroy');
+        }
         artPlayerRef.current = null;
 
         console.log('播放器资源已清理');
@@ -1987,7 +1991,8 @@ function PlayPageClient() {
       // 创建新的播放器实例
       Artplayer.PLAYBACK_RATE = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
       Artplayer.USE_RAF = true;
-      Artplayer.REMOVE_SRC_WHEN_DESTROY = false; // v5.3.0修复: 禁用destroy时移除src，避免'run'错误
+      // 启用5.3.0内存优化功能，配合安全检查使用
+      Artplayer.REMOVE_SRC_WHEN_DESTROY = true;
 
       artPlayerRef.current = new Artplayer({
         container: artRef.current,
@@ -2110,7 +2115,11 @@ function PlayPageClient() {
                   ) {
                     artPlayerRef.current.video.hls.destroy();
                   }
-                  artPlayerRef.current.destroy(false);
+                  if (artPlayerRef.current.video) {
+                    artPlayerRef.current.destroy(false);
+                  } else {
+                    console.warn('Video element not ready, skipping destroy');
+                  }
                   artPlayerRef.current = null;
                 }
                 setBlockAdEnabled(newVal);
