@@ -36,6 +36,16 @@ jobs:
           echo "[Error] Due to a change in the workflow file of the upstream repository, GitHub has automatically suspended the scheduled automatic update. You need to manually sync your fork."
           exit 1
 
+      - name: Trigger Release workflow
+        if: steps.sync.outputs.has_new_commits == 'true'
+        run: |
+          echo "New commits synced, triggering release.yml workflow..."
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/release.yml/dispatches \
+            -d '{"ref":"main"}'
+
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@main
         with:
