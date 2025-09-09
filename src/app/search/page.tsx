@@ -441,11 +441,11 @@ function SearchPageClient() {
   useEffect(() => {
     if (searchType === 'netdisk' && showResults) {
       const currentQuery = searchQuery.trim() || searchParams.get('q');
-      if (currentQuery && !netdiskLoading && !netdiskResults) {
+      if (currentQuery && !netdiskLoading && !netdiskResults && !netdiskError) {
         handleNetDiskSearch(currentQuery);
       }
     }
-  }, [searchType, showResults, searchQuery, searchParams, netdiskLoading, netdiskResults]);
+  }, [searchType, showResults, searchQuery, searchParams, netdiskLoading, netdiskResults, netdiskError]);
 
   useEffect(() => {
     // 当搜索参数变化时更新搜索状态
