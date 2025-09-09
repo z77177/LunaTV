@@ -32,7 +32,7 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
   const [messages, setMessages] = useState<ExtendedAIMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{message: string, details?: string} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +130,27 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
       setMessages([...updatedMessages, assistantMessage]);
     } catch (error) {
       console.error('AI推荐请求失败:', error);
-      setError(error instanceof Error ? error.message : '请求失败，请稍后重试');
+      
+      if (error instanceof Error) {
+        // 尝试解析错误响应中的详细信息
+        try {
+          const errorResponse = JSON.parse(error.message);
+          setError({
+            message: errorResponse.error || error.message,
+            details: errorResponse.details
+          });
+        } catch {
+          setError({
+            message: error.message,
+            details: '如果问题持续，请联系管理员检查AI配置'
+          });
+        }
+      } else {
+        setError({
+          message: '请求失败，请稍后重试',
+          details: '未知错误，请检查网络连接'
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -343,8 +363,32 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
 
           {/* 错误提示 */}
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-3 rounded-lg">
-              {error}
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
+                    {error.message}
+                  </h3>
+                  {error.details && (
+                    <div className="mt-2 text-sm text-red-700 dark:text-red-400">
+                      <p>{error.details}</p>
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <button
+                      onClick={() => setError(null)}
+                      className="text-sm bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-800 dark:text-red-200 px-3 py-1 rounded-md transition-colors"
+                    >
+                      关闭
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

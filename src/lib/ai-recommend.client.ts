@@ -62,7 +62,12 @@ export async function sendAIRecommendMessage(
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error || 'AI推荐请求失败');
+    // 将完整错误信息作为JSON字符串抛出，以便前端解析
+    throw new Error(JSON.stringify({
+      error: errorData.error || 'AI推荐请求失败',
+      details: errorData.details,
+      status: errorData.status || response.status
+    }));
   }
 
   return response.json();
