@@ -16,6 +16,7 @@ interface ChatRequest {
   model?: string;
   temperature?: number;
   max_tokens?: number;
+  max_completion_tokens?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    const { messages, model, temperature, max_tokens } = await request.json() as ChatRequest;
+    const { messages, model, temperature, max_tokens, max_completion_tokens } = await request.json() as ChatRequest;
 
     // 验证请求格式
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -121,12 +122,26 @@ export async function POST(request: NextRequest) {
     ];
 
     // 使用配置中的参数或请求参数
-    const requestBody = {
-      model: model || aiConfig.model,
+    const requestModel = model || aiConfig.model;
+    const tokenLimit = max_tokens || max_completion_tokens || aiConfig.maxTokens;
+    
+    // 判断是否是需要使用max_completion_tokens的模型
+    // 仅OpenAI的o系列(o1,o3,o4等)和GPT-5系列使用max_completion_tokens
+    const useMaxCompletionTokens = requestModel.startsWith('o') ||  // 所有o系列模型
+                                  requestModel.includes('gpt-5');
+    
+    const requestBody: any = {
+      model: requestModel,
       messages: chatMessages,
       temperature: temperature ?? aiConfig.temperature,
-      max_tokens: max_tokens ?? aiConfig.maxTokens,
     };
+    
+    // 根据模型类型使用正确的token限制参数
+    if (useMaxCompletionTokens) {
+      requestBody.max_completion_tokens = tokenLimit;
+    } else {
+      requestBody.max_tokens = tokenLimit;
+    }
 
     // 调用AI API
     const openaiResponse = await fetch(aiConfig.apiUrl.endsWith('/chat/completions') 
