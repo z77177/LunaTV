@@ -656,50 +656,20 @@ function SearchPageClient() {
       const response = await fetch(`/api/netdisk/search?q=${encodeURIComponent(query.trim())}`);
       const data = await response.json();
 
-      if (data.success) {
+      // 检查响应状态和success字段
+      if (response.ok && data.success) {
         setNetdiskResults(data.data.merged_by_type || {});
         setNetdiskTotal(data.data.total || 0);
       } else {
-        // 添加延迟以防止闪烁，让加载状态持续最少500ms
-        const minLoadingTime = 500;
-        const loadingStartTime = Date.now();
-        
-        const setErrorWithDelay = () => {
-          const elapsedTime = Date.now() - loadingStartTime;
-          const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-          
-          setTimeout(() => {
-            setNetdiskError(data.error || '网盘搜索失败');
-            setNetdiskLoading(false);
-          }, remainingTime);
-        };
-        
-        setErrorWithDelay();
-        return; // 提前返回，避免在finally中再次设置loading状态
+        // 处理错误情况（包括功能关闭、配置错误等）
+        setNetdiskError(data.error || '网盘搜索失败');
       }
     } catch (error: any) {
       console.error('网盘搜索请求失败:', error);
-      
-      // 同样添加延迟防止闪烁
-      const minLoadingTime = 500;
-      const loadingStartTime = Date.now();
-      
-      const setErrorWithDelay = () => {
-        const elapsedTime = Date.now() - loadingStartTime;
-        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
-        
-        setTimeout(() => {
-          setNetdiskError('网盘搜索请求失败，请稍后重试');
-          setNetdiskLoading(false);
-        }, remainingTime);
-      };
-      
-      setErrorWithDelay();
-      return; // 提前返回，避免在finally中再次设置loading状态
+      setNetdiskError('网盘搜索请求失败，请稍后重试');
+    } finally {
+      setNetdiskLoading(false);
     }
-    
-    // 只有成功情况下才会到达这里
-    setNetdiskLoading(false);
   };
 
   const handleSearch = (e: React.FormEvent) => {
