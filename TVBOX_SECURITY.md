@@ -3,16 +3,19 @@
 ## 🔒 安全问题
 TVBox的JSON接口默认无鉴权，可能被他人滥用。现已添加多种可选的安全机制。
 
-## 🛠️ 安全选项
+## 🛠️ 后台配置界面
+
+所有安全配置都可以在 **管理后台 > TVBox安全配置** 页面中进行设置，无需修改环境变量或配置文件。
 
 ### 1. Token鉴权（推荐）
 通过URL参数添加token验证：
 
-**环境变量配置：**
-```bash
-ENABLE_TVBOX_AUTH=true
-TVBOX_TOKEN=你的专用token  # 可选，不设置则使用PASSWORD
-```
+**后台配置步骤：**
+1. 登录管理后台
+2. 进入 "TVBox安全配置" 页面
+3. 启用 "Token验证"
+4. 系统会自动生成安全token（也可手动修改）
+5. 保存配置
 
 **使用方式：**
 - 无鉴权：`https://your-domain.com/api/tvbox`
@@ -22,20 +25,18 @@ TVBOX_TOKEN=你的专用token  # 可选，不设置则使用PASSWORD
 ### 2. IP白名单
 限制只允许特定IP访问：
 
-**环境变量配置：**
-```bash
-ENABLE_TVBOX_IP_WHITELIST=true
-TVBOX_ALLOWED_IPS=192.168.1.100,10.0.0.50,*  # 逗号分隔，*表示允许所有
-```
+**后台配置步骤：**
+1. 在管理后台的 "TVBox安全配置" 中启用 "IP白名单"
+2. 添加允许访问的IP地址（支持单个IP或CIDR格式）
+3. 保存配置
 
 ### 3. 访问频率限制
 防止频繁访问滥用：
 
-**环境变量配置：**
-```bash
-ENABLE_TVBOX_RATE_LIMIT=true
-TVBOX_RATE_LIMIT=60  # 每分钟最多60次请求
-```
+**后台配置步骤：**
+1. 在管理后台启用 "频率限制"
+2. 设置每分钟允许的最大请求次数（默认60次）
+3. 保存配置
 
 ## 📱 TVBox配置示例
 
@@ -46,53 +47,38 @@ https://your-domain.com/api/tvbox
 
 ### 启用Token验证
 ```
-https://your-domain.com/api/tvbox?token=mySecretToken123
+https://your-domain.com/api/tvbox?token=你的token
 ```
 
-### 完整配置示例
-在你的`.env`文件中添加：
-```bash
-# TVBox安全配置
-ENABLE_TVBOX_AUTH=true
-TVBOX_TOKEN=myTvboxToken2025
-ENABLE_TVBOX_IP_WHITELIST=true
-TVBOX_ALLOWED_IPS=192.168.1.0/24,10.0.0.0/24
-ENABLE_TVBOX_RATE_LIMIT=true
-TVBOX_RATE_LIMIT=30
+### Base64格式配置
+```
+https://your-domain.com/api/tvbox?format=base64&token=你的token
 ```
 
 ## 💡 使用建议
 
 ### 家庭使用
-```bash
-# 只需要token验证即可
-ENABLE_TVBOX_AUTH=true
-TVBOX_TOKEN=家庭专用token
-```
+- 在后台启用 "Token验证" 即可
+- 建议定期更换token以提高安全性
 
 ### 公网部署
-```bash
-# 建议开启所有安全机制
-ENABLE_TVBOX_AUTH=true
-TVBOX_TOKEN=复杂的随机token
-ENABLE_TVBOX_RATE_LIMIT=true
-TVBOX_RATE_LIMIT=30
-```
+- 建议启用所有三种安全机制：
+  1. Token验证（必选）
+  2. 频率限制（推荐设置为30次/分钟）
+  3. IP白名单（如果IP相对固定）
 
 ### 内网使用
-```bash
-# 可以只用IP白名单
-ENABLE_TVBOX_IP_WHITELIST=true
-TVBOX_ALLOWED_IPS=192.168.1.0/24
-```
+- 可以仅使用IP白名单限制内网访问
+- 或使用Token验证提供额外安全性
 
 ## ⚠️ 注意事项
 
 1. **TVBox兼容性**：所有安全机制都是可选的，默认保持无鉴权兼容TVBox
-2. **Token安全**：token一旦设置，需要在TVBox中配置完整URL才能访问
-3. **IP白名单**：适合固定网络环境，移动设备可能IP变化
-4. **频率限制**：防止暴力访问，正常使用不会触发
-5. **组合使用**：可以同时启用多种安全机制
+2. **后台配置**：所有设置都在管理后台中完成，实时生效无需重启
+3. **Token安全**：token一旦启用，需要在TVBox中配置完整URL才能访问
+4. **IP白名单**：适合固定网络环境，移动设备可能IP变化
+5. **频率限制**：防止暴力访问，正常使用不会触发
+6. **组合使用**：可以同时启用多种安全机制
 
 ## 🔧 故障排除
 
@@ -100,17 +86,20 @@ TVBOX_ALLOWED_IPS=192.168.1.0/24
 1. 检查URL是否包含正确的token参数
 2. 确认IP是否在白名单中
 3. 检查是否触发频率限制（等待1分钟后重试）
+4. 在管理后台查看TVBox安全配置是否正确保存
 
 ### 错误信息说明
 - `Invalid token`：token不正确或缺失
 - `Access denied for IP`：IP不在白名单中
 - `Rate limit exceeded`：访问频率过高
 
-## 📊 监控建议
+## 📊 配置管理
 
-可以在服务器日志中查看：
-- 访问IP地址
-- 访问频率
-- 鉴权失败次数
+### 在管理后台中：
+1. **实时预览**：可以看到生成的TVBox配置URL
+2. **安全状态**：显示当前启用的安全机制
+3. **Token管理**：支持自动生成或手动设置token
+4. **IP管理**：可视化添加/删除IP白名单
+5. **频率设置**：滑块调整请求限制次数
 
-这些信息有助于发现异常访问模式。
+这些功能让TVBox安全配置变得简单直观，无需编辑配置文件。
