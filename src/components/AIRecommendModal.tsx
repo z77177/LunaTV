@@ -309,7 +309,10 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
                       推荐影片卡片
                     </div>
                     <span className="text-gray-400 dark:text-gray-500">
-                      显示 {message.recommendations.length}/4
+                      {message.recommendations.length < 4 
+                        ? `显示 ${message.recommendations.length} 个推荐`
+                        : `显示前 4 个推荐`
+                      }
                     </span>
                   </div>
                   {message.recommendations.map((movie, index) => (
