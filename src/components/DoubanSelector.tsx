@@ -236,7 +236,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     ];
 
     // 根据内容类型选择对应的类型映射
-    let typeOptions;
+    let typeOptions: { label: string; value: string }[];
     if (type === 'movie') {
       typeOptions = movieTypeOptions;
     } else if (type === 'tv') {
