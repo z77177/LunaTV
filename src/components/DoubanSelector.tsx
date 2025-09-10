@@ -291,6 +291,21 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
       { label: '60年代', value: '1960s' },
       { label: '更早', value: 'earlier' },
     ];
+
+    // 平台选项映射
+    const platformOptions = [
+      { label: '腾讯视频', value: 'tencent' },
+      { label: '爱奇艺', value: 'iqiyi' },
+      { label: '优酷', value: 'youku' },
+      { label: '湖南卫视', value: 'hunan_tv' },
+      { label: 'Netflix', value: 'netflix' },
+      { label: 'HBO', value: 'hbo' },
+      { label: 'BBC', value: 'bbc' },
+      { label: 'NHK', value: 'nhk' },
+      { label: 'CBS', value: 'cbs' },
+      { label: 'NBC', value: 'nbc' },
+      { label: 'tvN', value: 'tvn' },
+    ];
     
     // 处理每个选项，将中文label转换为英文value保存到内部状态
     Object.entries(values).forEach(([key, value]) => {
@@ -310,8 +325,13 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
           if (yearOption) {
             newFilterValues[key] = yearOption.value;
           }
+        } else if (key === 'platform') {
+          const platformOption = platformOptions.find(opt => opt.label === value);
+          if (platformOption) {
+            newFilterValues[key] = platformOption.value;
+          }
         } else {
-          // 对于其他字段（如sort、platform），直接使用value
+          // 对于其他字段（如sort），直接使用value
           newFilterValues[key] = value;
         }
       }
