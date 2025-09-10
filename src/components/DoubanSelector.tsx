@@ -282,8 +282,6 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     } else if (type === 'show') {
       typeOptions = showTypeOptions;
     } else if (type === 'anime') {
-      // 动漫需要根据当前选择的是番剧还是剧场版来决定映射
-      // 直接使用animeTypeOptions，因为我们只使用共同的6个类型
       typeOptions = animeTypeOptions;
     } else {
       typeOptions = movieTypeOptions; // 默认使用电影类型
@@ -858,14 +856,14 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
                 {(primarySelection || animePrimaryOptions[0].value) ===
                 '番剧' ? (
                   <MultiLevelSelector
-                    key={`anime-tv-${primarySelection}-${currentFilterValues.type || 'default'}`}
+                    key={`anime-tv-${primarySelection}`}
                     onChange={handleMultiLevelChange}
                     contentType='anime-tv'
                     initialValues={currentFilterValues}
                   />
                 ) : (
                   <MultiLevelSelector
-                    key={`anime-movie-${primarySelection}-${currentFilterValues.type || 'default'}`}
+                    key={`anime-movie-${primarySelection}`}
                     onChange={handleMultiLevelChange}
                     contentType='anime-movie'
                     initialValues={currentFilterValues}
