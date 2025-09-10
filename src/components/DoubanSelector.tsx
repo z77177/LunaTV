@@ -178,15 +178,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     } else {
       newFilterValues.type = genreValue;
     }
-    
-    // 对于动漫，需要延迟设置currentFilterValues，确保primarySelection更新后MultiLevelSelector已经渲染
-    if (type === 'anime') {
-      setTimeout(() => {
-        setCurrentFilterValues(newFilterValues);
-      }, 100);
-    } else {
-      setCurrentFilterValues(newFilterValues);
-    }
+    setCurrentFilterValues(newFilterValues);
     
     // 直接调用onMultiLevelChange，让父组件立即更新数据
     setTimeout(() => {
