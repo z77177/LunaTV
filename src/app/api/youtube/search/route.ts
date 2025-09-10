@@ -9,6 +9,29 @@ export const runtime = 'nodejs';
 // YouTube Data API v3 配置
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 
+// 内容类型到搜索关键词的映射
+const getContentTypeQuery = (originalQuery: string, contentType: string): string => {
+  if (contentType === 'all') return originalQuery;
+  
+  const typeKeywords = {
+    music: ['music', 'song', 'audio', 'MV', 'cover', 'live'],
+    movie: ['movie', 'film', 'trailer', 'cinema', 'full movie'],
+    educational: ['tutorial', 'education', 'learn', 'how to', 'guide', 'course'],
+    gaming: ['gaming', 'gameplay', 'game', 'walkthrough', 'review'],
+    sports: ['sports', 'football', 'basketball', 'soccer', 'match', 'game'],
+    news: ['news', 'breaking', 'report', 'today', 'latest']
+  };
+  
+  const keywords = typeKeywords[contentType as keyof typeof typeKeywords] || [];
+  if (keywords.length > 0) {
+    // 随机选择一个关键词添加到搜索中
+    const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
+    return `${originalQuery} ${randomKeyword}`;
+  }
+  
+  return originalQuery;
+};
+
 // 模拟搜索数据（当没有真实API Key时使用）
 const mockSearchResults = [
   {
@@ -89,6 +112,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q');
+  const contentType = searchParams.get('contentType') || 'all';
   
   if (!query) {
     return NextResponse.json({ error: '搜索关键词不能为空' }, { status: 400 });
@@ -119,10 +143,10 @@ export async function GET(request: NextRequest) {
 
     // YouTube搜索缓存：60分钟（因为YouTube内容更新频率相对较低）
     const YOUTUBE_CACHE_TIME = 60 * 60; // 60分钟（秒）
-    const enabledRegionsStr = (youtubeConfig.enabledRegions || []).sort().join(',');
-    const enabledCategoriesStr = (youtubeConfig.enabledCategories || []).sort().join(',');
-    // 缓存key包含功能状态、演示模式、最大结果数，确保配置变化时缓存隔离
-    const cacheKey = `youtube-search-${youtubeConfig.enabled}-${youtubeConfig.enableDemo}-${maxResults}-${query}-${enabledRegionsStr}-${enabledCategoriesStr}`;
+    const enabledRegionsStr = (youtubeConfig.enabledRegions || []).sort().join(',') || 'none';
+    const enabledCategoriesStr = (youtubeConfig.enabledCategories || []).sort().join(',') || 'none';
+    // 缓存key包含功能状态、演示模式、最大结果数、内容类型，确保配置变化时缓存隔离
+    const cacheKey = `youtube-search-${youtubeConfig.enabled}-${youtubeConfig.enableDemo}-${maxResults}-${encodeURIComponent(query)}-${contentType}-${enabledRegionsStr}-${enabledCategoriesStr}`;
     
     console.log(`🔍 检查YouTube搜索缓存: ${cacheKey}`);
     
@@ -147,7 +171,31 @@ export async function GET(request: NextRequest) {
 
     // 如果启用演示模式或没有配置API Key，返回模拟数据
     if (youtubeConfig.enableDemo || !youtubeConfig.apiKey) {
-      const filteredResults = mockSearchResults.slice(0, maxResults).map(video => ({
+      // 根据内容类型过滤模拟结果
+      let filteredResults = [...mockSearchResults];
+      
+      if (contentType !== 'all') {
+        // 简单的内容类型过滤逻辑（基于标题关键词）
+        const typeFilters = {
+          music: ['music', 'song', 'MV', 'audio'],
+          movie: ['movie', 'film', 'video'],
+          educational: ['tutorial', 'guide', 'how'],
+          gaming: ['game', 'gaming'],
+          sports: ['sports', 'match'],
+          news: ['news', 'report']
+        };
+        
+        const filterKeywords = typeFilters[contentType as keyof typeof typeFilters] || [];
+        if (filterKeywords.length > 0) {
+          filteredResults = filteredResults.filter(video => 
+            filterKeywords.some(keyword => 
+              video.snippet.title.toLowerCase().includes(keyword)
+            )
+          );
+        }
+      }
+      
+      const finalResults = filteredResults.slice(0, maxResults).map(video => ({
         ...video,
         snippet: {
           ...video.snippet,
@@ -157,7 +205,7 @@ export async function GET(request: NextRequest) {
       
       const responseData = {
         success: true,
-        videos: filteredResults,
+        videos: finalResults,
         total: filteredResults.length,
         query: query,
         source: 'demo'
@@ -175,9 +223,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 使用真实的YouTube API
+    const enhancedQuery = getContentTypeQuery(query.trim(), contentType);
     const searchUrl = `${YOUTUBE_API_BASE}/search?` +
       `key=${youtubeConfig.apiKey}&` +
-      `q=${encodeURIComponent(query)}&` +
+      `q=${encodeURIComponent(enhancedQuery)}&` +
       `part=snippet&` +
       `type=video&` +
       `maxResults=${maxResults}&` +

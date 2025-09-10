@@ -62,6 +62,7 @@ function SearchPageClient() {
   const [youtubeResults, setYoutubeResults] = useState<any[] | null>(null);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [youtubeError, setYoutubeError] = useState<string | null>(null);
+  const [youtubeContentType, setYoutubeContentType] = useState<'all' | 'music' | 'movie' | 'educational' | 'gaming' | 'sports' | 'news'>('all');
   // 聚合卡片 refs 与聚合统计缓存
   const groupRefs = useRef<Map<string, React.RefObject<VideoCardHandle>>>(new Map());
   const groupStatsRef = useRef<Map<string, { douban_id?: number; episodes?: number; source_names: string[] }>>(new Map());
@@ -653,7 +654,7 @@ function SearchPageClient() {
   };
 
   // YouTube搜索函数
-  const handleYouTubeSearch = async (query: string) => {
+  const handleYouTubeSearch = async (query: string, contentType = youtubeContentType) => {
     if (!query.trim()) return;
 
     setYoutubeLoading(true);
@@ -661,7 +662,12 @@ function SearchPageClient() {
     setYoutubeResults(null);
 
     try {
-      const response = await fetch(`/api/youtube/search?q=${encodeURIComponent(query.trim())}`);
+      // 构建搜索URL，包含内容类型参数
+      let searchUrl = `/api/youtube/search?q=${encodeURIComponent(query.trim())}`;
+      if (contentType && contentType !== 'all') {
+        searchUrl += `&contentType=${contentType}`;
+      }
+      const response = await fetch(searchUrl);
       const data = await response.json();
 
       if (response.ok && data.success) {
@@ -935,6 +941,38 @@ function SearchPageClient() {
                         </span>
                       )}
                     </h2>
+                    
+                    {/* 内容类型选择器 */}
+                    <div className='mt-3 flex flex-wrap gap-2'>
+                      {[
+                        { key: 'all', label: '全部' },
+                        { key: 'music', label: '音乐' },
+                        { key: 'movie', label: '电影' },
+                        { key: 'educational', label: '教育' },
+                        { key: 'gaming', label: '游戏' },
+                        { key: 'sports', label: '体育' },
+                        { key: 'news', label: '新闻' }
+                      ].map((type) => (
+                        <button
+                          key={type.key}
+                          onClick={() => {
+                            setYoutubeContentType(type.key as any);
+                            const currentQuery = searchQuery.trim() || searchParams?.get('q');
+                            if (currentQuery) {
+                              handleYouTubeSearch(currentQuery, type.key as any);
+                            }
+                          }}
+                          className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                            youtubeContentType === type.key
+                              ? 'bg-red-500 text-white border-red-500'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                          }`}
+                          disabled={youtubeLoading}
+                        >
+                          {type.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   {youtubeError ? (
                     <div className='text-center py-8'>
