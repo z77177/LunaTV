@@ -53,36 +53,15 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     { label: '最新电影', value: '最新' },
     { label: '豆瓣高分', value: '豆瓣高分' },
     { label: '冷门佳片', value: '冷门佳片' },
-    { label: '按类型', value: '按类型' },
   ];
 
-  // 电影的二级选择器选项 - 按地区分类
-  const movieRegionOptions: SelectorOption[] = [
+  // 电影的二级选择器选项
+  const movieSecondaryOptions: SelectorOption[] = [
     { label: '全部', value: '全部' },
     { label: '华语', value: '华语' },
     { label: '欧美', value: '欧美' },
     { label: '韩国', value: '韩国' },
     { label: '日本', value: '日本' },
-  ];
-
-  // 电影的二级选择器选项 - 按类型分类
-  const movieGenreOptions: SelectorOption[] = [
-    { label: '全部', value: '全部' },
-    { label: '动作', value: '动作' },
-    { label: '喜剧', value: '喜剧' },
-    { label: '爱情', value: '爱情' },
-    { label: '科幻', value: '科幻' },
-    { label: '恐怖', value: '恐怖' },
-    { label: '悬疑', value: '悬疑' },
-    { label: '惊悚', value: '惊悚' },
-    { label: '犯罪', value: '犯罪' },
-    { label: '战争', value: '战争' },
-    { label: '冒险', value: '冒险' },
-    { label: '奇幻', value: '奇幻' },
-    { label: '剧情', value: '剧情' },
-    { label: '历史', value: '历史' },
-    { label: '纪录片', value: '纪录片' },
-    { label: '动画', value: '动画' },
   ];
 
   // 电视剧一级选择器选项
@@ -210,12 +189,9 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     // 副选择器初始位置
     let secondaryActiveIndex = -1;
     if (type === 'movie') {
-      // 根据主选择器的值决定使用哪个副选择器选项
-      const secondaryOptions = primarySelection === '按类型' 
-        ? movieGenreOptions 
-        : movieRegionOptions;
-      secondaryActiveIndex = secondaryOptions.findIndex(
-        (opt) => opt.value === (secondarySelection || secondaryOptions[0].value)
+      secondaryActiveIndex = movieSecondaryOptions.findIndex(
+        (opt) =>
+          opt.value === (secondarySelection || movieSecondaryOptions[0].value)
       );
     } else if (type === 'tv') {
       secondaryActiveIndex = tvSecondaryOptions.findIndex(
@@ -294,13 +270,10 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     let options: SelectorOption[] = [];
 
     if (type === 'movie') {
-      // 根据主选择器的值决定使用哪个副选择器选项
-      options = primarySelection === '按类型' 
-        ? movieGenreOptions 
-        : movieRegionOptions;
-      activeIndex = options.findIndex(
+      activeIndex = movieSecondaryOptions.findIndex(
         (opt) => opt.value === secondarySelection
       );
+      options = movieSecondaryOptions;
     } else if (type === 'tv') {
       activeIndex = tvSecondaryOptions.findIndex(
         (opt) => opt.value === secondarySelection
@@ -322,7 +295,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
       );
       return cleanup;
     }
-  }, [secondarySelection, primarySelection]); // 添加primarySelection依赖
+  }, [secondarySelection]);
 
   // 渲染胶囊式选择器
   const renderCapsuleSelector = (
@@ -398,16 +371,16 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
             </div>
           </div>
 
-          {/* 二级选择器 - 根据主选择器动态切换 */}
+          {/* 二级选择器 - 只在非"全部"时显示 */}
           {primarySelection !== '全部' ? (
             <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
               <span className='text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[48px]'>
-                {primarySelection === '按类型' ? '类型' : '地区'}
+                地区
               </span>
               <div className='overflow-x-auto'>
                 {renderCapsuleSelector(
-                  primarySelection === '按类型' ? movieGenreOptions : movieRegionOptions,
-                  secondarySelection || (primarySelection === '按类型' ? movieGenreOptions[0].value : movieRegionOptions[0].value),
+                  movieSecondaryOptions,
+                  secondarySelection || movieSecondaryOptions[0].value,
                   onSecondaryChange,
                   false
                 )}
