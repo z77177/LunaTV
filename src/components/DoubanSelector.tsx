@@ -148,27 +148,19 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
 
   // 处理快捷类型按钮点击
   const handleQuickGenreClick = (genreValue: string) => {
-    // 根据内容类型选择对应的选项数组和分类
+    // 自动切换到"全部"分类
+    onPrimaryChange('全部');
+    
+    // 根据内容类型选择对应的选项数组
     let currentOptions;
     if (type === 'movie') {
       currentOptions = quickGenreOptions;
-      onPrimaryChange('全部');
     } else if (type === 'tv') {
       currentOptions = quickTVGenreOptions;
-      onPrimaryChange('全部');
     } else if (type === 'show') {
       currentOptions = quickShowGenreOptions;
-      onPrimaryChange('全部');
     } else if (type === 'anime') {
       currentOptions = quickAnimeGenreOptions;
-      // 动漫需要根据类型选择番剧或剧场版
-      if (genreValue === 'love') {
-        // "恋爱"只有番剧支持
-        onPrimaryChange('番剧');
-      } else {
-        // 其他类型两者都支持，默认选择番剧
-        onPrimaryChange('番剧');
-      }
     } else {
       return; // 其他类型不支持快捷按钮
     }
