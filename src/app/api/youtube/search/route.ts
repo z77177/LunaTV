@@ -206,9 +206,10 @@ export async function GET(request: NextRequest) {
       const responseData = {
         success: true,
         videos: finalResults,
-        total: filteredResults.length,
+        total: finalResults.length,
         query: query,
-        source: 'demo'
+        source: 'demo',
+        warning: youtubeConfig.enableDemo ? '当前为演示模式，显示模拟数据' : 'API Key未配置，显示模拟数据。请在管理后台配置YouTube API Key以获取真实搜索结果'
       };
 
       // 服务端直接保存到数据库（不用ClientCache，避免HTTP循环调用）
@@ -235,7 +236,22 @@ export async function GET(request: NextRequest) {
     const response = await fetch(searchUrl);
 
     if (!response.ok) {
-      throw new Error(`YouTube API请求失败: ${response.status}`);
+      // 检查具体的错误状态
+      if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error?.errors?.[0]?.reason === 'quotaExceeded') {
+          throw new Error('YouTube API配额已用完，请稍后重试');
+        } else {
+          throw new Error('YouTube API Key无效或权限不足，请检查配置');
+        }
+      } else if (response.status === 400) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error?.errors?.[0]?.reason === 'keyInvalid') {
+          throw new Error('YouTube API Key格式错误，请检查配置');
+        }
+        throw new Error('YouTube API请求参数错误');
+      }
+      throw new Error(`YouTube API请求失败 (${response.status})，请检查API Key配置`);
     }
 
     const data = await response.json();
