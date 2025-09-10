@@ -47,7 +47,6 @@ function DoubanPageClient() {
     type: '',
     primarySelection: '',
     secondarySelection: '',
-    genreSelection: '',
     multiLevelSelection: {} as Record<string, string>,
     selectedWeekday: '',
     currentPage: 0,
@@ -73,9 +72,6 @@ function DoubanPageClient() {
     if (type === 'show') return 'show';
     return '全部';
   });
-
-  // 新增：电影类型选择器状态
-  const [genreSelection, setGenreSelection] = useState<string>('全部');
 
   // MultiLevelSelector 状态
   const [multiLevelValues, setMultiLevelValues] = useState<
@@ -105,7 +101,6 @@ function DoubanPageClient() {
       type,
       primarySelection,
       secondarySelection,
-      genreSelection,
       multiLevelSelection: multiLevelValues,
       selectedWeekday,
       currentPage,
@@ -126,7 +121,6 @@ function DoubanPageClient() {
       type,
       primarySelection,
       secondarySelection,
-      genreSelection,
       multiLevelSelection: multiLevelValues,
       selectedWeekday,
       currentPage,
@@ -135,7 +129,6 @@ function DoubanPageClient() {
     type,
     primarySelection,
     secondarySelection,
-    genreSelection,
     multiLevelValues,
     selectedWeekday,
     currentPage,
@@ -230,7 +223,6 @@ function DoubanPageClient() {
         type: string;
         primarySelection: string;
         secondarySelection: string;
-        genreSelection: string;
         multiLevelSelection: Record<string, string>;
         selectedWeekday: string;
         currentPage: number;
@@ -239,7 +231,6 @@ function DoubanPageClient() {
         type: string;
         primarySelection: string;
         secondarySelection: string;
-        genreSelection: string;
         multiLevelSelection: Record<string, string>;
         selectedWeekday: string;
         currentPage: number;
@@ -249,7 +240,6 @@ function DoubanPageClient() {
         snapshot1.type === snapshot2.type &&
         snapshot1.primarySelection === snapshot2.primarySelection &&
         snapshot1.secondarySelection === snapshot2.secondarySelection &&
-        snapshot1.genreSelection === snapshot2.genreSelection &&
         snapshot1.selectedWeekday === snapshot2.selectedWeekday &&
         snapshot1.currentPage === snapshot2.currentPage &&
         JSON.stringify(snapshot1.multiLevelSelection) ===
@@ -273,17 +263,16 @@ function DoubanPageClient() {
         };
       }
 
-      // 电影类型：添加genre参数
+      // 电影类型保持原逻辑
       return {
         kind: type as 'tv' | 'movie',
         category: primarySelection,
         type: secondarySelection,
-        genre: genreSelection, // 新增：传递电影类型参数
         pageLimit: 25,
         pageStart,
       };
     },
-    [type, primarySelection, secondarySelection, genreSelection]
+    [type, primarySelection, secondarySelection]
   );
 
   // 防抖的数据加载函数
@@ -293,7 +282,6 @@ function DoubanPageClient() {
       type,
       primarySelection,
       secondarySelection,
-      genreSelection,
       multiLevelSelection: multiLevelValues,
       selectedWeekday,
       currentPage: 0,
@@ -402,7 +390,6 @@ function DoubanPageClient() {
           requestSnapshot.type === currentSnapshot.type &&
           requestSnapshot.primarySelection === currentSnapshot.primarySelection &&
           requestSnapshot.secondarySelection === currentSnapshot.secondarySelection &&
-          requestSnapshot.genreSelection === currentSnapshot.genreSelection &&
           requestSnapshot.selectedWeekday === currentSnapshot.selectedWeekday &&
           JSON.stringify(requestSnapshot.multiLevelSelection) === JSON.stringify(currentSnapshot.multiLevelSelection)
         );
@@ -426,7 +413,6 @@ function DoubanPageClient() {
     type,
     primarySelection,
     secondarySelection,
-    genreSelection,
     multiLevelValues,
     selectedWeekday,
     getRequestParams,
@@ -461,7 +447,6 @@ function DoubanPageClient() {
     type,
     primarySelection,
     secondarySelection,
-    genreSelection,
     multiLevelValues,
     selectedWeekday,
     loadInitialData,
@@ -476,7 +461,6 @@ function DoubanPageClient() {
           type,
           primarySelection,
           secondarySelection,
-          genreSelection,
           multiLevelSelection: multiLevelValues,
           selectedWeekday,
           currentPage,
@@ -575,7 +559,6 @@ function DoubanPageClient() {
               requestSnapshot.type === currentSnapshot.type &&
               requestSnapshot.primarySelection === currentSnapshot.primarySelection &&
               requestSnapshot.secondarySelection === currentSnapshot.secondarySelection &&
-              requestSnapshot.genreSelection === currentSnapshot.genreSelection &&
               requestSnapshot.selectedWeekday === currentSnapshot.selectedWeekday &&
               JSON.stringify(requestSnapshot.multiLevelSelection) === JSON.stringify(currentSnapshot.multiLevelSelection)
             );
@@ -603,7 +586,6 @@ function DoubanPageClient() {
     type,
     primarySelection,
     secondarySelection,
-    genreSelection,
     customCategories,
     multiLevelValues,
     selectedWeekday,
@@ -748,23 +730,6 @@ function DoubanPageClient() {
     setSelectedWeekday(weekday);
   }, []);
 
-  // 新增：处理电影类型选择器变化
-  const handleGenreChange = useCallback(
-    (value: string) => {
-      // 只有当值真正改变时才设置loading状态
-      if (value !== genreSelection) {
-        setLoading(true);
-        // 立即重置页面状态，防止基于旧状态的请求
-        setCurrentPage(0);
-        setDoubanData([]);
-        setHasMore(true);
-        setIsLoadingMore(false);
-        setGenreSelection(value);
-      }
-    },
-    [genreSelection]
-  );
-
   // 处理虚拟化组件的加载更多请求
   const handleVirtualLoadMore = useCallback(() => {
     if (hasMore && !isLoadingMore) {
@@ -823,10 +788,8 @@ function DoubanPageClient() {
                 type={type as 'movie' | 'tv' | 'show' | 'anime'}
                 primarySelection={primarySelection}
                 secondarySelection={secondarySelection}
-                genreSelection={genreSelection}
                 onPrimaryChange={handlePrimaryChange}
                 onSecondaryChange={handleSecondaryChange}
-                onGenreChange={handleGenreChange}
                 onMultiLevelChange={handleMultiLevelChange}
                 onWeekdayChange={handleWeekdayChange}
               />
