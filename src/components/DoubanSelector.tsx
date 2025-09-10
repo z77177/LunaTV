@@ -282,9 +282,15 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     } else if (type === 'show') {
       typeOptions = showTypeOptions;
     } else if (type === 'anime') {
-      // 动漫需要根据当前选择的是番剧还是剧场版来决定映射
-      // 直接使用animeTypeOptions，因为我们只使用共同的6个类型
-      typeOptions = animeTypeOptions;
+      // 动漫使用简化的共同类型映射
+      typeOptions = [
+        { label: '治愈', value: 'healing' },
+        { label: '恋爱', value: 'love' },
+        { label: '科幻', value: 'sci_fi' },
+        { label: '悬疑', value: 'suspense' },
+        { label: '励志', value: 'inspirational' },
+        { label: '运动', value: 'sports' },
+      ];
     } else {
       typeOptions = movieTypeOptions; // 默认使用电影类型
     }
