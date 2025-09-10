@@ -161,14 +161,8 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
       onPrimaryChange('全部');
     } else if (type === 'anime') {
       currentOptions = quickAnimeGenreOptions;
-      // 动漫需要根据类型选择番剧或剧场版
-      if (genreValue === 'love') {
-        // "恋爱"只有番剧支持
-        onPrimaryChange('番剧');
-      } else {
-        // 其他类型两者都支持，默认选择番剧
-        onPrimaryChange('番剧');
-      }
+      // 动漫统一使用番剧，简单直接
+      onPrimaryChange('番剧');
     } else {
       return; // 其他类型不支持快捷按钮
     }
@@ -861,22 +855,12 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
                 筛选
               </span>
               <div className='overflow-x-auto'>
-                {(primarySelection || animePrimaryOptions[0].value) ===
-                '番剧' ? (
-                  <MultiLevelSelector
-                    key={`anime-tv-${primarySelection}-${currentFilterValues.type || 'default'}`}
-                    onChange={handleMultiLevelChange}
-                    contentType='anime-tv'
-                    initialValues={currentFilterValues}
-                  />
-                ) : (
-                  <MultiLevelSelector
-                    key={`anime-movie-${primarySelection}-${currentFilterValues.type || 'default'}`}
-                    onChange={handleMultiLevelChange}
-                    contentType='anime-movie'
-                    initialValues={currentFilterValues}
-                  />
-                )}
+                <MultiLevelSelector
+                  key={`anime-tv-${primarySelection}-${currentFilterValues.type || 'default'}`}
+                  onChange={handleMultiLevelChange}
+                  contentType='anime-tv'
+                  initialValues={currentFilterValues}
+                />
               </div>
             </div>
           )}
