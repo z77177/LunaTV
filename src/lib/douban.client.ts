@@ -171,6 +171,7 @@ interface DoubanCategoriesParams {
   kind: 'tv' | 'movie';
   category: string;
   type: string;
+  genre?: string; // 新增：电影类型参数
   pageLimit?: number;
   pageStart?: number;
 }
@@ -290,7 +291,7 @@ export async function fetchDoubanCategories(
   useTencentCDN = false,
   useAliCDN = false
 ): Promise<DoubanResult> {
-  const { kind, category, type, pageLimit = 20, pageStart = 0 } = params;
+  const { kind, category, type, genre, pageLimit = 20, pageStart = 0 } = params;
 
   // 验证参数
   if (!['tv', 'movie'].includes(kind)) {
@@ -309,11 +310,17 @@ export async function fetchDoubanCategories(
     throw new Error('pageStart 不能小于 0');
   }
 
+  // 构建URL，如果有genre参数且不是"全部"，则使用genre作为category
+  let targetCategory = category;
+  if (genre && genre !== '全部') {
+    targetCategory = genre;
+  }
+
   const target = useTencentCDN
-    ? `https://m.douban.cmliussss.net/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`
+    ? `https://m.douban.cmliussss.net/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${targetCategory}&type=${type}`
     : useAliCDN
-      ? `https://m.douban.cmliussss.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`
-      : `https://m.douban.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`;
+      ? `https://m.douban.cmliussss.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${targetCategory}&type=${type}`
+      : `https://m.douban.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${targetCategory}&type=${type}`;
 
   try {
     const response = await fetchWithTimeout(
@@ -360,13 +367,13 @@ export async function fetchDoubanCategories(
 export async function getDoubanCategories(
   params: DoubanCategoriesParams
 ): Promise<DoubanResult> {
-  const { kind, category, type, pageLimit = 20, pageStart = 0 } = params;
+  const { kind, category, type, genre, pageLimit = 20, pageStart = 0 } = params;
   
-  // 检查缓存
-  const cacheKey = getCacheKey('categories', { kind, category, type, pageLimit, pageStart });
+  // 检查缓存 - 包含genre参数
+  const cacheKey = getCacheKey('categories', { kind, category, type, genre, pageLimit, pageStart });
   const cached = await getCache(cacheKey);
   if (cached) {
-    console.log(`豆瓣分类缓存命中: ${kind}/${category}/${type}`);
+    console.log(`豆瓣分类缓存命中: ${kind}/${category}/${type}/${genre || '无类型'}`);
     return cached;
   }
   
@@ -392,7 +399,7 @@ export async function getDoubanCategories(
     case 'direct':
     default:
       const response = await fetch(
-        `/api/douban/categories?kind=${kind}&category=${category}&type=${type}&limit=${pageLimit}&start=${pageStart}`
+        `/api/douban/categories?kind=${kind}&category=${category}&type=${type}&genre=${genre || ''}&limit=${pageLimit}&start=${pageStart}`
       );
       result = await response.json();
       break;
@@ -401,7 +408,7 @@ export async function getDoubanCategories(
   // 保存到缓存
   if (result.code === 200) {
     await setCache(cacheKey, result, DOUBAN_CACHE_EXPIRE.categories);
-    console.log(`豆瓣分类已缓存: ${kind}/${category}/${type}`);
+    console.log(`豆瓣分类已缓存: ${kind}/${category}/${type}/${genre || '无类型'}`);
   }
   
   return result;
