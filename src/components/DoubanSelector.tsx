@@ -743,6 +743,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
                   key={`${type}-${primarySelection}`}
                   onChange={handleMultiLevelChange}
                   contentType={type}
+                  initialValues={currentFilterValues}
                 />
               </div>
             </div>
@@ -852,6 +853,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
                   key={`${type}-${primarySelection}`}
                   onChange={handleMultiLevelChange}
                   contentType={type}
+                  initialValues={currentFilterValues}
                 />
               </div>
             </div>
