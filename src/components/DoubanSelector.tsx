@@ -203,7 +203,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
   const handleMultiLevelChange = (values: Record<string, string>) => {
     // 当用户手动操作MultiLevelSelector时，需要同步更新currentFilterValues
     // 这样可以确保状态的一致性
-    const newFilterValues: Record<string, string> = {};
+    const newFilterValues: Record<string, string> = { ...currentFilterValues };
     
     // 类型选项映射 - 电影
     const movieTypeOptions = [
