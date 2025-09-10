@@ -101,6 +101,38 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     { label: '剧场版', value: '剧场版' },
   ];
 
+  // 快捷类型按钮选项
+  const quickGenreOptions = [
+    { label: '恐怖', value: 'horror' },
+    { label: '动作', value: 'action' },
+    { label: '科幻', value: 'sci-fi' },
+    { label: '爱情', value: 'romance' },
+    { label: '喜剧', value: 'comedy' },
+    { label: '悬疑', value: 'suspense' },
+    { label: '犯罪', value: 'crime' },
+    { label: '惊悚', value: 'thriller' },
+  ];
+
+  // 处理快捷类型按钮点击
+  const handleQuickGenreClick = (genreValue: string) => {
+    // 自动切换到"全部"分类
+    onPrimaryChange('全部');
+    
+    // 根据value找到对应的中文label，因为MultiLevelSelector传递的是label不是value
+    const genreOption = quickGenreOptions.find(opt => opt.value === genreValue);
+    const genreLabel = genreOption?.label || genreValue;
+    
+    // 设置对应的类型筛选 - 传递中文label，与手动筛选保持一致
+    setTimeout(() => {
+      onMultiLevelChange?.({ 
+        type: genreLabel,  // 传递中文label，如"恐怖"而不是"horror"
+        region: 'all',
+        year: 'all', 
+        sort: 'T'
+      });
+    }, 100);
+  };
+
   // 处理多级选择器变化
   const handleMultiLevelChange = (values: Record<string, string>) => {
     onMultiLevelChange?.(values);
@@ -351,11 +383,45 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     );
   };
 
+  // 渲染快捷类型按钮
+  const renderQuickGenreButtons = () => {
+    return (
+      <div className='space-y-2'>
+        <div className='flex items-center gap-2'>
+          <span className='text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap'>
+            快捷分类
+          </span>
+          <div className='flex flex-wrap gap-1.5 sm:gap-2'>
+            {quickGenreOptions.map((genre) => (
+              <button
+                key={genre.value}
+                onClick={() => handleQuickGenreClick(genre.value)}
+                className='px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm font-medium 
+                         bg-gradient-to-r from-blue-500 to-purple-600 text-white 
+                         rounded-full shadow-sm hover:shadow-md hover:from-blue-600 hover:to-purple-700
+                         transition-all duration-200 transform hover:scale-105 active:scale-95
+                         dark:from-blue-600 dark:to-purple-700 dark:hover:from-blue-700 dark:hover:to-purple-800'
+              >
+                {genre.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className='text-xs text-gray-500 dark:text-gray-400 ml-14 sm:ml-16'>
+          💡 热门类型快捷访问 · 更多类型请选择"全部"进行筛选
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className='space-y-4 sm:space-y-6'>
       {/* 电影类型 - 显示两级选择器 */}
       {type === 'movie' && (
         <div className='space-y-3 sm:space-y-4'>
+          {/* 快捷类型按钮 - 只在电影类型时显示 */}
+          {renderQuickGenreButtons()}
+          
           {/* 一级选择器 */}
           <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
             <span className='text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[48px]'>
