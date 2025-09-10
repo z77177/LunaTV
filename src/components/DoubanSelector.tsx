@@ -371,8 +371,28 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
             newFilterValues[key] = typeOption.value;
           }
         } else if (key === 'label') {
-          // 动漫的类型存储在label字段中
-          newFilterValues[key] = value;
+          // 动漫的类型存储在label字段中，需要转换为英文value
+          const labelOptions = [
+            { label: '治愈', value: 'healing' },
+            { label: '恋爱', value: 'love' },
+            { label: '科幻', value: 'sci_fi' },
+            { label: '悬疑', value: 'suspense' },
+            { label: '励志', value: 'inspirational' },
+            { label: '运动', value: 'sports' },
+            { label: '黑色幽默', value: 'dark_humor' },
+            { label: '历史', value: 'history' },
+            { label: '歌舞', value: 'musical' },
+            { label: '恶搞', value: 'parody' },
+            { label: '后宫', value: 'harem' },
+            { label: '情色', value: 'erotic' },
+            { label: '国漫', value: 'chinese_anime' },
+            { label: '人性', value: 'human_nature' },
+            { label: '魔幻', value: 'fantasy' },
+          ];
+          const labelOption = labelOptions.find(opt => opt.label === value);
+          if (labelOption) {
+            newFilterValues[key] = labelOption.value;
+          }
         } else if (key === 'region') {
           const regionOption = regionOptions.find(opt => opt.label === value);
           if (regionOption) {
