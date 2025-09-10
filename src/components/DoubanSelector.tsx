@@ -172,7 +172,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     const genreLabel = genreOption?.label || genreValue;
     
     // 设置MultiLevelSelector的初始值
-    const newFilterValues = { type: genreValue };
+    const newFilterValues = type === 'anime' ? { label: genreValue } : { type: genreValue };
     setCurrentFilterValues(newFilterValues);
     
     // 直接调用onMultiLevelChange，让父组件立即更新数据
@@ -357,6 +357,9 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
           if (typeOption) {
             newFilterValues[key] = typeOption.value;
           }
+        } else if (key === 'label') {
+          // 动漫的类型存储在label字段中
+          newFilterValues[key] = value;
         } else if (key === 'region') {
           const regionOption = regionOptions.find(opt => opt.label === value);
           if (regionOption) {
@@ -673,7 +676,9 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
           </span>
           <div className='flex flex-wrap gap-1.5 sm:gap-2'>
             {currentOptions.map((genre) => {
-              const isActive = genre.value === currentFilterValues.type;
+              const isActive = type === 'anime' 
+                ? genre.value === currentFilterValues.label 
+                : genre.value === currentFilterValues.type;
               return (
                 <button
                   key={genre.value}
