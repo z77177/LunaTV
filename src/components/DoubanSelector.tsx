@@ -46,6 +46,9 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     width: number;
   }>({ left: 0, width: 0 });
 
+  // 添加状态来跟踪当前的筛选值，用于传递给MultiLevelSelector
+  const [currentFilterValues, setCurrentFilterValues] = useState<Record<string, string>>({});
+
   // 电影的一级选择器选项
   const moviePrimaryOptions: SelectorOption[] = [
     { label: '全部', value: '全部' },
@@ -118,23 +121,127 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     // 自动切换到"全部"分类
     onPrimaryChange('全部');
     
-    // 根据value找到对应的中文label，因为MultiLevelSelector传递的是label不是value
+    // 根据value找到对应的中文label
     const genreOption = quickGenreOptions.find(opt => opt.value === genreValue);
     const genreLabel = genreOption?.label || genreValue;
     
-    // 设置对应的类型筛选 - 传递中文label，与手动筛选保持一致
+    // 设置MultiLevelSelector的初始值
+    const newFilterValues = { type: genreValue };
+    setCurrentFilterValues(newFilterValues);
+    
+    // 直接调用onMultiLevelChange，让父组件立即更新数据
     setTimeout(() => {
       onMultiLevelChange?.({ 
-        type: genreLabel,  // 传递中文label，如"恐怖"而不是"horror"
+        type: genreLabel,  // 传递中文label给API
         region: 'all',
         year: 'all', 
         sort: 'T'
       });
-    }, 100);
+    }, 50);
   };
 
   // 处理多级选择器变化
   const handleMultiLevelChange = (values: Record<string, string>) => {
+    // 当用户手动操作MultiLevelSelector时，需要同步更新currentFilterValues
+    // 这样可以确保状态的一致性
+    const newFilterValues: Record<string, string> = {};
+    
+    // 类型选项映射
+    const typeOptions = [
+      { label: '喜剧', value: 'comedy' },
+      { label: '爱情', value: 'romance' },
+      { label: '动作', value: 'action' },
+      { label: '科幻', value: 'sci-fi' },
+      { label: '悬疑', value: 'suspense' },
+      { label: '犯罪', value: 'crime' },
+      { label: '惊悚', value: 'thriller' },
+      { label: '冒险', value: 'adventure' },
+      { label: '音乐', value: 'music' },
+      { label: '历史', value: 'history' },
+      { label: '奇幻', value: 'fantasy' },
+      { label: '恐怖', value: 'horror' },
+      { label: '战争', value: 'war' },
+      { label: '传记', value: 'biography' },
+      { label: '歌舞', value: 'musical' },
+      { label: '武侠', value: 'wuxia' },
+      { label: '情色', value: 'erotic' },
+      { label: '灾难', value: 'disaster' },
+      { label: '西部', value: 'western' },
+      { label: '纪录片', value: 'documentary' },
+      { label: '短片', value: 'short' },
+    ];
+
+    // 地区选项映射
+    const regionOptions = [
+      { label: '华语', value: 'chinese' },
+      { label: '欧美', value: 'western' },
+      { label: '韩国', value: 'korean' },
+      { label: '日本', value: 'japanese' },
+      { label: '中国大陆', value: 'mainland_china' },
+      { label: '美国', value: 'usa' },
+      { label: '中国香港', value: 'hong_kong' },
+      { label: '中国台湾', value: 'taiwan' },
+      { label: '英国', value: 'uk' },
+      { label: '法国', value: 'france' },
+      { label: '德国', value: 'germany' },
+      { label: '意大利', value: 'italy' },
+      { label: '西班牙', value: 'spain' },
+      { label: '印度', value: 'india' },
+      { label: '泰国', value: 'thailand' },
+      { label: '俄罗斯', value: 'russia' },
+      { label: '加拿大', value: 'canada' },
+      { label: '澳大利亚', value: 'australia' },
+      { label: '爱尔兰', value: 'ireland' },
+      { label: '瑞典', value: 'sweden' },
+      { label: '巴西', value: 'brazil' },
+      { label: '丹麦', value: 'denmark' },
+    ];
+
+    // 年代选项映射
+    const yearOptions = [
+      { label: '2020年代', value: '2020s' },
+      { label: '2025', value: '2025' },
+      { label: '2024', value: '2024' },
+      { label: '2023', value: '2023' },
+      { label: '2022', value: '2022' },
+      { label: '2021', value: '2021' },
+      { label: '2020', value: '2020' },
+      { label: '2019', value: '2019' },
+      { label: '2010年代', value: '2010s' },
+      { label: '2000年代', value: '2000s' },
+      { label: '90年代', value: '1990s' },
+      { label: '80年代', value: '1980s' },
+      { label: '70年代', value: '1970s' },
+      { label: '60年代', value: '1960s' },
+      { label: '更早', value: 'earlier' },
+    ];
+    
+    // 处理每个选项，将中文label转换为英文value保存到内部状态
+    Object.entries(values).forEach(([key, value]) => {
+      if (value && value !== 'all' && !(key === 'sort' && value === 'T')) {
+        if (key === 'type') {
+          const typeOption = typeOptions.find(opt => opt.label === value);
+          if (typeOption) {
+            newFilterValues[key] = typeOption.value;
+          }
+        } else if (key === 'region') {
+          const regionOption = regionOptions.find(opt => opt.label === value);
+          if (regionOption) {
+            newFilterValues[key] = regionOption.value;
+          }
+        } else if (key === 'year') {
+          const yearOption = yearOptions.find(opt => opt.label === value);
+          if (yearOption) {
+            newFilterValues[key] = yearOption.value;
+          }
+        } else {
+          // 对于其他字段（如sort、platform），直接使用value
+          newFilterValues[key] = value;
+        }
+      }
+    });
+    
+    setCurrentFilterValues(newFilterValues);
     onMultiLevelChange?.(values);
   };
 
@@ -329,6 +436,21 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     }
   }, [secondarySelection]);
 
+  // 监听主选择器变化，清除筛选状态
+  useEffect(() => {
+    // 如果从"全部"切换到其他分类，清除筛选状态
+    if (primarySelection && primarySelection !== '全部') {
+      setCurrentFilterValues({});
+    }
+  }, [primarySelection]);
+
+  // 监听type变化，当不是movie类型时清除筛选状态
+  useEffect(() => {
+    if (type !== 'movie') {
+      setCurrentFilterValues({});
+    }
+  }, [type]);
+
   // 渲染胶囊式选择器
   const renderCapsuleSelector = (
     options: SelectorOption[],
@@ -392,19 +514,24 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
             快捷分类
           </span>
           <div className='flex flex-wrap gap-1.5 sm:gap-2'>
-            {quickGenreOptions.map((genre) => (
-              <button
-                key={genre.value}
-                onClick={() => handleQuickGenreClick(genre.value)}
-                className='px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm font-medium 
-                         bg-gradient-to-r from-blue-500 to-purple-600 text-white 
-                         rounded-full shadow-sm hover:shadow-md hover:from-blue-600 hover:to-purple-700
-                         transition-all duration-200 transform hover:scale-105 active:scale-95
-                         dark:from-blue-600 dark:to-purple-700 dark:hover:from-blue-700 dark:hover:to-purple-800'
-              >
-                {genre.label}
-              </button>
-            ))}
+            {quickGenreOptions.map((genre) => {
+              const isActive = genre.value === currentFilterValues.type;
+              return (
+                <button
+                  key={genre.value}
+                  onClick={() => handleQuickGenreClick(genre.value)}
+                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm font-medium 
+                           rounded-full shadow-sm transition-all duration-200 transform hover:scale-105 active:scale-95
+                           ${isActive 
+                             ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md' 
+                             : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-md hover:from-blue-600 hover:to-purple-700'
+                           }
+                           dark:from-blue-600 dark:to-purple-700 dark:hover:from-blue-700 dark:hover:to-purple-800`}
+                >
+                  {genre.label}
+                </button>
+              );
+            })}
           </div>
         </div>
         <div className='text-xs text-gray-500 dark:text-gray-400 ml-14 sm:ml-16'>
@@ -463,6 +590,7 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
                   key={`${type}-${primarySelection}`}
                   onChange={handleMultiLevelChange}
                   contentType={type}
+                  initialValues={currentFilterValues}
                 />
               </div>
             </div>
