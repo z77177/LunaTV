@@ -662,8 +662,13 @@ function DoubanPageClient() {
             setPrimarySelection(value);
           }
         } else {
+          // 电影切换到"按类型"时，重置二级分类为第一个选项
+          if (type === 'movie' && value === '按类型') {
+            setPrimarySelection(value);
+            setSecondarySelection('全部'); // 重置为类型分类的第一个选项
+          }
           // 电视剧和综艺切换到"最近热门"时，重置二级分类为第一个选项
-          if ((type === 'tv' || type === 'show') && value === '最近热门') {
+          else if ((type === 'tv' || type === 'show') && value === '最近热门') {
             setPrimarySelection(value);
             if (type === 'tv') {
               setSecondarySelection('tv');
