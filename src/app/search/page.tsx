@@ -683,7 +683,14 @@ function SearchPageClient() {
       }
     } catch (error: any) {
       console.error('YouTube搜索请求失败:', error);
-      setYoutubeError('YouTube搜索请求失败，请稍后重试');
+      // 尝试提取具体的错误消息
+      let errorMessage = 'YouTube搜索请求失败，请稍后重试';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      setYoutubeError(errorMessage);
     } finally {
       setYoutubeLoading(false);
     }

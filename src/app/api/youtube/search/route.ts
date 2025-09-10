@@ -236,22 +236,52 @@ export async function GET(request: NextRequest) {
     const response = await fetch(searchUrl);
 
     if (!response.ok) {
+      // 获取错误详细信息
+      const errorData = await response.json().catch(() => ({}));
+      console.log('YouTube API错误详情:', errorData);
+      
+      let errorMessage = '';
+      
       // 检查具体的错误状态
-      if (response.status === 403) {
-        const errorData = await response.json().catch(() => ({}));
-        if (errorData.error?.errors?.[0]?.reason === 'quotaExceeded') {
-          throw new Error('YouTube API配额已用完，请稍后重试');
+      if (response.status === 400) {
+        const reason = errorData.error?.errors?.[0]?.reason;
+        const message = errorData.error?.message || '';
+        
+        if (reason === 'keyInvalid' || message.includes('API key not valid')) {
+          errorMessage = 'YouTube API Key无效，请在管理后台检查配置';
+        } else if (reason === 'badRequest') {
+          if (message.includes('API key')) {
+            errorMessage = 'YouTube API Key格式错误，请在管理后台重新配置';
+          } else {
+            errorMessage = `YouTube API请求参数错误: ${message}`;
+          }
         } else {
-          throw new Error('YouTube API Key无效或权限不足，请检查配置');
+          errorMessage = `YouTube API请求错误: ${message || 'Bad Request'}`;
         }
-      } else if (response.status === 400) {
-        const errorData = await response.json().catch(() => ({}));
-        if (errorData.error?.errors?.[0]?.reason === 'keyInvalid') {
-          throw new Error('YouTube API Key格式错误，请检查配置');
+      } else if (response.status === 403) {
+        const reason = errorData.error?.errors?.[0]?.reason;
+        const message = errorData.error?.message || '';
+        
+        if (reason === 'quotaExceeded' || message.includes('quota')) {
+          errorMessage = 'YouTube API配额已用完，请稍后重试';
+        } else if (message.includes('not been used') || message.includes('disabled')) {
+          errorMessage = 'YouTube Data API v3未启用，请在Google Cloud Console中启用该API';
+        } else if (message.includes('blocked') || message.includes('restricted')) {
+          errorMessage = 'API Key被限制访问，请检查Google Cloud Console中的API Key限制设置';
+        } else {
+          errorMessage = 'YouTube API访问被拒绝，请检查API Key权限配置';
         }
-        throw new Error('YouTube API请求参数错误');
+      } else if (response.status === 401) {
+        errorMessage = 'YouTube API认证失败，请检查API Key是否正确';
+      } else {
+        errorMessage = `YouTube API请求失败 (${response.status})，请检查API Key配置`;
       }
-      throw new Error(`YouTube API请求失败 (${response.status})，请检查API Key配置`);
+      
+      // 返回错误响应而不是抛出异常
+      return NextResponse.json({
+        success: false,
+        error: errorMessage
+      }, { status: 400 });
     }
 
     const data = await response.json();
