@@ -172,7 +172,12 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     const genreLabel = genreOption?.label || genreValue;
     
     // 设置MultiLevelSelector的初始值
-    const newFilterValues = type === 'anime' ? { label: genreValue } : { type: genreValue };
+    const newFilterValues: Record<string, string> = {};
+    if (type === 'anime') {
+      newFilterValues.label = genreValue;
+    } else {
+      newFilterValues.type = genreValue;
+    }
     setCurrentFilterValues(newFilterValues);
     
     // 直接调用onMultiLevelChange，让父组件立即更新数据
