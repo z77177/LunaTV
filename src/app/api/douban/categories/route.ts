@@ -29,6 +29,7 @@ export async function GET(request: Request) {
   const kind = searchParams.get('kind') || 'movie';
   const category = searchParams.get('category');
   const type = searchParams.get('type');
+  const genre = searchParams.get('genre'); // 新增：电影类型参数
   const pageLimit = parseInt(searchParams.get('limit') || '20');
   const pageStart = parseInt(searchParams.get('start') || '0');
 
@@ -61,7 +62,13 @@ export async function GET(request: Request) {
     );
   }
 
-  const target = `https://m.douban.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${category}&type=${type}`;
+  // 构建URL，如果有genre参数且不是"全部"，则使用genre作为category
+  let targetCategory = category;
+  if (genre && genre !== '全部') {
+    targetCategory = genre;
+  }
+  
+  const target = `https://m.douban.com/rexxar/api/v2/subject/recent_hot/${kind}?start=${pageStart}&limit=${pageLimit}&category=${targetCategory}&type=${type}`;
 
   try {
     console.log(`[豆瓣分类] 请求URL: ${target}`);

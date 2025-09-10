@@ -16,8 +16,10 @@ interface DoubanSelectorProps {
   type: 'movie' | 'tv' | 'show' | 'anime';
   primarySelection?: string;
   secondarySelection?: string;
+  genreSelection?: string;
   onPrimaryChange: (value: string) => void;
   onSecondaryChange: (value: string) => void;
+  onGenreChange?: (value: string) => void;
   onMultiLevelChange?: (values: Record<string, string>) => void;
   onWeekdayChange: (weekday: string) => void;
 }
@@ -26,8 +28,10 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
   type,
   primarySelection,
   secondarySelection,
+  genreSelection,
   onPrimaryChange,
   onSecondaryChange,
+  onGenreChange,
   onMultiLevelChange,
   onWeekdayChange,
 }) => {
@@ -42,6 +46,13 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
   const secondaryContainerRef = useRef<HTMLDivElement>(null);
   const secondaryButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [secondaryIndicatorStyle, setSecondaryIndicatorStyle] = useState<{
+    left: number;
+    width: number;
+  }>({ left: 0, width: 0 });
+
+  const genreContainerRef = useRef<HTMLDivElement>(null);
+  const genreButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [genreIndicatorStyle, setGenreIndicatorStyle] = useState<{
     left: number;
     width: number;
   }>({ left: 0, width: 0 });
@@ -62,6 +73,26 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     { label: '欧美', value: '欧美' },
     { label: '韩国', value: '韩国' },
     { label: '日本', value: '日本' },
+  ];
+
+  // 新增：电影的第三行类型选择器选项
+  const movieGenreOptions: SelectorOption[] = [
+    { label: '全部', value: '全部' },
+    { label: '动作', value: '动作' },
+    { label: '喜剧', value: '喜剧' },
+    { label: '爱情', value: '爱情' },
+    { label: '科幻', value: '科幻' },
+    { label: '恐怖', value: '恐怖' },
+    { label: '悬疑', value: '悬疑' },
+    { label: '惊悚', value: '惊悚' },
+    { label: '犯罪', value: '犯罪' },
+    { label: '战争', value: '战争' },
+    { label: '冒险', value: '冒险' },
+    { label: '奇幻', value: '奇幻' },
+    { label: '剧情', value: '剧情' },
+    { label: '历史', value: '历史' },
+    { label: '纪录片', value: '纪录片' },
+    { label: '动画', value: '动画' },
   ];
 
   // 电视剧一级选择器选项
@@ -297,6 +328,22 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
     }
   }, [secondarySelection]);
 
+  // 监听第三行类型选择器变化
+  useEffect(() => {
+    if (type === 'movie') {
+      const activeIndex = movieGenreOptions.findIndex(
+        (opt) => opt.value === genreSelection
+      );
+      const cleanup = updateIndicatorPosition(
+        activeIndex,
+        genreContainerRef,
+        genreButtonRefs,
+        setGenreIndicatorStyle
+      );
+      return cleanup;
+    }
+  }, [genreSelection]);
+
   // 渲染胶囊式选择器
   const renderCapsuleSelector = (
     options: SelectorOption[],
@@ -401,6 +448,50 @@ const DoubanSelector: React.FC<DoubanSelectorProps> = ({
               </div>
             </div>
           )}
+
+          {/* 第三行：新增的电影类型选择器 - 电影类型专用 */}
+          <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
+            <span className='text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[48px]'>
+              类型
+            </span>
+            <div className='overflow-x-auto'>
+              <div
+                ref={genreContainerRef}
+                className='relative inline-flex bg-gray-200/60 rounded-full p-0.5 sm:p-1 dark:bg-gray-700/60 backdrop-blur-sm'
+              >
+                {/* 滑动的白色背景指示器 */}
+                {genreIndicatorStyle.width > 0 && (
+                  <div
+                    className='absolute top-0.5 bottom-0.5 sm:top-1 sm:bottom-1 bg-white dark:bg-gray-500 rounded-full shadow-sm transition-all duration-300 ease-out'
+                    style={{
+                      left: `${genreIndicatorStyle.left}px`,
+                      width: `${genreIndicatorStyle.width}px`,
+                    }}
+                  />
+                )}
+
+                {movieGenreOptions.map((option, index) => {
+                  const isActive = genreSelection === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      ref={(el) => {
+                        genreButtonRefs.current[index] = el;
+                      }}
+                      onClick={() => onGenreChange?.(option.value)}
+                      className={`relative z-10 px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-full transition-all duration-200 whitespace-nowrap ${
+                        isActive
+                          ? 'text-gray-900 dark:text-gray-100 cursor-default'
+                          : 'text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 cursor-pointer'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
