@@ -162,31 +162,6 @@ export const AI_RECOMMEND_PRESETS = [
   {
     title: '🎭 推荐综艺节目',
     message: '推荐一些好看的综艺节目，要有趣的，请直接列出节目名'
-  },
-  // 新增YouTube相关预设
-  {
-    title: '📺 推荐YouTube频道',
-    message: '推荐一些优质的YouTube频道，包括教育、娱乐、科技、音乐等不同类型的频道'
-  },
-  {
-    title: '🎵 推荐YouTube音乐',
-    message: '推荐一些YouTube上好听的音乐视频、音乐频道或音乐合集'
-  },
-  {
-    title: '📚 推荐学习视频',
-    message: '推荐YouTube上的优质学习教程视频，比如编程、语言学习、技能提升等'
-  },
-  {
-    title: '🎮 推荐游戏视频',
-    message: '推荐一些精彩的YouTube游戏视频、游戏攻略或游戏解说频道'
-  },
-  {
-    title: '🍳 推荐美食视频',
-    message: '推荐YouTube上的美食制作教程、烹饪技巧或美食探店视频'
-  },
-  {
-    title: '🏃 推荐健身视频',
-    message: '推荐YouTube上的健身教程、瑜伽课程或运动指导视频'
   }
 ];
 

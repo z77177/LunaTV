@@ -17,7 +17,6 @@ import {
   sendAIRecommendMessage,
   MovieRecommendation,
 } from '@/lib/ai-recommend.client';
-import YouTubeEnhancedResponse from './YouTubeEnhancedResponse';
 
 interface AIRecommendModalProps {
   isOpen: boolean;
@@ -288,32 +287,14 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
                 }`}
               >
                 {message.role === 'assistant' ? (
-                  <>
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: formatAIResponseWithLinks(message.content, handleTitleClick),
-                      }}
-                      className="prose prose-sm dark:prose-invert max-w-none"
-                    />
-                    {/* YouTube增强响应 */}
-                    <YouTubeEnhancedResponse 
-                      content={message.content}
-                      onLinkDetected={(links) => {
-                        console.log('检测到YouTube链接:', links);
-                      }}
-                    />
-                  </>
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: formatAIResponseWithLinks(message.content, handleTitleClick),
+                    }}
+                    className="prose prose-sm dark:prose-invert max-w-none"
+                  />
                 ) : (
-                  <>
-                    <div className="whitespace-pre-wrap">{message.content}</div>
-                    {/* 用户输入的YouTube链接也进行检测 */}
-                    <YouTubeEnhancedResponse 
-                      content={message.content}
-                      onLinkDetected={(links) => {
-                        console.log('用户分享的YouTube链接:', links);
-                      }}
-                    />
-                  </>
+                  <div className="whitespace-pre-wrap">{message.content}</div>
                 )}
               </div>
               
