@@ -33,6 +33,9 @@ export interface AIChatResponse {
     total_tokens: number;
   };
   recommendations?: MovieRecommendation[];
+  youtubeVideos?: any[];
+  videoLinks?: any[];
+  type?: string;
 }
 
 export interface AIRecommendHistory {
