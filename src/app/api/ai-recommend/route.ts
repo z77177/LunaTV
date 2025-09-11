@@ -164,7 +164,7 @@ ${youtubeEnabled && youtubeConfig.apiKey ? `### YouTube推荐格式：
 
 示例：
 【如何学习编程】 - 适合初学者的编程入门教程
-【今日新闻速报】 - 最新国际新闻资讯` : '### YouTube搜索不可用时的回复：\n当用户请求YouTube视频搜索时，请回复：\n"很抱歉，YouTube视频搜索功能暂不可用。管理员尚未配置YouTube API Key。\n\n不过您可以：\n• 直接发送YouTube链接给我解析\n• 让我为您推荐影视剧内容"'}
+【今日新闻速报】 - 最新国际新闻资讯` : '### YouTube搜索不可用时的回复：\n当用户请求YouTube视频搜索时，请回复：\n"很抱歉，YouTube视频搜索功能暂不可用。管理员尚未配置YouTube API Key。\n\n不过您可以：\n- 直接发送YouTube链接给我解析\n- 让我为您推荐影视剧内容"'}
 
 ## 推荐要求：
 - ${randomHint}
