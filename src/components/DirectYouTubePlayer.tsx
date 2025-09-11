@@ -60,35 +60,40 @@ const getVideoInfo = async (videoId: string): Promise<{title: string; author_nam
 
 interface DirectYouTubePlayerProps {
   className?: string;
+  initialUrl?: string; // 新增：支持初始URL
 }
 
-const DirectYouTubePlayer = ({ className = '' }: DirectYouTubePlayerProps) => {
-  const [url, setUrl] = useState('');
+const DirectYouTubePlayer = ({ className = '', initialUrl }: DirectYouTubePlayerProps) => {
+  const [url, setUrl] = useState(initialUrl || '');
   const [videoData, setVideoData] = useState<any>(null);
   const [isValidUrl, setIsValidUrl] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // 处理URL输入变化
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputUrl = e.target.value;
-    setUrl(inputUrl);
-    
-    // 实时验证URL
-    if (inputUrl.trim()) {
-      const valid = isValidYouTubeUrl(inputUrl.trim());
-      setIsValidUrl(valid);
-    } else {
-      setIsValidUrl(null);
+  // 处理初始URL
+  useEffect(() => {
+    if (initialUrl && initialUrl !== url) {
+      setUrl(initialUrl);
+      // 如果提供了初始URL，自动验证并处理
+      if (isValidYouTubeUrl(initialUrl)) {
+        setIsValidUrl(true);
+        // 延迟调用以确保状态已更新
+        setTimeout(() => {
+          const videoId = extractVideoId(initialUrl);
+          if (videoId) {
+            handleUrlSubmitWithUrl(initialUrl);
+          }
+        }, 100);
+      }
     }
-  };
+  }, [initialUrl]);
 
-  // 处理URL提交
-  const handleUrlSubmit = async () => {
-    const trimmedUrl = url.trim();
-    if (!trimmedUrl) return;
+  // 独立的URL处理函数，支持传入URL参数
+  const handleUrlSubmitWithUrl = async (urlToSubmit?: string) => {
+    const targetUrl = urlToSubmit || url.trim();
+    if (!targetUrl) return;
 
-    const videoId = extractVideoId(trimmedUrl);
+    const videoId = extractVideoId(targetUrl);
     if (!videoId) {
       setIsValidUrl(false);
       return;
@@ -133,6 +138,25 @@ const DirectYouTubePlayer = ({ className = '' }: DirectYouTubePlayerProps) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 处理URL输入变化
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputUrl = e.target.value;
+    setUrl(inputUrl);
+    
+    // 实时验证URL
+    if (inputUrl.trim()) {
+      const valid = isValidYouTubeUrl(inputUrl.trim());
+      setIsValidUrl(valid);
+    } else {
+      setIsValidUrl(null);
+    }
+  };
+
+  // 处理URL提交
+  const handleUrlSubmit = async () => {
+    await handleUrlSubmitWithUrl();
   };
 
   // 处理回车键
