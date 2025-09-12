@@ -2689,7 +2689,7 @@ function PlayPageClient() {
               
               let isConfigVisible = false;
               
-              // 弹幕面板位置修正函数 - 完全模仿ArtPlayer设置面板算法
+              // 弹幕面板位置修正函数 - 完全模仿ArtPlayer原版位置算法
               const adjustPanelPosition = () => {
                 const player = document.querySelector('.artplayer');
                 if (!player || !configButton || !configPanel) return;
@@ -2697,12 +2697,30 @@ function PlayPageClient() {
                 try {
                   const panelElement = configPanel as HTMLElement;
                   
-                  // 始终清除内联样式，使用CSS默认定位
-                  panelElement.style.left = '';
+                  // 获取各元素的位置信息 - 严格按照ArtPlayer原版算法
+                  const controlRect = configButton.getBoundingClientRect();
+                  const panelRect = configPanel.getBoundingClientRect();
+                  const playerRect = player.getBoundingClientRect();
+                  
+                  // ArtPlayer原版位置计算算法
+                  const half = panelRect.width / 2 - controlRect.width / 2;
+                  const left = playerRect.left - (controlRect.left - half);
+                  const right = controlRect.right + half - playerRect.right;
+                  
+                  // 应用位置计算结果
+                  if (left > 0) {
+                    panelElement.style.left = `${-half + left}px`;
+                  } else if (right > 0) {
+                    panelElement.style.left = `${-half - right}px`;
+                  } else {
+                    panelElement.style.left = `${-half}px`;
+                  }
+                  
+                  // 清除其他样式防止冲突
                   panelElement.style.right = '';
                   panelElement.style.transform = '';
                   
-                  console.log('弹幕面板：使用CSS默认定位，自动适配屏幕方向');
+                  console.log('弹幕面板位置已修正 - 使用ArtPlayer原版算法');
                 } catch (error) {
                   console.warn('弹幕面板位置调整失败:', error);
                 }
@@ -2717,8 +2735,10 @@ function PlayPageClient() {
                 
                 if (isConfigVisible) {
                   (configPanel as HTMLElement).style.display = 'block';
-                  // 显示后立即调整位置
-                  setTimeout(adjustPanelPosition, 10);
+                  // 显示后延迟调整位置，确保DOM完全更新
+                  setTimeout(() => {
+                    adjustPanelPosition();
+                  }, 50);
                   console.log('移动端弹幕配置面板：显示');
                 } else {
                   (configPanel as HTMLElement).style.display = 'none';
@@ -2737,6 +2757,26 @@ function PlayPageClient() {
                 console.log('已监听ArtPlayer resize事件，实现自动适配');
               }
               
+              // 监听播放器设置面板的变化，确保弹幕菜单位置正确
+              const observePlayerChanges = () => {
+                const observer = new MutationObserver(() => {
+                  if (isConfigVisible) {
+                    setTimeout(adjustPanelPosition, 100);
+                  }
+                });
+                
+                observer.observe(player, { 
+                  childList: true, 
+                  subtree: true, 
+                  attributes: true, 
+                  attributeFilter: ['class', 'style'] 
+                });
+                
+                return () => observer.disconnect();
+              };
+              
+              const disconnectObserver = observePlayerChanges();
+              
               // 额外监听屏幕方向变化事件，确保完全自动适配
               const handleOrientationChange = () => {
                 if (isConfigVisible) {
@@ -2752,6 +2792,7 @@ function PlayPageClient() {
               const _cleanup = () => {
                 window.removeEventListener('orientationchange', handleOrientationChange);
                 window.removeEventListener('resize', handleOrientationChange);
+                disconnectObserver(); // 断开DOM变化观察器
               };
               
               // 点击其他地方自动隐藏
