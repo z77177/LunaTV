@@ -3003,7 +3003,7 @@ function PlayPageClient() {
                   disconnectObserver(); // 断开DOM变化观察器
                 };
 
-                // 点击其他地方自动隐藏 - 使用捕获阶段避免冲突
+                // 点击其他地方自动隐藏 - 避免影响播放器控制区域
                 document.addEventListener('click', (e) => {
                   const target = e.target as Element;
 
@@ -3017,13 +3017,13 @@ function PlayPageClient() {
                     return; // 点击弹幕UI本身，不处理
                   }
 
-                  // 检查是否点击了整个播放器区域
-                  const artPlayer = target.closest('.artplayer');
-                  if (artPlayer) {
-                    return; // 点击播放器内部任何地方，都不处理隐藏逻辑
+                  // 检查是否点击了播放器控制栏区域
+                  const artControls = target.closest('.art-controls, .art-bottom');
+                  if (artControls) {
+                    return; // 点击控制栏区域，不处理
                   }
 
-                  // 只有点击播放器外部且面板显示时才隐藏
+                  // 只有在面板实际显示时才隐藏
                   if (isConfigVisible || isStyleVisible) {
                     isConfigVisible = false;
                     isStyleVisible = false;
@@ -3033,9 +3033,9 @@ function PlayPageClient() {
                       (stylePanel as HTMLElement).style.opacity = '0';
                       (stylePanel as HTMLElement).style.pointerEvents = 'none';
                     }
-                    console.log('点击播放器外部区域，隐藏弹幕配置面板');
+                    console.log('点击外部区域，隐藏弹幕配置面板');
                   }
-                }, true); // 使用捕获阶段
+                });
 
                 console.log('移动端弹幕配置切换功能已激活');
               } else {
@@ -3134,7 +3134,7 @@ function PlayPageClient() {
                   });
                 }
 
-                // 点击外部区域隐藏面板 - 使用捕获阶段避免冲突
+                // 点击外部区域隐藏面板 - 改进的逻辑
                 document.addEventListener('click', (e) => {
                   const target = e.target as Element;
 
@@ -3148,13 +3148,13 @@ function PlayPageClient() {
                     return; // 点击弹幕UI本身，不处理
                   }
 
-                  // 检查是否点击了整个播放器区域
-                  const artPlayer = target.closest('.artplayer');
-                  if (artPlayer) {
-                    return; // 点击播放器内部任何地方，都不处理隐藏逻辑
+                  // 检查是否点击了播放器控制栏区域
+                  const artControls = target.closest('.art-controls, .art-bottom');
+                  if (artControls) {
+                    return; // 点击控制栏区域，不处理
                   }
 
-                  // 只有点击播放器外部且面板显示时才隐藏
+                  // 只有在面板实际显示时才隐藏
                   const configVisible = getConfigVisible();
                   const styleVisible = stylePanel && getStyleVisible();
 
@@ -3162,16 +3162,16 @@ function PlayPageClient() {
                     if (configVisible) {
                       (configPanel as HTMLElement).style.opacity = '0';
                       (configPanel as HTMLElement).style.pointerEvents = 'none';
-                      console.log('点击播放器外部，隐藏配置面板');
+                      console.log('点击外部，隐藏配置面板');
                     }
 
                     if (styleVisible) {
                       (stylePanel as HTMLElement).style.opacity = '0';
                       (stylePanel as HTMLElement).style.pointerEvents = 'none';
-                      console.log('点击播放器外部，隐藏样式面板');
+                      console.log('点击外部，隐藏样式面板');
                     }
                   }
-                }, true); // 使用捕获阶段
+                });
 
                 console.log('桌面端点击支持已激活，保持原有hover机制');
               }
