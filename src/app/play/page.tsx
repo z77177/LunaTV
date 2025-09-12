@@ -2952,31 +2952,6 @@ function PlayPageClient() {
               
               console.log('🎯 强制CSS已应用，hover应该被完全禁用');
               
-              // 💀 暴力方法：直接修改内联样式强制禁用hover
-              const forceDisableHover = () => {
-                // 强制隐藏面板
-                (configPanel as HTMLElement).style.cssText = 'opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; display: none !important;';
-                if (stylePanel) {
-                  (stylePanel as HTMLElement).style.cssText = 'opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; display: none !important;';
-                }
-                console.log('💀 暴力禁用hover - 直接修改内联样式');
-              };
-              
-              // 立即执行强制禁用
-              forceDisableHover();
-              
-              // 定期检查并强制禁用（防止被ArtPlayer重置）
-              const hoverKiller = setInterval(() => {
-                if (!isConfigVisible) {
-                  (configPanel as HTMLElement).style.cssText = 'opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; display: none !important;';
-                }
-                if (stylePanel && !isStyleVisible) {
-                  (stylePanel as HTMLElement).style.cssText = 'opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; display: none !important;';
-                }
-              }, 100);
-              
-              console.log('🔪 Hover杀手已启动 - 100ms间隔强制禁用');
-              
               // 🖱️ 配置按钮CLICK切换
               console.log('🔧 正在绑定配置按钮点击事件...');
               configButton.addEventListener('click', (e) => {
@@ -2988,15 +2963,13 @@ function PlayPageClient() {
                 console.log('🔄 切换状态:', isConfigVisible ? '显示' : '隐藏');
                 
                 if (isConfigVisible) {
-                  // 强制显示（覆盖所有CSS）
-                  (configPanel as HTMLElement).style.cssText = 'opacity: 1 !important; pointer-events: auto !important; visibility: visible !important; display: block !important;';
+                  configPanel.classList.add('click-show');
                   adjustPanelPosition();
-                  console.log('✅ 配置面板显示 (强制内联样式)');
+                  console.log('✅ 配置面板显示 (CLICK模式)');
                   console.log('📋 面板classList:', configPanel.classList.toString());
                 } else {
-                  // 强制隐藏（覆盖所有CSS）
-                  (configPanel as HTMLElement).style.cssText = 'opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; display: none !important;';
-                  console.log('❌ 配置面板隐藏 (强制内联样式)');
+                  configPanel.classList.remove('click-show');
+                  console.log('❌ 配置面板隐藏 (CLICK模式)');
                 }
                 
                 // 隐藏其他面板
@@ -3093,10 +3066,6 @@ function PlayPageClient() {
               const cleanupDesktopOptimizations = () => {
                 document.removeEventListener('click', handleGlobalClick);
                 document.removeEventListener('keydown', handleKeyboardShortcuts);
-                
-                // 停止hover杀手定时器
-                clearInterval(hoverKiller);
-                console.log('🛑 Hover杀手已停止');
                 
                 const styleElement = document.getElementById('danmaku-click-mode');
                 if (styleElement) {
