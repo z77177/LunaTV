@@ -2912,152 +2912,8 @@ function PlayPageClient() {
               
               console.log('移动端弹幕配置切换功能已激活');
             } else {
-              // 🚀 桌面端：智能hover优化 - 延迟显示 + 智能隐藏
-              console.log('桌面端启用智能hover优化');
-              
-              // 定时器管理
-              let configHoverTimer: NodeJS.Timeout | null = null;
-              let configHideTimer: NodeJS.Timeout | null = null;
-              let styleHoverTimer: NodeJS.Timeout | null = null;
-              let styleHideTimer: NodeJS.Timeout | null = null;
-              
-              // 配置参数
-              const HOVER_DELAY = 300;  // hover后300ms显示，避免误触
-              const HIDE_DELAY = 150;   // 离开后150ms隐藏
-              const INTENT_DELAY = 120; // 意图明确时快速响应
-              
-              // 用户意图检测
-              const detectUserIntent = (mouseEvent: MouseEvent, element: Element) => {
-                const rect = element.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                
-                const distance = Math.sqrt(
-                  Math.pow(mouseEvent.clientX - centerX, 2) + 
-                  Math.pow(mouseEvent.clientY - centerY, 2)
-                );
-                
-                // 距离中心越近，意图越明确
-                return distance < 30 ? 'intentional' : 'casual';
-              };
-              
-              // 弹幕配置按钮优化hover
-              const optimizeConfigHover = () => {
-                // 移除原有的CSS hover效果，使用JS控制
-                const style = document.createElement('style');
-                style.id = 'danmaku-hover-optimization';
-                style.textContent = `
-                  /* 禁用原有CSS hover，改用JS控制 */
-                  .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                  }
-                  
-                  .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                  }
-                  
-                  /* 优化后的显示状态 */
-                  .artplayer-plugin-danmuku .apd-config-panel.optimized-show,
-                  .artplayer-plugin-danmuku .apd-style-panel.optimized-show {
-                    opacity: 1 !important;
-                    pointer-events: auto !important;
-                    transition: opacity 0.2s ease-in-out !important;
-                  }
-                  
-                  /* 优化后的隐藏状态 */
-                  .artplayer-plugin-danmuku .apd-config-panel.optimized-hide,
-                  .artplayer-plugin-danmuku .apd-style-panel.optimized-hide {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                    transition: opacity 0.15s ease-out !important;
-                  }
-                `;
-                document.head.appendChild(style);
-              };
-              
-              // 配置按钮hover事件
-              configButton.addEventListener('mouseenter', (e) => {
-                if (configHideTimer) clearTimeout(configHideTimer);
-                
-                const intent = detectUserIntent(e as MouseEvent, configButton);
-                const delay = intent === 'intentional' ? INTENT_DELAY : HOVER_DELAY;
-                
-                configHoverTimer = setTimeout(() => {
-                  configPanel.classList.remove('optimized-hide');
-                  configPanel.classList.add('optimized-show');
-                  console.log(`🎯 配置面板显示 (${intent}, ${delay}ms)`);
-                }, delay);
-              });
-              
-              configButton.addEventListener('mouseleave', () => {
-                if (configHoverTimer) clearTimeout(configHoverTimer);
-                
-                configHideTimer = setTimeout(() => {
-                  configPanel.classList.remove('optimized-show');
-                  configPanel.classList.add('optimized-hide');
-                  console.log('📤 配置面板隐藏');
-                }, HIDE_DELAY);
-              });
-              
-              // 面板内hover保持显示
-              configPanel.addEventListener('mouseenter', () => {
-                if (configHideTimer) clearTimeout(configHideTimer);
-                configPanel.classList.remove('optimized-hide');
-                configPanel.classList.add('optimized-show');
-              });
-              
-              configPanel.addEventListener('mouseleave', () => {
-                configHideTimer = setTimeout(() => {
-                  configPanel.classList.remove('optimized-show');
-                  configPanel.classList.add('optimized-hide');
-                  console.log('📤 配置面板隐藏 (从面板离开)');
-                }, HIDE_DELAY);
-              });
-              
-              // 样式按钮类似处理（如果存在）
-              if (styleButton && stylePanel) {
-                styleButton.addEventListener('mouseenter', (e) => {
-                  if (styleHideTimer) clearTimeout(styleHideTimer);
-                  
-                  const intent = detectUserIntent(e as MouseEvent, styleButton);
-                  const delay = intent === 'intentional' ? INTENT_DELAY : HOVER_DELAY;
-                  
-                  styleHoverTimer = setTimeout(() => {
-                    stylePanel.classList.remove('optimized-hide');
-                    stylePanel.classList.add('optimized-show');
-                    console.log(`🎨 样式面板显示 (${intent}, ${delay}ms)`);
-                  }, delay);
-                });
-                
-                styleButton.addEventListener('mouseleave', () => {
-                  if (styleHoverTimer) clearTimeout(styleHoverTimer);
-                  
-                  styleHideTimer = setTimeout(() => {
-                    stylePanel.classList.remove('optimized-show');
-                    stylePanel.classList.add('optimized-hide');
-                    console.log('📤 样式面板隐藏');
-                  }, HIDE_DELAY);
-                });
-                
-                stylePanel.addEventListener('mouseenter', () => {
-                  if (styleHideTimer) clearTimeout(styleHideTimer);
-                  stylePanel.classList.remove('optimized-hide');
-                  stylePanel.classList.add('optimized-show');
-                });
-                
-                stylePanel.addEventListener('mouseleave', () => {
-                  styleHideTimer = setTimeout(() => {
-                    stylePanel.classList.remove('optimized-show');
-                    stylePanel.classList.add('optimized-hide');
-                    console.log('📤 样式面板隐藏 (从面板离开)');
-                  }, HIDE_DELAY);
-                });
-              }
-              
-              // 应用CSS优化
-              optimizeConfigHover();
+              // 🖥️ 桌面端：保持原版CSS hover + 仅添加键盘快捷键
+              console.log('桌面端保持原版hover机制，添加键盘快捷键');
               
               // 🎹 键盘快捷键支持
               const handleKeyboardShortcuts = (e: KeyboardEvent) => {
@@ -3076,67 +2932,20 @@ function PlayPageClient() {
                     }
                   }
                 }
-                
-                // ESC键隐藏弹幕面板
-                if (e.key === 'Escape') {
-                  if (configPanel.classList.contains('optimized-show')) {
-                    configPanel.classList.remove('optimized-show');
-                    configPanel.classList.add('optimized-hide');
-                  }
-                  if (stylePanel && stylePanel.classList.contains('optimized-show')) {
-                    stylePanel.classList.remove('optimized-show');
-                    stylePanel.classList.add('optimized-hide');
-                  }
-                  console.log('🎹 ESC键隐藏弹幕面板');
-                }
               };
               
               document.addEventListener('keydown', handleKeyboardShortcuts);
               
-              // 🖱️ 全局点击隐藏面板
-              const handleGlobalClick = (e: MouseEvent) => {
-                const target = e.target as Element;
-                if (!configButton.contains(target) && 
-                    !configPanel.contains(target) &&
-                    !(styleButton && styleButton.contains(target)) &&
-                    !(stylePanel && stylePanel.contains(target))) {
-                  
-                  if (configPanel.classList.contains('optimized-show')) {
-                    configPanel.classList.remove('optimized-show');
-                    configPanel.classList.add('optimized-hide');
-                    console.log('🖱️ 全局点击隐藏配置面板');
-                  }
-                  if (stylePanel && stylePanel.classList.contains('optimized-show')) {
-                    stylePanel.classList.remove('optimized-show');
-                    stylePanel.classList.add('optimized-hide');
-                    console.log('🖱️ 全局点击隐藏样式面板');
-                  }
-                }
-              };
-              
-              document.addEventListener('click', handleGlobalClick);
-              
-              // 🔄 清理函数（防止内存泄漏）
+              // 🔄 清理函数
               const cleanupDesktopOptimizations = () => {
                 document.removeEventListener('keydown', handleKeyboardShortcuts);
-                document.removeEventListener('click', handleGlobalClick);
-                if (configHoverTimer) clearTimeout(configHoverTimer);
-                if (configHideTimer) clearTimeout(configHideTimer);
-                if (styleHoverTimer) clearTimeout(styleHoverTimer);
-                if (styleHideTimer) clearTimeout(styleHideTimer);
-                
-                const styleElement = document.getElementById('danmaku-hover-optimization');
-                if (styleElement) {
-                  styleElement.remove();
-                }
               };
               
-              // 在播放器销毁时清理
               if (artPlayerRef.current) {
                 artPlayerRef.current.on('destroy', cleanupDesktopOptimizations);
               }
               
-              console.log('✅ 桌面端智能hover优化已启用 (含键盘快捷键支持)');
+              console.log('✅ 桌面端保持原版hover + 键盘快捷键已启用');
             }
           }, 2000); // 延迟2秒确保弹幕插件完全初始化
         };
