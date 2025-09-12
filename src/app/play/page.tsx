@@ -3039,22 +3039,22 @@ function PlayPageClient() {
                       (configPanel as HTMLElement).style.opacity = '1';
                       (configPanel as HTMLElement).style.pointerEvents = 'all';
                     } else {
-                      // 延迟300ms显示，避免意外触发
+                      // 延迟150ms显示，避免意外触发
                       configHoverTimer = setTimeout(() => {
                         if (isConfigMouseInside) {
                           (configPanel as HTMLElement).style.opacity = '1';
                           (configPanel as HTMLElement).style.pointerEvents = 'all';
                         }
-                      }, 300);
+                      }, 150);
                     }
                   } else {
-                    // 延迟200ms隐藏，给用户移动到面板的时间
+                    // 延迟100ms隐藏，给用户移动到面板的时间
                     configHoverTimer = setTimeout(() => {
                       if (!isConfigMouseInside) {
                         (configPanel as HTMLElement).style.opacity = '0';
                         (configPanel as HTMLElement).style.pointerEvents = 'none';
                       }
-                    }, 200);
+                    }, 100);
                   }
                 };
 
@@ -3074,7 +3074,7 @@ function PlayPageClient() {
                           (stylePanel as HTMLElement).style.opacity = '1';
                           (stylePanel as HTMLElement).style.pointerEvents = 'all';
                         }
-                      }, 300);
+                      }, 150);
                     }
                   } else if (stylePanel) {
                     styleHoverTimer = setTimeout(() => {
@@ -3082,7 +3082,7 @@ function PlayPageClient() {
                         (stylePanel as HTMLElement).style.opacity = '0';
                         (stylePanel as HTMLElement).style.pointerEvents = 'none';
                       }
-                    }, 200);
+                    }, 100);
                   }
                 };
 
