@@ -3,10 +3,10 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import Hls from 'hls.js';
 import { Heart, ChevronUp } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
 
 import EpisodeSelector from '@/components/EpisodeSelector';
 import NetDiskSearchResults from '@/components/NetDiskSearchResults';
@@ -3027,9 +3027,6 @@ function PlayPageClient() {
               } else {
                 // 桌面端：添加点击支持，保持原有hover机制
                 console.log('桌面端添加点击支持');
-
-                let isConfigVisible = false;
-                let isStyleVisible = false;
 
                 // 获取当前面板状态
                 const getConfigVisible = () => {
