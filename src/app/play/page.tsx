@@ -2633,9 +2633,7 @@ function PlayPageClient() {
             .artplayer-plugin-danmuku .apd-config-panel {
               /* 使用绝对定位而不是fixed，让ArtPlayer的动态定位生效 */
               position: absolute !important;
-              /* 移除固定的left/right定位，让JS动态计算 */
-              left: auto;
-              right: auto;
+              /* 保持ArtPlayer原版的默认left: 0，让JS动态覆盖 */
               /* 保留z-index确保层级正确 */
               z-index: 2147483647 !important; /* 使用最大z-index确保在全屏模式下也能显示在最顶层 */
               /* 确保面板可以接收点击事件 */
@@ -2697,6 +2695,14 @@ function PlayPageClient() {
                 try {
                   const panelElement = configPanel as HTMLElement;
                   
+                  // 确保面板先恢复默认位置，模拟CSS默认行为
+                  panelElement.style.left = '0px';
+                  panelElement.style.right = '';
+                  panelElement.style.transform = '';
+                  
+                  // 强制重排以获取准确的位置信息
+                  panelElement.offsetHeight;
+                  
                   // 获取各元素的位置信息 - 严格按照ArtPlayer原版算法
                   const controlRect = configButton.getBoundingClientRect();
                   const panelRect = configPanel.getBoundingClientRect();
@@ -2716,11 +2722,13 @@ function PlayPageClient() {
                     panelElement.style.left = `${-half}px`;
                   }
                   
-                  // 清除其他样式防止冲突
-                  panelElement.style.right = '';
-                  panelElement.style.transform = '';
-                  
-                  console.log('弹幕面板位置已修正 - 使用ArtPlayer原版算法');
+                  console.log('弹幕面板位置已修正:', {
+                    controlRect: controlRect.left,
+                    panelWidth: panelRect.width,
+                    playerLeft: playerRect.left,
+                    half,
+                    finalLeft: panelElement.style.left
+                  });
                 } catch (error) {
                   console.warn('弹幕面板位置调整失败:', error);
                 }
@@ -2734,14 +2742,16 @@ function PlayPageClient() {
                 isConfigVisible = !isConfigVisible;
                 
                 if (isConfigVisible) {
-                  (configPanel as HTMLElement).style.display = 'block';
+                  (configPanel as HTMLElement).style.opacity = '1';
+                  (configPanel as HTMLElement).style.pointerEvents = 'all';
                   // 显示后延迟调整位置，确保DOM完全更新
                   setTimeout(() => {
                     adjustPanelPosition();
                   }, 50);
                   console.log('移动端弹幕配置面板：显示');
                 } else {
-                  (configPanel as HTMLElement).style.display = 'none';
+                  (configPanel as HTMLElement).style.opacity = '0';
+                  (configPanel as HTMLElement).style.pointerEvents = 'none';
                   console.log('移动端弹幕配置面板：隐藏');
                 }
               });
