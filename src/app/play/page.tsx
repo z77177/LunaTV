@@ -2981,7 +2981,7 @@ function PlayPageClient() {
               configButton.addEventListener('mouseenter', (e) => {
                 if (configHideTimer) clearTimeout(configHideTimer);
                 
-                const intent = detectUserIntent(e, configButton);
+                const intent = detectUserIntent(e as MouseEvent, configButton);
                 const delay = intent === 'intentional' ? INTENT_DELAY : HOVER_DELAY;
                 
                 configHoverTimer = setTimeout(() => {
@@ -3021,7 +3021,7 @@ function PlayPageClient() {
                 styleButton.addEventListener('mouseenter', (e) => {
                   if (styleHideTimer) clearTimeout(styleHideTimer);
                   
-                  const intent = detectUserIntent(e, styleButton);
+                  const intent = detectUserIntent(e as MouseEvent, styleButton);
                   const delay = intent === 'intentional' ? INTENT_DELAY : HOVER_DELAY;
                   
                   styleHoverTimer = setTimeout(() => {
