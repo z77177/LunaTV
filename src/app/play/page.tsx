@@ -3019,118 +3019,171 @@ function PlayPageClient() {
 
                 console.log('移动端弹幕配置切换功能已激活');
               } else {
-                // 桌面端：改进hover机制，添加延迟和更智能的交互
-                console.log('桌面端启用改进的hover机制');
+                // 桌面端：优化hover机制 - 添加点击支持 + 优化hover延迟
+                console.log('桌面端启用优化的hover + 点击机制');
 
                 let configHoverTimer: NodeJS.Timeout | null = null;
                 let styleHoverTimer: NodeJS.Timeout | null = null;
-                let isConfigMouseInside = false;
-                let isStyleMouseInside = false;
+                let isConfigVisible = false;
+                let isStyleVisible = false;
 
-                // 改进的hover处理函数
-                const handleConfigHover = (show: boolean, immediate = false) => {
+                // 显示配置面板
+                const showConfigPanel = () => {
+                  if (isStyleVisible && stylePanel) {
+                    isStyleVisible = false;
+                    (stylePanel as HTMLElement).style.opacity = '0';
+                    (stylePanel as HTMLElement).style.pointerEvents = 'none';
+                  }
+                  isConfigVisible = true;
+                  (configPanel as HTMLElement).style.opacity = '1';
+                  (configPanel as HTMLElement).style.pointerEvents = 'all';
+                };
+
+                // 隐藏配置面板
+                const hideConfigPanel = () => {
+                  isConfigVisible = false;
+                  (configPanel as HTMLElement).style.opacity = '0';
+                  (configPanel as HTMLElement).style.pointerEvents = 'none';
+                };
+
+                // 显示样式面板
+                const showStylePanel = () => {
+                  if (!stylePanel) return;
+                  if (isConfigVisible) {
+                    isConfigVisible = false;
+                    (configPanel as HTMLElement).style.opacity = '0';
+                    (configPanel as HTMLElement).style.pointerEvents = 'none';
+                  }
+                  isStyleVisible = true;
+                  (stylePanel as HTMLElement).style.opacity = '1';
+                  (stylePanel as HTMLElement).style.pointerEvents = 'all';
+                };
+
+                // 隐藏样式面板
+                const hideStylePanel = () => {
+                  if (!stylePanel) return;
+                  isStyleVisible = false;
+                  (stylePanel as HTMLElement).style.opacity = '0';
+                  (stylePanel as HTMLElement).style.pointerEvents = 'none';
+                };
+
+                // 配置按钮事件 - 支持点击和hover
+                configButton.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (isConfigVisible) {
+                    hideConfigPanel();
+                  } else {
+                    showConfigPanel();
+                  }
+                  console.log('桌面端点击配置按钮:', isConfigVisible ? '显示' : '隐藏');
+                });
+
+                configButton.addEventListener('mouseenter', () => {
                   if (configHoverTimer) {
                     clearTimeout(configHoverTimer);
                     configHoverTimer = null;
                   }
-
-                  if (show) {
-                    if (immediate) {
-                      (configPanel as HTMLElement).style.opacity = '1';
-                      (configPanel as HTMLElement).style.pointerEvents = 'all';
-                    } else {
-                      // 延迟150ms显示，避免意外触发
-                      configHoverTimer = setTimeout(() => {
-                        if (isConfigMouseInside) {
-                          (configPanel as HTMLElement).style.opacity = '1';
-                          (configPanel as HTMLElement).style.pointerEvents = 'all';
-                        }
-                      }, 150);
+                  // 短延迟显示，避免意外触发
+                  configHoverTimer = setTimeout(() => {
+                    if (!isConfigVisible) {
+                      showConfigPanel();
                     }
-                  } else {
-                    // 延迟100ms隐藏，给用户移动到面板的时间
-                    configHoverTimer = setTimeout(() => {
-                      if (!isConfigMouseInside) {
-                        (configPanel as HTMLElement).style.opacity = '0';
-                        (configPanel as HTMLElement).style.pointerEvents = 'none';
-                      }
-                    }, 100);
-                  }
-                };
-
-                const handleStyleHover = (show: boolean, immediate = false) => {
-                  if (styleHoverTimer) {
-                    clearTimeout(styleHoverTimer);
-                    styleHoverTimer = null;
-                  }
-
-                  if (show && stylePanel) {
-                    if (immediate) {
-                      (stylePanel as HTMLElement).style.opacity = '1';
-                      (stylePanel as HTMLElement).style.pointerEvents = 'all';
-                    } else {
-                      styleHoverTimer = setTimeout(() => {
-                        if (isStyleMouseInside) {
-                          (stylePanel as HTMLElement).style.opacity = '1';
-                          (stylePanel as HTMLElement).style.pointerEvents = 'all';
-                        }
-                      }, 150);
-                    }
-                  } else if (stylePanel) {
-                    styleHoverTimer = setTimeout(() => {
-                      if (!isStyleMouseInside) {
-                        (stylePanel as HTMLElement).style.opacity = '0';
-                        (stylePanel as HTMLElement).style.pointerEvents = 'none';
-                      }
-                    }, 100);
-                  }
-                };
-
-                // 配置按钮和面板的事件监听
-                configButton.addEventListener('mouseenter', () => {
-                  isConfigMouseInside = true;
-                  handleConfigHover(true);
+                  }, 100);
                 });
 
                 configButton.addEventListener('mouseleave', () => {
-                  isConfigMouseInside = false;
-                  handleConfigHover(false);
+                  if (configHoverTimer) {
+                    clearTimeout(configHoverTimer);
+                    configHoverTimer = null;
+                  }
+                  // 延迟隐藏，给用户移动到面板的时间
+                  configHoverTimer = setTimeout(() => {
+                    hideConfigPanel();
+                  }, 150);
                 });
 
+                // 配置面板事件
                 configPanel.addEventListener('mouseenter', () => {
-                  isConfigMouseInside = true;
-                  handleConfigHover(true, true); // 立即显示
+                  if (configHoverTimer) {
+                    clearTimeout(configHoverTimer);
+                    configHoverTimer = null;
+                  }
+                  if (!isConfigVisible) {
+                    showConfigPanel();
+                  }
                 });
 
                 configPanel.addEventListener('mouseleave', () => {
-                  isConfigMouseInside = false;
-                  handleConfigHover(false);
+                  configHoverTimer = setTimeout(() => {
+                    hideConfigPanel();
+                  }, 150);
                 });
 
-                // 样式按钮和面板的事件监听
+                // 样式按钮和面板事件
                 if (styleButton && stylePanel) {
+                  styleButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (isStyleVisible) {
+                      hideStylePanel();
+                    } else {
+                      showStylePanel();
+                    }
+                    console.log('桌面端点击样式按钮:', isStyleVisible ? '显示' : '隐藏');
+                  });
+
                   styleButton.addEventListener('mouseenter', () => {
-                    isStyleMouseInside = true;
-                    handleStyleHover(true);
+                    if (styleHoverTimer) {
+                      clearTimeout(styleHoverTimer);
+                      styleHoverTimer = null;
+                    }
+                    styleHoverTimer = setTimeout(() => {
+                      if (!isStyleVisible) {
+                        showStylePanel();
+                      }
+                    }, 100);
                   });
 
                   styleButton.addEventListener('mouseleave', () => {
-                    isStyleMouseInside = false;
-                    handleStyleHover(false);
+                    if (styleHoverTimer) {
+                      clearTimeout(styleHoverTimer);
+                      styleHoverTimer = null;
+                    }
+                    styleHoverTimer = setTimeout(() => {
+                      hideStylePanel();
+                    }, 150);
                   });
 
                   stylePanel.addEventListener('mouseenter', () => {
-                    isStyleMouseInside = true;
-                    handleStyleHover(true, true);
+                    if (styleHoverTimer) {
+                      clearTimeout(styleHoverTimer);
+                      styleHoverTimer = null;
+                    }
+                    if (!isStyleVisible) {
+                      showStylePanel();
+                    }
                   });
 
                   stylePanel.addEventListener('mouseleave', () => {
-                    isStyleMouseInside = false;
-                    handleStyleHover(false);
+                    styleHoverTimer = setTimeout(() => {
+                      hideStylePanel();
+                    }, 150);
                   });
                 }
 
-                // 禁用原始CSS hover效果，改为JS控制
+                // 点击外部区域隐藏面板
+                document.addEventListener('click', (e) => {
+                  if (!configButton.contains(e.target as Node) &&
+                    !configPanel.contains(e.target as Node) &&
+                    (!styleButton || !styleButton.contains(e.target as Node)) &&
+                    (!stylePanel || !stylePanel.contains(e.target as Node))) {
+                    hideConfigPanel();
+                    hideStylePanel();
+                  }
+                });
+
+                // 完全禁用原始CSS hover效果
                 const style = document.createElement('style');
                 style.textContent = `
                 .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
@@ -3141,7 +3194,7 @@ function PlayPageClient() {
               `;
                 document.head.appendChild(style);
 
-                console.log('桌面端改进的hover机制已激活');
+                console.log('桌面端优化的hover + 点击机制已激活');
               }
             }, 2000); // 延迟2秒确保弹幕插件完全初始化
           };
