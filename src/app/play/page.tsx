@@ -2772,58 +2772,58 @@ function PlayPageClient() {
             
             console.log('设备类型:', isMobile ? '移动端' : '桌面端');
             
-            // 🔧 通用面板位置调整函数 - 模仿ArtPlayer原版位置算法
-            const adjustPanelPosition = () => {
-              const player = document.querySelector('.artplayer');
-              if (!player || !configButton || !configPanel) return;
-              
-              try {
-                const panelElement = configPanel as HTMLElement;
-                
-                // 确保面板先恢复默认位置
-                panelElement.style.left = '0px';
-                panelElement.style.right = '';
-                panelElement.style.transform = '';
-                
-                // 强制重排以获取准确的位置信息
-                panelElement.offsetHeight;
-                
-                // 获取各元素的位置信息 - 严格按照ArtPlayer原版算法
-                const controlRect = configButton.getBoundingClientRect();
-                const panelRect = configPanel.getBoundingClientRect();
-                const playerRect = player.getBoundingClientRect();
-                
-                // ArtPlayer原版位置计算算法
-                const half = panelRect.width / 2 - controlRect.width / 2;
-                const left = playerRect.left - (controlRect.left - half);
-                const right = controlRect.right + half - playerRect.right;
-                
-                // 应用位置计算结果
-                if (left > 0) {
-                  panelElement.style.left = `${-half + left}px`;
-                } else if (right > 0) {
-                  panelElement.style.left = `${-half - right}px`;
-                } else {
-                  panelElement.style.left = `${-half}px`;
-                }
-                
-                console.log('弹幕面板位置已调整:', {
-                  controlRect: controlRect.left,
-                  panelWidth: panelRect.width,
-                  playerLeft: playerRect.left,
-                  half,
-                  finalLeft: panelElement.style.left
-                });
-              } catch (error) {
-                console.warn('弹幕面板位置调整失败:', error);
-              }
-            };
-            
             if (isMobile) {
               // 移动端：添加点击切换支持 + 持久位置修正
               console.log('为移动端添加弹幕配置按钮点击切换功能');
               
               let isConfigVisible = false;
+              
+              // 弹幕面板位置修正函数 - 完全模仿ArtPlayer原版位置算法
+              const adjustPanelPosition = () => {
+                const player = document.querySelector('.artplayer');
+                if (!player || !configButton || !configPanel) return;
+                
+                try {
+                  const panelElement = configPanel as HTMLElement;
+                  
+                  // 确保面板先恢复默认位置，模拟CSS默认行为
+                  panelElement.style.left = '0px';
+                  panelElement.style.right = '';
+                  panelElement.style.transform = '';
+                  
+                  // 强制重排以获取准确的位置信息
+                  panelElement.offsetHeight;
+                  
+                  // 获取各元素的位置信息 - 严格按照ArtPlayer原版算法
+                  const controlRect = configButton.getBoundingClientRect();
+                  const panelRect = configPanel.getBoundingClientRect();
+                  const playerRect = player.getBoundingClientRect();
+                  
+                  // ArtPlayer原版位置计算算法
+                  const half = panelRect.width / 2 - controlRect.width / 2;
+                  const left = playerRect.left - (controlRect.left - half);
+                  const right = controlRect.right + half - playerRect.right;
+                  
+                  // 应用位置计算结果
+                  if (left > 0) {
+                    panelElement.style.left = `${-half + left}px`;
+                  } else if (right > 0) {
+                    panelElement.style.left = `${-half - right}px`;
+                  } else {
+                    panelElement.style.left = `${-half}px`;
+                  }
+                  
+                  console.log('弹幕面板位置已修正:', {
+                    controlRect: controlRect.left,
+                    panelWidth: panelRect.width,
+                    playerLeft: playerRect.left,
+                    half,
+                    finalLeft: panelElement.style.left
+                  });
+                } catch (error) {
+                  console.warn('弹幕面板位置调整失败:', error);
+                }
+              };
               
               // 添加点击事件监听器
               configButton.addEventListener('click', (e) => {
