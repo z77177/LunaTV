@@ -2918,48 +2918,68 @@ function PlayPageClient() {
               let isConfigVisible = false;
               let isStyleVisible = false;
               
-              // 🎯 禁用CSS hover，改为JS控制
+              // 🎯 强制禁用CSS hover，改为JS控制
               const style = document.createElement('style');
               style.id = 'danmaku-click-mode';
               style.textContent = `
-                /* 禁用原有CSS hover */
-                .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-                .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
+                /* 最高权重禁用原有CSS hover */
+                .artplayer .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+                .artplayer .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
                   opacity: 0 !important;
                   pointer-events: none !important;
+                  visibility: hidden !important;
+                  display: none !important;
                 }
                 
-                /* JS控制的显示状态 */
-                .artplayer-plugin-danmuku .apd-config-panel.click-show,
-                .artplayer-plugin-danmuku .apd-style-panel.click-show {
+                /* 初始状态强制隐藏 */
+                .artplayer .artplayer-plugin-danmuku .apd-config-panel,
+                .artplayer .artplayer-plugin-danmuku .apd-style-panel {
+                  opacity: 0 !important;
+                  pointer-events: none !important;
+                  visibility: hidden !important;
+                }
+                
+                /* JS控制的显示状态 - 最高权重 */
+                .artplayer .artplayer-plugin-danmuku .apd-config-panel.click-show,
+                .artplayer .artplayer-plugin-danmuku .apd-style-panel.click-show {
                   opacity: 1 !important;
                   pointer-events: auto !important;
+                  visibility: visible !important;
+                  display: block !important;
                 }
               `;
               document.head.appendChild(style);
               
+              console.log('🎯 强制CSS已应用，hover应该被完全禁用');
+              
               // 🖱️ 配置按钮CLICK切换
+              console.log('🔧 正在绑定配置按钮点击事件...');
               configButton.addEventListener('click', (e) => {
+                console.log('🖱️ 配置按钮被点击！');
                 e.preventDefault();
                 e.stopPropagation();
                 
                 isConfigVisible = !isConfigVisible;
+                console.log('🔄 切换状态:', isConfigVisible ? '显示' : '隐藏');
                 
                 if (isConfigVisible) {
                   configPanel.classList.add('click-show');
-                  adjustPanelPosition(); // 复用移动端的位置算法
-                  console.log('🖱️ 配置面板显示 (CLICK模式)');
+                  adjustPanelPosition();
+                  console.log('✅ 配置面板显示 (CLICK模式)');
+                  console.log('📋 面板classList:', configPanel.classList.toString());
                 } else {
                   configPanel.classList.remove('click-show');
-                  console.log('🖱️ 配置面板隐藏 (CLICK模式)');
+                  console.log('❌ 配置面板隐藏 (CLICK模式)');
                 }
                 
                 // 隐藏其他面板
                 if (stylePanel && isStyleVisible) {
                   isStyleVisible = false;
                   stylePanel.classList.remove('click-show');
+                  console.log('📝 样式面板已隐藏');
                 }
               });
+              console.log('✅ 配置按钮事件监听器已绑定');
               
               // 🎨 样式按钮CLICK切换（如果存在）
               if (styleButton && stylePanel) {
