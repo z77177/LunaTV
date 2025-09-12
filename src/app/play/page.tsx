@@ -2666,6 +2666,67 @@ function PlayPageClient() {
         // 应用CSS优化
         optimizeDanmukuControlsCSS();
 
+        // 防止进度条拖拽时误触弹幕菜单 - 解决拖拽冲突问题
+        const preventDanmakuMenuConflict = () => {
+          let isDraggingProgress = false;
+          
+          // 监听进度条拖拽状态
+          if (artPlayerRef.current) {
+            // 监听document的mousedown/mouseup来追踪拖拽状态
+            const handleMouseDown = (e: MouseEvent) => {
+              const progressBar = document.querySelector('.art-control-progress');
+              const target = e.target as Element;
+              
+              // 检查是否在进度条区域开始拖拽
+              if (progressBar && progressBar.contains(target)) {
+                isDraggingProgress = true;
+              }
+            };
+            
+            const handleMouseUp = () => {
+              isDraggingProgress = false;
+            };
+            
+            document.addEventListener('mousedown', handleMouseDown);
+            document.addEventListener('mouseup', handleMouseUp);
+            
+            // 拦截弹幕配置按钮的mouseenter事件
+            setTimeout(() => {
+              const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config');
+              if (configButton) {
+                // 创建一个透明遮罩层来拦截mouseenter事件
+                const interceptor = document.createElement('div');
+                interceptor.style.cssText = `
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  width: 100%;
+                  height: 100%;
+                  z-index: 1;
+                  pointer-events: none;
+                `;
+                
+                configButton.appendChild(interceptor);
+                
+                // 在拖拽时启用遮罩
+                const updateInterceptor = () => {
+                  if (isDraggingProgress) {
+                    interceptor.style.pointerEvents = 'all';
+                  } else {
+                    interceptor.style.pointerEvents = 'none';
+                  }
+                };
+                
+                // 定期检查拖拽状态
+                setInterval(updateInterceptor, 50);
+              }
+            }, 1000);
+          }
+        };
+        
+        // 启用防冲突机制
+        preventDanmakuMenuConflict();
+
         // 移动端弹幕配置按钮点击切换支持 - 基于ArtPlayer设置按钮原理
         const addMobileDanmakuToggle = () => {
           const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
