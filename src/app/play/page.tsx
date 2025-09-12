@@ -2979,7 +2979,7 @@ function PlayPageClient() {
               
               // 配置按钮hover事件
               configButton.addEventListener('mouseenter', (e) => {
-                clearTimeout(configHideTimer);
+                if (configHideTimer) clearTimeout(configHideTimer);
                 
                 const intent = detectUserIntent(e, configButton);
                 const delay = intent === 'intentional' ? INTENT_DELAY : HOVER_DELAY;
@@ -2992,7 +2992,7 @@ function PlayPageClient() {
               });
               
               configButton.addEventListener('mouseleave', () => {
-                clearTimeout(configHoverTimer);
+                if (configHoverTimer) clearTimeout(configHoverTimer);
                 
                 configHideTimer = setTimeout(() => {
                   configPanel.classList.remove('optimized-show');
@@ -3003,7 +3003,7 @@ function PlayPageClient() {
               
               // 面板内hover保持显示
               configPanel.addEventListener('mouseenter', () => {
-                clearTimeout(configHideTimer);
+                if (configHideTimer) clearTimeout(configHideTimer);
                 configPanel.classList.remove('optimized-hide');
                 configPanel.classList.add('optimized-show');
               });
@@ -3019,7 +3019,7 @@ function PlayPageClient() {
               // 样式按钮类似处理（如果存在）
               if (styleButton && stylePanel) {
                 styleButton.addEventListener('mouseenter', (e) => {
-                  clearTimeout(styleHideTimer);
+                  if (styleHideTimer) clearTimeout(styleHideTimer);
                   
                   const intent = detectUserIntent(e, styleButton);
                   const delay = intent === 'intentional' ? INTENT_DELAY : HOVER_DELAY;
@@ -3032,7 +3032,7 @@ function PlayPageClient() {
                 });
                 
                 styleButton.addEventListener('mouseleave', () => {
-                  clearTimeout(styleHoverTimer);
+                  if (styleHoverTimer) clearTimeout(styleHoverTimer);
                   
                   styleHideTimer = setTimeout(() => {
                     stylePanel.classList.remove('optimized-show');
@@ -3042,7 +3042,7 @@ function PlayPageClient() {
                 });
                 
                 stylePanel.addEventListener('mouseenter', () => {
-                  clearTimeout(styleHideTimer);
+                  if (styleHideTimer) clearTimeout(styleHideTimer);
                   stylePanel.classList.remove('optimized-hide');
                   stylePanel.classList.add('optimized-show');
                 });
@@ -3120,10 +3120,10 @@ function PlayPageClient() {
               const cleanupDesktopOptimizations = () => {
                 document.removeEventListener('keydown', handleKeyboardShortcuts);
                 document.removeEventListener('click', handleGlobalClick);
-                clearTimeout(configHoverTimer);
-                clearTimeout(configHideTimer);
-                clearTimeout(styleHoverTimer);
-                clearTimeout(styleHideTimer);
+                if (configHoverTimer) clearTimeout(configHoverTimer);
+                if (configHideTimer) clearTimeout(configHideTimer);
+                if (styleHoverTimer) clearTimeout(styleHoverTimer);
+                if (styleHideTimer) clearTimeout(styleHideTimer);
                 
                 const styleElement = document.getElementById('danmaku-hover-optimization');
                 if (styleElement) {
