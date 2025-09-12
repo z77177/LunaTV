@@ -2,8 +2,11 @@ name: Upstream Sync
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # run every 6 hours
-  workflow_dispatch:
+    - cron: '0 */6 * * *' # 每 6 小时运行一次
+  workflow_dispatch:       # 手动触发
+  push:
+    branches:
+      - main               # 当 main 分支有更新时触发
 
 permissions:
   contents: write
@@ -43,22 +46,40 @@ jobs:
         id: check_files
         run: |
           git fetch origin main
-          # 获取最近一次 merge upstream 的提交范围
           LAST_COMMIT=$(git log -1 --pretty=format:%H)
           echo "Last commit: $LAST_COMMIT"
 
-          # 检查文件是否变化
           if git diff-tree --no-commit-id --name-only -r $LAST_COMMIT | grep -E '^(VERSION.txt|CHANGELOG)$'; then
             echo "files_changed=true" >> $GITHUB_OUTPUT
           else
             echo "files_changed=false" >> $GITHUB_OUTPUT
           fi
 
-      # Step 4: 仅在 upstream 有更新 且 关键文件有变化 时触发 release.yml
-      - name: Trigger Release workflow
-        if: steps.sync.outputs.has_new_commits == 'true' && steps.check_files.outputs.files_changed == 'true'
+      # Step 4: 读取 VERSION.txt 版本号
+      - name: Read VERSION.txt
+        id: read_version
+        if: steps.check_files.outputs.files_changed == 'true'
         run: |
-          echo "New commits with VERSION.txt/CHANGELOG changes detected, triggering release.yml..."
+          VERSION=$(cat VERSION.txt | tr -d ' \n')
+          echo "VERSION=$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      # Step 5: 检查 tag 是否存在
+      - name: Check if tag exists
+        id: check_tag
+        if: steps.read_version.outputs.version != ''
+        run: |
+          if git rev-parse "refs/tags/${{ steps.read_version.outputs.version }}" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 6: 仅在满足条件时触发 release.yml
+      - name: Trigger Release workflow
+        if: steps.sync.outputs.has_new_commits == 'true' && steps.check_files.outputs.files_changed == 'true' && steps.check_tag.outputs.tag_exists == 'false'
+        run: |
+          echo "New version detected: ${{ steps.read_version.outputs.version }}. Triggering release.yml..."
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
