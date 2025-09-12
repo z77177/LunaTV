@@ -2687,6 +2687,36 @@ function PlayPageClient() {
                   opacity: 0 !important;
                   pointer-events: none !important;
                 }
+                
+                /* 核心修复：确保进度条在弹幕面板上方，或让面板不拦截进度条点击 */
+                .art-progress {
+                  position: relative;
+                  z-index: 999 !important;
+                }
+                
+                /* 弹幕面板pointer-events精确控制 - 只有内容区域可点击，面板背景不拦截 */
+                .artplayer-plugin-danmuku .apd-config-panel {
+                  pointer-events: none !important;
+                }
+                
+                .artplayer-plugin-danmuku .apd-style-panel {
+                  pointer-events: none !important;
+                }
+                
+                /* 只有内容区域可以接收点击事件 */
+                .artplayer-plugin-danmuku .apd-config-panel-inner,
+                .artplayer-plugin-danmuku .apd-style-panel-inner {
+                  pointer-events: auto !important;
+                }
+                
+                /* 面板内的具体控件可以点击 */
+                .artplayer-plugin-danmuku .apd-config-panel .apd-mode,
+                .artplayer-plugin-danmuku .apd-config-panel .apd-other,
+                .artplayer-plugin-danmuku .apd-config-panel .apd-slider,
+                .artplayer-plugin-danmuku .apd-style-panel .apd-mode,
+                .artplayer-plugin-danmuku .apd-style-panel .apd-color {
+                  pointer-events: auto !important;
+                }
               `;
               document.head.appendChild(style);
             };
