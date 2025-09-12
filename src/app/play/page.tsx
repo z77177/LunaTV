@@ -2834,6 +2834,12 @@ function PlayPageClient() {
               }
 
               console.log('设备类型:', isMobile ? '移动端' : '桌面端');
+              console.log('找到弹幕元素:', {
+                configButton: !!configButton,
+                configPanel: !!configPanel,
+                styleButton: !!styleButton,
+                stylePanel: !!stylePanel
+              });
 
               if (isMobile) {
                 // 移动端：添加点击切换支持 + 持久位置修正
@@ -3019,182 +3025,127 @@ function PlayPageClient() {
 
                 console.log('移动端弹幕配置切换功能已激活');
               } else {
-                // 桌面端：优化hover机制 - 添加点击支持 + 优化hover延迟
-                console.log('桌面端启用优化的hover + 点击机制');
+                // 桌面端：添加点击支持，保持原有hover机制
+                console.log('桌面端添加点击支持');
 
-                let configHoverTimer: NodeJS.Timeout | null = null;
-                let styleHoverTimer: NodeJS.Timeout | null = null;
                 let isConfigVisible = false;
                 let isStyleVisible = false;
 
-                // 显示配置面板
-                const showConfigPanel = () => {
-                  if (isStyleVisible && stylePanel) {
-                    isStyleVisible = false;
-                    (stylePanel as HTMLElement).style.opacity = '0';
-                    (stylePanel as HTMLElement).style.pointerEvents = 'none';
-                  }
-                  isConfigVisible = true;
-                  (configPanel as HTMLElement).style.opacity = '1';
-                  (configPanel as HTMLElement).style.pointerEvents = 'all';
+                // 获取当前面板状态
+                const getConfigVisible = () => {
+                  const panel = configPanel as HTMLElement;
+                  return panel.style.opacity === '1' ||
+                    window.getComputedStyle(panel).opacity === '1';
                 };
 
-                // 隐藏配置面板
-                const hideConfigPanel = () => {
-                  isConfigVisible = false;
-                  (configPanel as HTMLElement).style.opacity = '0';
-                  (configPanel as HTMLElement).style.pointerEvents = 'none';
+                const getStyleVisible = () => {
+                  if (!stylePanel) return false;
+                  const panel = stylePanel as HTMLElement;
+                  return panel.style.opacity === '1' ||
+                    window.getComputedStyle(panel).opacity === '1';
                 };
 
-                // 显示样式面板
-                const showStylePanel = () => {
-                  if (!stylePanel) return;
-                  if (isConfigVisible) {
-                    isConfigVisible = false;
-                    (configPanel as HTMLElement).style.opacity = '0';
-                    (configPanel as HTMLElement).style.pointerEvents = 'none';
-                  }
-                  isStyleVisible = true;
-                  (stylePanel as HTMLElement).style.opacity = '1';
-                  (stylePanel as HTMLElement).style.pointerEvents = 'all';
-                };
-
-                // 隐藏样式面板
-                const hideStylePanel = () => {
-                  if (!stylePanel) return;
-                  isStyleVisible = false;
-                  (stylePanel as HTMLElement).style.opacity = '0';
-                  (stylePanel as HTMLElement).style.pointerEvents = 'none';
-                };
-
-                // 配置按钮事件 - 支持点击和hover
+                // 配置按钮点击事件
                 configButton.addEventListener('click', (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  if (isConfigVisible) {
-                    hideConfigPanel();
+
+                  const currentlyVisible = getConfigVisible();
+                  console.log('点击配置按钮，当前状态:', currentlyVisible);
+
+                  if (currentlyVisible) {
+                    // 隐藏配置面板
+                    (configPanel as HTMLElement).style.opacity = '0';
+                    (configPanel as HTMLElement).style.pointerEvents = 'none';
+                    console.log('隐藏配置面板');
                   } else {
-                    showConfigPanel();
-                  }
-                  console.log('桌面端点击配置按钮:', isConfigVisible ? '显示' : '隐藏');
-                });
-
-                configButton.addEventListener('mouseenter', () => {
-                  if (configHoverTimer) {
-                    clearTimeout(configHoverTimer);
-                    configHoverTimer = null;
-                  }
-                  // 短延迟显示，避免意外触发
-                  configHoverTimer = setTimeout(() => {
-                    if (!isConfigVisible) {
-                      showConfigPanel();
+                    // 先隐藏样式面板
+                    if (stylePanel && getStyleVisible()) {
+                      (stylePanel as HTMLElement).style.opacity = '0';
+                      (stylePanel as HTMLElement).style.pointerEvents = 'none';
                     }
-                  }, 100);
-                });
+                    // 显示配置面板
+                    (configPanel as HTMLElement).style.opacity = '1';
+                    (configPanel as HTMLElement).style.pointerEvents = 'all';
+                    console.log('显示配置面板');
 
-                configButton.addEventListener('mouseleave', () => {
-                  if (configHoverTimer) {
-                    clearTimeout(configHoverTimer);
-                    configHoverTimer = null;
-                  }
-                  // 延迟隐藏，给用户移动到面板的时间
-                  configHoverTimer = setTimeout(() => {
-                    hideConfigPanel();
-                  }, 150);
-                });
-
-                // 配置面板事件
-                configPanel.addEventListener('mouseenter', () => {
-                  if (configHoverTimer) {
-                    clearTimeout(configHoverTimer);
-                    configHoverTimer = null;
-                  }
-                  if (!isConfigVisible) {
-                    showConfigPanel();
+                    // 调用ArtPlayer的位置调整函数
+                    if (artPlayerRef.current && artPlayerRef.current.plugins &&
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku) {
+                      const danmuku = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+                      if (danmuku.setting && danmuku.setting.onMouseEnter) {
+                        danmuku.setting.onMouseEnter({
+                          $control: configButton,
+                          $panel: configPanel
+                        });
+                      }
+                    }
                   }
                 });
 
-                configPanel.addEventListener('mouseleave', () => {
-                  configHoverTimer = setTimeout(() => {
-                    hideConfigPanel();
-                  }, 150);
-                });
-
-                // 样式按钮和面板事件
+                // 样式按钮点击事件
                 if (styleButton && stylePanel) {
                   styleButton.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (isStyleVisible) {
-                      hideStylePanel();
+
+                    const currentlyVisible = getStyleVisible();
+                    console.log('点击样式按钮，当前状态:', currentlyVisible);
+
+                    if (currentlyVisible) {
+                      // 隐藏样式面板
+                      (stylePanel as HTMLElement).style.opacity = '0';
+                      (stylePanel as HTMLElement).style.pointerEvents = 'none';
+                      console.log('隐藏样式面板');
                     } else {
-                      showStylePanel();
-                    }
-                    console.log('桌面端点击样式按钮:', isStyleVisible ? '显示' : '隐藏');
-                  });
-
-                  styleButton.addEventListener('mouseenter', () => {
-                    if (styleHoverTimer) {
-                      clearTimeout(styleHoverTimer);
-                      styleHoverTimer = null;
-                    }
-                    styleHoverTimer = setTimeout(() => {
-                      if (!isStyleVisible) {
-                        showStylePanel();
+                      // 先隐藏配置面板
+                      if (getConfigVisible()) {
+                        (configPanel as HTMLElement).style.opacity = '0';
+                        (configPanel as HTMLElement).style.pointerEvents = 'none';
                       }
-                    }, 100);
-                  });
+                      // 显示样式面板
+                      (stylePanel as HTMLElement).style.opacity = '1';
+                      (stylePanel as HTMLElement).style.pointerEvents = 'all';
+                      console.log('显示样式面板');
 
-                  styleButton.addEventListener('mouseleave', () => {
-                    if (styleHoverTimer) {
-                      clearTimeout(styleHoverTimer);
-                      styleHoverTimer = null;
+                      // 调用ArtPlayer的位置调整函数
+                      if (artPlayerRef.current && artPlayerRef.current.plugins &&
+                        artPlayerRef.current.plugins.artplayerPluginDanmuku) {
+                        const danmuku = artPlayerRef.current.plugins.artplayerPluginDanmuku;
+                        if (danmuku.setting && danmuku.setting.onMouseEnter) {
+                          danmuku.setting.onMouseEnter({
+                            $control: styleButton,
+                            $panel: stylePanel
+                          });
+                        }
+                      }
                     }
-                    styleHoverTimer = setTimeout(() => {
-                      hideStylePanel();
-                    }, 150);
-                  });
-
-                  stylePanel.addEventListener('mouseenter', () => {
-                    if (styleHoverTimer) {
-                      clearTimeout(styleHoverTimer);
-                      styleHoverTimer = null;
-                    }
-                    if (!isStyleVisible) {
-                      showStylePanel();
-                    }
-                  });
-
-                  stylePanel.addEventListener('mouseleave', () => {
-                    styleHoverTimer = setTimeout(() => {
-                      hideStylePanel();
-                    }, 150);
                   });
                 }
 
                 // 点击外部区域隐藏面板
                 document.addEventListener('click', (e) => {
-                  if (!configButton.contains(e.target as Node) &&
-                    !configPanel.contains(e.target as Node) &&
-                    (!styleButton || !styleButton.contains(e.target as Node)) &&
-                    (!stylePanel || !stylePanel.contains(e.target as Node))) {
-                    hideConfigPanel();
-                    hideStylePanel();
+                  const target = e.target as Node;
+                  if (!configButton.contains(target) &&
+                    !configPanel.contains(target) &&
+                    (!styleButton || !styleButton.contains(target)) &&
+                    (!stylePanel || !stylePanel.contains(target))) {
+
+                    if (getConfigVisible()) {
+                      (configPanel as HTMLElement).style.opacity = '0';
+                      (configPanel as HTMLElement).style.pointerEvents = 'none';
+                      console.log('点击外部，隐藏配置面板');
+                    }
+
+                    if (stylePanel && getStyleVisible()) {
+                      (stylePanel as HTMLElement).style.opacity = '0';
+                      (stylePanel as HTMLElement).style.pointerEvents = 'none';
+                      console.log('点击外部，隐藏样式面板');
+                    }
                   }
                 });
 
-                // 完全禁用原始CSS hover效果
-                const style = document.createElement('style');
-                style.textContent = `
-                .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-                .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
-                  opacity: 0 !important;
-                  pointer-events: none !important;
-                }
-              `;
-                document.head.appendChild(style);
-
-                console.log('桌面端优化的hover + 点击机制已激活');
+                console.log('桌面端点击支持已激活，保持原有hover机制');
               }
             }, 2000); // 延迟2秒确保弹幕插件完全初始化
           };
