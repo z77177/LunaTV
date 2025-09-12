@@ -3006,22 +3006,25 @@ function PlayPageClient() {
                 // 点击其他地方自动隐藏 - 避免影响播放器控制区域
                 document.addEventListener('click', (e) => {
                   const target = e.target as Element;
-                  const artplayer = document.querySelector('.artplayer');
 
-                  // 如果点击的是播放器视频区域，不处理隐藏逻辑
-                  if (artplayer && artplayer.contains(target)) {
-                    const isClickOnVideo = target.closest('.art-video-player, .art-video, .art-poster');
-                    if (isClickOnVideo) {
-                      return; // 不处理视频区域的点击
-                    }
+                  // 检查是否点击了弹幕按钮或面板区域
+                  const isClickOnDanmakuUI = configButton.contains(e.target as Node) ||
+                    configPanel.contains(e.target as Node) ||
+                    (styleButton && styleButton.contains(e.target as Node)) ||
+                    (stylePanel && stylePanel.contains(e.target as Node));
+
+                  if (isClickOnDanmakuUI) {
+                    return; // 点击弹幕UI本身，不处理
                   }
 
-                  if ((isConfigVisible &&
-                    !configButton.contains(e.target as Node) &&
-                    !configPanel.contains(e.target as Node)) ||
-                    (isStyleVisible && stylePanel && styleButton &&
-                      !styleButton.contains(e.target as Node) &&
-                      !stylePanel.contains(e.target as Node))) {
+                  // 检查是否点击了播放器控制栏区域
+                  const artControls = target.closest('.art-controls, .art-bottom');
+                  if (artControls) {
+                    return; // 点击控制栏区域，不处理
+                  }
+
+                  // 只有在面板实际显示时才隐藏
+                  if (isConfigVisible || isStyleVisible) {
                     isConfigVisible = false;
                     isStyleVisible = false;
                     (configPanel as HTMLElement).style.opacity = '0';
@@ -3131,31 +3134,38 @@ function PlayPageClient() {
                   });
                 }
 
-                // 点击外部区域隐藏面板 - 避免影响播放器控制区域
+                // 点击外部区域隐藏面板 - 改进的逻辑
                 document.addEventListener('click', (e) => {
                   const target = e.target as Element;
-                  const artplayer = document.querySelector('.artplayer');
 
-                  // 如果点击的是播放器视频区域，不处理隐藏逻辑
-                  if (artplayer && artplayer.contains(target)) {
-                    const isClickOnVideo = target.closest('.art-video-player, .art-video, .art-poster');
-                    if (isClickOnVideo) {
-                      return; // 不处理视频区域的点击
-                    }
+                  // 检查是否点击了弹幕按钮或面板区域
+                  const isClickOnDanmakuUI = configButton.contains(target as Node) ||
+                    configPanel.contains(target as Node) ||
+                    (styleButton && styleButton.contains(target as Node)) ||
+                    (stylePanel && stylePanel.contains(target as Node));
+
+                  if (isClickOnDanmakuUI) {
+                    return; // 点击弹幕UI本身，不处理
                   }
 
-                  if (!configButton.contains(target as Node) &&
-                    !configPanel.contains(target as Node) &&
-                    (!styleButton || !styleButton.contains(target as Node)) &&
-                    (!stylePanel || !stylePanel.contains(target as Node))) {
+                  // 检查是否点击了播放器控制栏区域
+                  const artControls = target.closest('.art-controls, .art-bottom');
+                  if (artControls) {
+                    return; // 点击控制栏区域，不处理
+                  }
 
-                    if (getConfigVisible()) {
+                  // 只有在面板实际显示时才隐藏
+                  const configVisible = getConfigVisible();
+                  const styleVisible = stylePanel && getStyleVisible();
+
+                  if (configVisible || styleVisible) {
+                    if (configVisible) {
                       (configPanel as HTMLElement).style.opacity = '0';
                       (configPanel as HTMLElement).style.pointerEvents = 'none';
                       console.log('点击外部，隐藏配置面板');
                     }
 
-                    if (stylePanel && getStyleVisible()) {
+                    if (styleVisible) {
                       (stylePanel as HTMLElement).style.opacity = '0';
                       (stylePanel as HTMLElement).style.pointerEvents = 'none';
                       console.log('点击外部，隐藏样式面板');
