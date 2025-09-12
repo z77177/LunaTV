@@ -2762,8 +2762,6 @@ function PlayPageClient() {
           setTimeout(() => {
             const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config');
             const configPanel = document.querySelector('.artplayer-plugin-danmuku .apd-config-panel');
-            const styleButton = document.querySelector('.artplayer-plugin-danmuku .apd-style');
-            const stylePanel = document.querySelector('.artplayer-plugin-danmuku .apd-style-panel');
             
             if (!configButton || !configPanel) {
               console.warn('弹幕配置按钮或面板未找到');
@@ -2912,16 +2910,13 @@ function PlayPageClient() {
               
               console.log('移动端弹幕配置切换功能已激活');
             } else {
-              // 🖥️ 桌面端：完全保留官方原版hover体验
-              console.log('桌面端使用官方原版hover机制');
-              
-              // 不做任何修改，完全使用官方CSS hover
-              console.log('✅ 桌面端保持官方原版hover体验');
+              // 桌面端：保持原有hover机制
+              console.log('桌面端保持原有hover机制');
             }
           }, 2000); // 延迟2秒确保弹幕插件完全初始化
         };
         
-        // 启用优化后的弹幕菜单交互
+        // 启用移动端弹幕配置切换
         addMobileDanmakuToggle();
 
         // 播放器就绪后，加载外部弹幕数据
