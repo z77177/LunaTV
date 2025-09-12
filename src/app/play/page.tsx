@@ -2666,97 +2666,61 @@ function PlayPageClient() {
         // 应用CSS优化
         optimizeDanmukuControlsCSS();
 
-        // 解决进度条拖拽时误触弹幕菜单的问题
+        // 解决进度条拖拽时误触弹幕菜单的问题 - 基于CSS hover控制
         const fixDanmakuProgressConflict = () => {
           let isDraggingProgress = false;
           
-          setTimeout(() => {
-            const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config') as HTMLElement;
-            if (!configButton) return;
+          // 添加CSS样式来在拖拽时禁用hover效果
+          const addConflictFixCSS = () => {
+            if (document.getElementById('danmaku-progress-conflict-fix')) return;
             
-            // 监听进度条的拖拽事件
-            const progressBar = document.querySelector('.art-control-progress') as HTMLElement;
-            if (!progressBar) return;
-            
-            // 拦截原始的mouseenter事件处理器
-            const interceptMouseenter = () => {
-              // 克隆节点来移除所有事件监听器
-              const newConfigButton = configButton.cloneNode(true) as HTMLElement;
-              configButton.parentNode?.replaceChild(newConfigButton, configButton);
-              
-              // 手动重新添加mouseenter和mouseleave事件，但加入拖拽检测
-              newConfigButton.addEventListener('mouseenter', () => {
-                // 只有在非拖拽状态时才触发弹幕菜单
-                if (!isDraggingProgress) {
-                  // 触发弹幕菜单显示
-                  const panel = document.querySelector('.artplayer-plugin-danmuku .apd-config-panel') as HTMLElement;
-                  if (panel) {
-                    panel.style.opacity = '1';
-                    panel.style.pointerEvents = 'all';
-                    
-                    // 重新计算面板位置（模拟原始onMouseEnter逻辑）
-                    const player = document.querySelector('.artplayer') as HTMLElement;
-                    if (player) {
-                      const controlRect = newConfigButton.getBoundingClientRect();
-                      const panelRect = panel.getBoundingClientRect();
-                      const playerRect = player.getBoundingClientRect();
-                      
-                      const half = panelRect.width / 2 - controlRect.width / 2;
-                      const left = playerRect.left - (controlRect.left - half);
-                      const right = controlRect.right + half - playerRect.right;
-                      
-                      if (left > 0) {
-                        panel.style.left = `${-half + left}px`;
-                      } else if (right > 0) {
-                        panel.style.left = `${-half - right}px`;
-                      } else {
-                        panel.style.left = `${-half}px`;
-                      }
-                    }
-                  }
-                }
-              });
-
-              // 添加mouseleave事件来隐藏菜单
-              newConfigButton.addEventListener('mouseleave', () => {
-                const panel = document.querySelector('.artplayer-plugin-danmuku .apd-config-panel') as HTMLElement;
-                if (panel) {
-                  panel.style.opacity = '0';
-                  panel.style.pointerEvents = 'none';
-                }
-              });
-
-              // 当鼠标进入面板时保持显示
-              const panel = document.querySelector('.artplayer-plugin-danmuku .apd-config-panel') as HTMLElement;
-              if (panel) {
-                panel.addEventListener('mouseenter', () => {
-                  panel.style.opacity = '1';
-                  panel.style.pointerEvents = 'all';
-                });
-                
-                panel.addEventListener('mouseleave', () => {
-                  panel.style.opacity = '0';
-                  panel.style.pointerEvents = 'none';
-                });
+            const style = document.createElement('style');
+            style.id = 'danmaku-progress-conflict-fix';
+            style.textContent = `
+              /* 拖拽时禁用弹幕配置按钮的hover效果 */
+              .artplayer.dragging-progress .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel {
+                opacity: 0 !important;
+                pointer-events: none !important;
               }
-            };
-            
-            // 监听进度条拖拽状态
-            const handleProgressMouseDown = () => {
-              isDraggingProgress = true;
-            };
-            
-            const handleDocumentMouseUp = () => {
+              
+              /* 拖拽时禁用弹幕样式按钮的hover效果 */
+              .artplayer.dragging-progress .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
+                opacity: 0 !important;
+                pointer-events: none !important;
+              }
+            `;
+            document.head.appendChild(style);
+          };
+          
+          // 监听进度条拖拽状态
+          const handleProgressMouseDown = () => {
+            isDraggingProgress = true;
+            const artplayer = document.querySelector('.artplayer') as HTMLElement;
+            if (artplayer) {
+              artplayer.classList.add('dragging-progress');
+            }
+          };
+          
+          const handleDocumentMouseUp = () => {
+            if (isDraggingProgress) {
               isDraggingProgress = false;
-            };
-            
-            progressBar.addEventListener('mousedown', handleProgressMouseDown);
-            document.addEventListener('mouseup', handleDocumentMouseUp);
-            
-            // 执行拦截
-            interceptMouseenter();
-            
-          }, 1500); // 确保弹幕插件完全加载
+              const artplayer = document.querySelector('.artplayer') as HTMLElement;
+              if (artplayer) {
+                artplayer.classList.remove('dragging-progress');
+              }
+            }
+          };
+          
+          setTimeout(() => {
+            const progressBar = document.querySelector('.art-control-progress') as HTMLElement;
+            if (progressBar) {
+              progressBar.addEventListener('mousedown', handleProgressMouseDown);
+              document.addEventListener('mouseup', handleDocumentMouseUp);
+            }
+          }, 1000);
+          
+          // 应用CSS修复
+          addConflictFixCSS();
         };
         
         // 启用修复
