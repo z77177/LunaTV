@@ -2666,64 +2666,86 @@ function PlayPageClient() {
         // 应用CSS优化
         optimizeDanmukuControlsCSS();
 
-        // 解决进度条拖拽时误触弹幕菜单的问题 - 基于CSS hover控制
+        // 彻底解决弹幕菜单和进度条的冲突问题
         const fixDanmakuProgressConflict = () => {
           let isDraggingProgress = false;
           
-          // 添加CSS样式来在拖拽时禁用hover效果
-          const addConflictFixCSS = () => {
-            if (document.getElementById('danmaku-progress-conflict-fix')) return;
-            
-            const style = document.createElement('style');
-            style.id = 'danmaku-progress-conflict-fix';
-            style.textContent = `
-              /* 拖拽时禁用弹幕配置按钮的hover效果 */
-              .artplayer.dragging-progress .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel {
-                opacity: 0 !important;
-                pointer-events: none !important;
-              }
+          const blockDanmakuHoverDuringDrag = () => {
+            setTimeout(() => {
+              const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config') as HTMLElement;
+              const styleButton = document.querySelector('.artplayer-plugin-danmuku .apd-style') as HTMLElement;
               
-              /* 拖拽时禁用弹幕样式按钮的hover效果 */
-              .artplayer.dragging-progress .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
-                opacity: 0 !important;
-                pointer-events: none !important;
+              if (!configButton && !styleButton) return;
+              
+              // 覆盖CSS hover效果 + 移除JavaScript mouseenter事件
+              const addBlockingCSS = () => {
+                if (document.getElementById('danmaku-hover-blocker')) return;
+                
+                const style = document.createElement('style');
+                style.id = 'danmaku-hover-blocker';
+                style.textContent = `
+                  /* 在拖拽时完全禁用弹幕hover */
+                  .artplayer.progress-dragging .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+                  .artplayer.progress-dragging .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                    visibility: hidden !important;
+                  }
+                  
+                  /* 额外保险：在拖拽时隐藏所有弹幕面板 */
+                  .artplayer.progress-dragging .artplayer-plugin-danmuku .apd-config-panel,
+                  .artplayer.progress-dragging .artplayer-plugin-danmuku .apd-style-panel {
+                    display: none !important;
+                  }
+                `;
+                document.head.appendChild(style);
+              };
+              
+              // 拖拽状态管理
+              const handleProgressMouseDown = () => {
+                isDraggingProgress = true;
+                const artplayer = document.querySelector('.artplayer') as HTMLElement;
+                if (artplayer) {
+                  artplayer.classList.add('progress-dragging');
+                }
+                
+                // 立即隐藏任何显示的弹幕面板
+                const panels = document.querySelectorAll('.artplayer-plugin-danmuku .apd-config-panel, .artplayer-plugin-danmuku .apd-style-panel') as NodeListOf<HTMLElement>;
+                panels.forEach(panel => {
+                  panel.style.opacity = '0';
+                  panel.style.pointerEvents = 'none';
+                });
+              };
+              
+              const handleDocumentMouseUp = () => {
+                if (isDraggingProgress) {
+                  setTimeout(() => {
+                    isDraggingProgress = false;
+                    const artplayer = document.querySelector('.artplayer') as HTMLElement;
+                    if (artplayer) {
+                      artplayer.classList.remove('progress-dragging');
+                    }
+                  }, 100); // 延迟移除，确保拖拽完全结束
+                }
+              };
+              
+              // 监听进度条交互
+              const progressBar = document.querySelector('.art-control-progress') as HTMLElement;
+              if (progressBar) {
+                progressBar.addEventListener('mousedown', handleProgressMouseDown);
               }
-            `;
-            document.head.appendChild(style);
-          };
-          
-          // 监听进度条拖拽状态
-          const handleProgressMouseDown = () => {
-            isDraggingProgress = true;
-            const artplayer = document.querySelector('.artplayer') as HTMLElement;
-            if (artplayer) {
-              artplayer.classList.add('dragging-progress');
-            }
-          };
-          
-          const handleDocumentMouseUp = () => {
-            if (isDraggingProgress) {
-              isDraggingProgress = false;
-              const artplayer = document.querySelector('.artplayer') as HTMLElement;
-              if (artplayer) {
-                artplayer.classList.remove('dragging-progress');
-              }
-            }
-          };
-          
-          setTimeout(() => {
-            const progressBar = document.querySelector('.art-control-progress') as HTMLElement;
-            if (progressBar) {
-              progressBar.addEventListener('mousedown', handleProgressMouseDown);
               document.addEventListener('mouseup', handleDocumentMouseUp);
-            }
-          }, 1000);
+              
+              // 应用CSS阻止
+              addBlockingCSS();
+              
+            }, 2000); // 确保弹幕插件完全加载
+          };
           
-          // 应用CSS修复
-          addConflictFixCSS();
+          blockDanmakuHoverDuringDrag();
         };
         
-        // 启用修复
+        // 启用彻底修复
         fixDanmakuProgressConflict();
 
         // 移动端弹幕配置按钮点击切换支持 - 基于ArtPlayer设置按钮原理
