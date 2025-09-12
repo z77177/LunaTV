@@ -3003,8 +3003,19 @@ function PlayPageClient() {
                   disconnectObserver(); // 断开DOM变化观察器
                 };
 
-                // 点击其他地方自动隐藏
+                // 点击其他地方自动隐藏 - 避免影响播放器控制区域
                 document.addEventListener('click', (e) => {
+                  const target = e.target as Element;
+                  const artplayer = document.querySelector('.artplayer');
+
+                  // 如果点击的是播放器视频区域，不处理隐藏逻辑
+                  if (artplayer && artplayer.contains(target)) {
+                    const isClickOnVideo = target.closest('.art-video-player, .art-video, .art-poster');
+                    if (isClickOnVideo) {
+                      return; // 不处理视频区域的点击
+                    }
+                  }
+
                   if ((isConfigVisible &&
                     !configButton.contains(e.target as Node) &&
                     !configPanel.contains(e.target as Node)) ||
@@ -3120,13 +3131,23 @@ function PlayPageClient() {
                   });
                 }
 
-                // 点击外部区域隐藏面板
+                // 点击外部区域隐藏面板 - 避免影响播放器控制区域
                 document.addEventListener('click', (e) => {
-                  const target = e.target as Node;
-                  if (!configButton.contains(target) &&
-                    !configPanel.contains(target) &&
-                    (!styleButton || !styleButton.contains(target)) &&
-                    (!stylePanel || !stylePanel.contains(target))) {
+                  const target = e.target as Element;
+                  const artplayer = document.querySelector('.artplayer');
+
+                  // 如果点击的是播放器视频区域，不处理隐藏逻辑
+                  if (artplayer && artplayer.contains(target)) {
+                    const isClickOnVideo = target.closest('.art-video-player, .art-video, .art-poster');
+                    if (isClickOnVideo) {
+                      return; // 不处理视频区域的点击
+                    }
+                  }
+
+                  if (!configButton.contains(target as Node) &&
+                    !configPanel.contains(target as Node) &&
+                    (!styleButton || !styleButton.contains(target as Node)) &&
+                    (!stylePanel || !stylePanel.contains(target as Node))) {
 
                     if (getConfigVisible()) {
                       (configPanel as HTMLElement).style.opacity = '0';
