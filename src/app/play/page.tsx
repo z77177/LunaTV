@@ -2759,13 +2759,16 @@ function PlayPageClient() {
               
               // 监听播放器设置面板的变化，确保弹幕菜单位置正确
               const observePlayerChanges = () => {
+                const playerElement = document.querySelector('.artplayer');
+                if (!playerElement) return () => {};
+                
                 const observer = new MutationObserver(() => {
                   if (isConfigVisible) {
                     setTimeout(adjustPanelPosition, 100);
                   }
                 });
                 
-                observer.observe(player, { 
+                observer.observe(playerElement, { 
                   childList: true, 
                   subtree: true, 
                   attributes: true, 
