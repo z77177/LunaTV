@@ -561,8 +561,8 @@ function PlayPageClient() {
     if (sources.length === 1) return sources[0];
 
     // 使用全局统一的设备检测结果
-    const isIPad = /iPad/i.test(userAgent) || (userAgent.includes('Macintosh') && navigator.maxTouchPoints >= 1);
-    const isIOS = isIOSGlobal;
+    const _isIPad = /iPad/i.test(userAgent) || (userAgent.includes('Macintosh') && navigator.maxTouchPoints >= 1);
+    const _isIOS = isIOSGlobal;
     const isIOS13 = isIOS13Global;
     const isMobile = isMobileGlobal;
 
@@ -2760,7 +2760,7 @@ function PlayPageClient() {
               // 监听播放器设置面板的变化，确保弹幕菜单位置正确
               const observePlayerChanges = () => {
                 const playerElement = document.querySelector('.artplayer');
-                if (!playerElement) return () => {};
+                if (!playerElement) return () => { /* no-op */ };
                 
                 const observer = new MutationObserver(() => {
                   if (isConfigVisible) {
