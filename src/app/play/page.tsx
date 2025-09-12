@@ -2964,32 +2964,63 @@ function PlayPageClient() {
               
               console.log('🎯 强制CSS已应用，hover应该被完全禁用');
               
-              // 🎯 核心解决方案：移除ArtPlayer原始的hover事件监听器
-              const removeOriginalHoverEvents = () => {
+              // 🎯 终极解决方案：完全劫持hover事件
+              const disableAllHoverEvents = () => {
                 try {
-                  // 方法1: 克隆节点移除所有事件
-                  const configClone = configButton.cloneNode(true) as HTMLElement;
-                  configButton.parentNode?.replaceChild(configClone, configButton);
+                  // 方法1: 覆盖addEventListener
+                  const originalAddEventListener = Element.prototype.addEventListener;
+                  configButton.addEventListener = function(type: string, listener: any, options?: any) {
+                    if (type === 'mouseenter' || type === 'mouseover' || type === 'hover') {
+                      console.log('🚫 阻止弹幕按钮绑定hover事件:', type);
+                      return; // 直接忽略hover事件绑定
+                    }
+                    return originalAddEventListener.call(this, type, listener, options);
+                  };
                   
                   if (styleButton) {
-                    const styleClone = styleButton.cloneNode(true) as HTMLElement;
-                    styleButton.parentNode?.replaceChild(styleClone, styleButton);
+                    styleButton.addEventListener = function(type: string, listener: any, options?: any) {
+                      if (type === 'mouseenter' || type === 'mouseover' || type === 'hover') {
+                        console.log('🚫 阻止样式按钮绑定hover事件:', type);
+                        return;
+                      }
+                      return originalAddEventListener.call(this, type, listener, options);
+                    };
                   }
                   
-                  // 更新引用
-                  const newConfigButton = document.querySelector('.artplayer-plugin-danmuku .apd-config') as HTMLElement;
-                  const newStyleButton = document.querySelector('.artplayer-plugin-danmuku .apd-style') as HTMLElement;
+                  // 方法2: 用CSS完全禁用指针事件，然后只对我们的click重新启用
+                  const ultimateStyle = document.createElement('style');
+                  ultimateStyle.id = 'danmaku-ultimate-disable';
+                  ultimateStyle.textContent = `
+                    /* 完全禁用按钮的所有鼠标事件，只保留click */
+                    .artplayer .artplayer-plugin-danmuku .apd-config,
+                    .artplayer .artplayer-plugin-danmuku .apd-style {
+                      pointer-events: none !important;
+                    }
+                    
+                    /* 只对我们添加的click事件重新启用 */
+                    .artplayer .artplayer-plugin-danmuku .apd-config.click-enabled,
+                    .artplayer .artplayer-plugin-danmuku .apd-style.click-enabled {
+                      pointer-events: auto !important;
+                    }
+                  `;
+                  document.head.appendChild(ultimateStyle);
                   
-                  console.log('✅ ArtPlayer原始hover事件已完全移除');
-                  return { configButton: newConfigButton, styleButton: newStyleButton };
+                  // 启用我们的点击事件
+                  configButton.classList.add('click-enabled');
+                  if (styleButton) {
+                    styleButton.classList.add('click-enabled');
+                  }
+                  
+                  console.log('🚫 已完全劫持hover事件并禁用指针事件');
+                  return { configButton, styleButton };
                 } catch (error) {
-                  console.warn('移除hover事件失败:', error);
+                  console.warn('劫持hover事件失败:', error);
                   return { configButton, styleButton };
                 }
               };
               
-              // 立即移除原始hover事件
-              const { configButton: cleanConfigButton, styleButton: cleanStyleButton } = removeOriginalHoverEvents();
+              // 立即劫持hover事件
+              const { configButton: cleanConfigButton, styleButton: cleanStyleButton } = disableAllHoverEvents();
               
               // 更新位置调整函数的按钮引用
               currentConfigButton = cleanConfigButton;
