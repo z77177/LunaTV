@@ -2684,7 +2684,7 @@ function PlayPageClient() {
               const newConfigButton = configButton.cloneNode(true) as HTMLElement;
               configButton.parentNode?.replaceChild(newConfigButton, configButton);
               
-              // 手动重新添加mouseenter事件，但加入拖拽检测
+              // 手动重新添加mouseenter和mouseleave事件，但加入拖拽检测
               newConfigButton.addEventListener('mouseenter', () => {
                 // 只有在非拖拽状态时才触发弹幕菜单
                 if (!isDraggingProgress) {
@@ -2716,6 +2716,29 @@ function PlayPageClient() {
                   }
                 }
               });
+
+              // 添加mouseleave事件来隐藏菜单
+              newConfigButton.addEventListener('mouseleave', () => {
+                const panel = document.querySelector('.artplayer-plugin-danmuku .apd-config-panel') as HTMLElement;
+                if (panel) {
+                  panel.style.opacity = '0';
+                  panel.style.pointerEvents = 'none';
+                }
+              });
+
+              // 当鼠标进入面板时保持显示
+              const panel = document.querySelector('.artplayer-plugin-danmuku .apd-config-panel') as HTMLElement;
+              if (panel) {
+                panel.addEventListener('mouseenter', () => {
+                  panel.style.opacity = '1';
+                  panel.style.pointerEvents = 'all';
+                });
+                
+                panel.addEventListener('mouseleave', () => {
+                  panel.style.opacity = '0';
+                  panel.style.pointerEvents = 'none';
+                });
+              }
             };
             
             // 监听进度条拖拽状态
