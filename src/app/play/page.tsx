@@ -2916,10 +2916,10 @@ function PlayPageClient() {
               console.log('桌面端启用智能hover优化');
               
               // 定时器管理
-              let configHoverTimer = null;
-              let configHideTimer = null;
-              let styleHoverTimer = null;
-              let styleHideTimer = null;
+              let configHoverTimer: NodeJS.Timeout | null = null;
+              let configHideTimer: NodeJS.Timeout | null = null;
+              let styleHoverTimer: NodeJS.Timeout | null = null;
+              let styleHideTimer: NodeJS.Timeout | null = null;
               
               // 配置参数
               const HOVER_DELAY = 300;  // hover后300ms显示，避免误触
@@ -2927,7 +2927,7 @@ function PlayPageClient() {
               const INTENT_DELAY = 120; // 意图明确时快速响应
               
               // 用户意图检测
-              const detectUserIntent = (mouseEvent, element) => {
+              const detectUserIntent = (mouseEvent: MouseEvent, element: Element) => {
                 const rect = element.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
@@ -3060,10 +3060,10 @@ function PlayPageClient() {
               optimizeConfigHover();
               
               // 🎹 键盘快捷键支持
-              const handleKeyboardShortcuts = (e) => {
+              const handleKeyboardShortcuts = (e: KeyboardEvent) => {
                 // D键快速切换弹幕显示/隐藏
                 if (e.key.toLowerCase() === 'd' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-                  if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                  if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
                     e.preventDefault();
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                       const isVisible = !artPlayerRef.current.plugins.artplayerPluginDanmuku.isHide;
@@ -3094,7 +3094,7 @@ function PlayPageClient() {
               document.addEventListener('keydown', handleKeyboardShortcuts);
               
               // 🖱️ 全局点击隐藏面板
-              const handleGlobalClick = (e) => {
+              const handleGlobalClick = (e: MouseEvent) => {
                 const target = e.target as Element;
                 if (!configButton.contains(target) && 
                     !configPanel.contains(target) &&
