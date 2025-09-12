@@ -2773,11 +2773,9 @@ function PlayPageClient() {
             console.log('设备类型:', isMobile ? '移动端' : '桌面端');
             
             // 🔧 通用面板位置调整函数 - 模仿ArtPlayer原版位置算法
-            let currentConfigButton = configButton; // 会在后面更新为cleanConfigButton
-            
             const adjustPanelPosition = () => {
               const player = document.querySelector('.artplayer');
-              if (!player || !currentConfigButton || !configPanel) return;
+              if (!player || !configButton || !configPanel) return;
               
               try {
                 const panelElement = configPanel as HTMLElement;
@@ -2791,7 +2789,7 @@ function PlayPageClient() {
                 panelElement.offsetHeight;
                 
                 // 获取各元素的位置信息 - 严格按照ArtPlayer原版算法
-                const controlRect = currentConfigButton.getBoundingClientRect();
+                const controlRect = configButton.getBoundingClientRect();
                 const panelRect = configPanel.getBoundingClientRect();
                 const playerRect = player.getBoundingClientRect();
                 
@@ -2800,32 +2798,22 @@ function PlayPageClient() {
                 const left = playerRect.left - (controlRect.left - half);
                 const right = controlRect.right + half - playerRect.right;
                 
-                console.log('🎯 位置计算调试:', {
-                  playerLeft: playerRect.left,
-                  playerWidth: playerRect.width,
-                  buttonLeft: controlRect.left,
-                  buttonWidth: controlRect.width,
-                  panelWidth: panelRect.width,
-                  half,
-                  leftOverflow: left,
-                  rightOverflow: right
-                });
-                
-                // 智能位置调整
+                // 应用位置计算结果
                 if (left > 0) {
-                  // 左边溢出，向右调整
                   panelElement.style.left = `${-half + left}px`;
-                  console.log('📍 左边溢出，向右调整:', `${-half + left}px`);
                 } else if (right > 0) {
-                  // 右边溢出，向左调整
                   panelElement.style.left = `${-half - right}px`;
-                  console.log('📍 右边溢出，向左调整:', `${-half - right}px`);
                 } else {
-                  // 居中显示
                   panelElement.style.left = `${-half}px`;
-                  console.log('📍 居中显示:', `${-half}px`);
                 }
                 
+                console.log('弹幕面板位置已调整:', {
+                  controlRect: controlRect.left,
+                  panelWidth: panelRect.width,
+                  playerLeft: playerRect.left,
+                  half,
+                  finalLeft: panelElement.style.left
+                });
               } catch (error) {
                 console.warn('弹幕面板位置调整失败:', error);
               }
@@ -2964,36 +2952,6 @@ function PlayPageClient() {
               
               console.log('🎯 强制CSS已应用，hover应该被完全禁用');
               
-              // 🎯 核心解决方案：移除ArtPlayer原始的hover事件监听器
-              const removeOriginalHoverEvents = () => {
-                try {
-                  // 方法1: 克隆节点移除所有事件
-                  const configClone = configButton.cloneNode(true) as HTMLElement;
-                  configButton.parentNode?.replaceChild(configClone, configButton);
-                  
-                  if (styleButton) {
-                    const styleClone = styleButton.cloneNode(true) as HTMLElement;
-                    styleButton.parentNode?.replaceChild(styleClone, styleButton);
-                  }
-                  
-                  // 更新引用
-                  const newConfigButton = document.querySelector('.artplayer-plugin-danmuku .apd-config') as HTMLElement;
-                  const newStyleButton = document.querySelector('.artplayer-plugin-danmuku .apd-style') as HTMLElement;
-                  
-                  console.log('✅ ArtPlayer原始hover事件已完全移除');
-                  return { configButton: newConfigButton, styleButton: newStyleButton };
-                } catch (error) {
-                  console.warn('移除hover事件失败:', error);
-                  return { configButton, styleButton };
-                }
-              };
-              
-              // 立即移除原始hover事件
-              const { configButton: cleanConfigButton, styleButton: cleanStyleButton } = removeOriginalHoverEvents();
-              
-              // 更新位置调整函数的按钮引用
-              currentConfigButton = cleanConfigButton;
-              
               // 💀 暴力方法：直接修改内联样式强制禁用hover
               const forceDisableHover = () => {
                 // 强制隐藏面板
@@ -3021,7 +2979,7 @@ function PlayPageClient() {
               
               // 🖱️ 配置按钮CLICK切换
               console.log('🔧 正在绑定配置按钮点击事件...');
-              cleanConfigButton.addEventListener('click', (e) => {
+              configButton.addEventListener('click', (e) => {
                 console.log('🖱️ 配置按钮被点击！');
                 e.preventDefault();
                 e.stopPropagation();
@@ -3051,8 +3009,8 @@ function PlayPageClient() {
               console.log('✅ 配置按钮事件监听器已绑定');
               
               // 🎨 样式按钮CLICK切换（如果存在）
-              if (cleanStyleButton && stylePanel) {
-                cleanStyleButton.addEventListener('click', (e) => {
+              if (styleButton && stylePanel) {
+                styleButton.addEventListener('click', (e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   
@@ -3077,9 +3035,9 @@ function PlayPageClient() {
               // 🖱️ 全局点击隐藏（学习官方focus事件处理）
               const handleGlobalClick = (e: MouseEvent) => {
                 const target = e.target as Element;
-                if (!cleanConfigButton.contains(target) && 
+                if (!configButton.contains(target) && 
                     !configPanel.contains(target) &&
-                    !(cleanStyleButton && cleanStyleButton.contains(target)) &&
+                    !(styleButton && styleButton.contains(target)) &&
                     !(stylePanel && stylePanel.contains(target))) {
                   
                   if (isConfigVisible) {
