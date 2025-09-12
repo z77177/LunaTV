@@ -3002,7 +3002,7 @@ function PlayPageClient() {
                   if ((isConfigVisible &&
                     !configButton.contains(e.target as Node) &&
                     !configPanel.contains(e.target as Node)) ||
-                    (isStyleVisible && stylePanel &&
+                    (isStyleVisible && stylePanel && styleButton &&
                       !styleButton.contains(e.target as Node) &&
                       !stylePanel.contains(e.target as Node))) {
                     isConfigVisible = false;
@@ -4026,8 +4026,8 @@ function PlayPageClient() {
                                 <svg
                                   key={i}
                                   className={`w-3 h-3 ${i < Math.floor(parseFloat(bangumiDetails.rating.score) / 2)
-                                      ? 'text-yellow-500'
-                                      : 'text-gray-300 dark:text-gray-600'
+                                    ? 'text-yellow-500'
+                                    : 'text-gray-300 dark:text-gray-600'
                                     }`}
                                   fill='currentColor'
                                   viewBox='0 0 20 20'
@@ -4103,8 +4103,8 @@ function PlayPageClient() {
                                 <svg
                                   key={i}
                                   className={`w-3 h-3 ${i < Math.floor(parseFloat(movieDetails.rate) / 2)
-                                      ? 'text-yellow-500'
-                                      : 'text-gray-300 dark:text-gray-600'
+                                    ? 'text-yellow-500'
+                                    : 'text-gray-300 dark:text-gray-600'
                                     }`}
                                   fill='currentColor'
                                   viewBox='0 0 20 20'
@@ -4298,8 +4298,8 @@ function PlayPageClient() {
       <button
         onClick={scrollToTop}
         className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
-            ? 'opacity-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 translate-y-4 pointer-events-none'
+          ? 'opacity-100 translate-y-0 pointer-events-auto'
+          : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
         aria-label='返回顶部'
       >
