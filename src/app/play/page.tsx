@@ -2669,7 +2669,6 @@ function PlayPageClient() {
         // 解决进度条拖拽时误触弹幕菜单的问题
         const fixDanmakuProgressConflict = () => {
           let isDraggingProgress = false;
-          let originalMouseenterHandler: ((e: Event) => void) | null = null;
           
           setTimeout(() => {
             const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config') as HTMLElement;
@@ -2686,7 +2685,7 @@ function PlayPageClient() {
               configButton.parentNode?.replaceChild(newConfigButton, configButton);
               
               // 手动重新添加mouseenter事件，但加入拖拽检测
-              newConfigButton.addEventListener('mouseenter', (e) => {
+              newConfigButton.addEventListener('mouseenter', () => {
                 // 只有在非拖拽状态时才触发弹幕菜单
                 if (!isDraggingProgress) {
                   // 触发弹幕菜单显示
