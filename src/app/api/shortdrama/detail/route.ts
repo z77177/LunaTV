@@ -54,11 +54,11 @@ export async function GET(request: NextRequest) {
 
     // 转换为兼容格式
     const response = {
-      id: result.data.videoId.toString(),
-      title: result.data.videoName,
-      poster: result.data.cover,
+      id: result.data!.videoId.toString(),
+      title: result.data!.videoName,
+      poster: result.data!.cover,
       episodes: Array.from({ length: totalEpisodes }, (_, i) =>
-        `shortdrama:${result.data.videoId}:${i}` // API实际使用0-based索引
+        `shortdrama:${result.data!.videoId}:${i}` // API实际使用0-based索引
       ),
       episodes_titles: Array.from({ length: totalEpisodes }, (_, i) =>
         `第${i + 1}集`
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       source: 'shortdrama',
       source_name: '短剧',
       year: new Date().getFullYear().toString(),
-      desc: result.data.description,
+      desc: result.data!.description,
       type_name: '短剧',
     };
 
