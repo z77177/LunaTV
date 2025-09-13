@@ -438,8 +438,8 @@ export class UpstashRedisStorage implements IStorage {
       }
 
       // 使用与LunaTV-stat相同的方式：从config获取用户列表，避免数据库查询问题
-      const { getConfig } = await import('@/lib/config');
-      const config = await getConfig();
+      const configModule = await import('./config');
+      const config = await configModule.getConfig();
       const allUsers = config.UserConfig.Users;
       const userStats: UserPlayStat[] = [];
       let totalWatchTime = 0;
@@ -590,8 +590,8 @@ export class UpstashRedisStorage implements IStorage {
   async getContentStats(limit = 10): Promise<ContentStat[]> {
     try {
       // 使用与LunaTV-stat相同的方式：从config获取用户列表
-      const { getConfig } = await import('@/lib/config');
-      const config = await getConfig();
+      const configModule = await import('./config');
+      const config = await configModule.getConfig();
       const allUsers = config.UserConfig.Users;
       const contentStats: Record<string, {
         source: string;
