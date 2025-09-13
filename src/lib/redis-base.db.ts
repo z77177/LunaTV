@@ -151,9 +151,11 @@ export function createRedisClient(config: RedisConnectionConfig, globalSymbol: s
 // 抽象基类，包含所有通用的Redis操作逻辑
 export abstract class BaseRedisStorage implements IStorage {
   protected client: RedisClientType;
+  protected config: RedisConnectionConfig;
   protected withRetry: <T>(operation: () => Promise<T>, maxRetries?: number) => Promise<T>;
 
   constructor(config: RedisConnectionConfig, globalSymbol: symbol) {
+    this.config = config; // 保存配置
     this.client = createRedisClient(config, globalSymbol);
     this.withRetry = createRetryWrapper(config.clientName, () => this.client);
   }
