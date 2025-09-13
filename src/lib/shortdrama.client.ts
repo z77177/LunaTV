@@ -8,27 +8,51 @@ import {
 
 const SHORTDRAMA_API_BASE = 'https://api.r2afosne.dpdns.org';
 
+// 检测是否为移动端环境
+const isMobile = () => {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
+// 获取API基础URL - 移动端使用内部API代理，桌面端直接调用外部API
+const getApiBase = (endpoint: string) => {
+  if (isMobile()) {
+    return `/api/shortdrama${endpoint}`;
+  }
+  return `${SHORTDRAMA_API_BASE}${endpoint}`;
+};
+
 // 获取短剧分类列表
 export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
   try {
-    const response = await fetch(`${SHORTDRAMA_API_BASE}/vod/categories`, {
+    const apiUrl = getApiBase('/categories');
+
+    // 移动端使用内部API，不需要headers
+    const fetchOptions = isMobile() ? {} : {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'application/json',
       },
-    });
+    };
+
+    const response = await fetch(apiUrl, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    // API返回的是带categories数组的对象
-    const categories = data.categories || [];
-    return categories.map((item: any) => ({
-      type_id: item.type_id,
-      type_name: item.type_name,
-    }));
+
+    // 内部API直接返回数组，外部API返回带categories的对象
+    if (isMobile()) {
+      return data; // 内部API已经处理过格式
+    } else {
+      const categories = data.categories || [];
+      return categories.map((item: any) => ({
+        type_id: item.type_id,
+        type_name: item.type_name,
+      }));
+    }
   } catch (error) {
     console.error('获取短剧分类失败:', error);
     return [];
@@ -84,37 +108,45 @@ export async function getShortDramaList(
   size = 20
 ): Promise<{ list: ShortDramaItem[]; hasMore: boolean }> {
   try {
-    const response = await fetch(
-      `${SHORTDRAMA_API_BASE}/vod/list?categoryId=${category}&page=${page}&size=${size}`,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'application/json',
-        },
-      }
-    );
+    const apiUrl = isMobile()
+      ? `/api/shortdrama/list?categoryId=${category}&page=${page}&size=${size}`
+      : `${SHORTDRAMA_API_BASE}/vod/list?categoryId=${category}&page=${page}&size=${size}`;
+
+    const fetchOptions = isMobile() ? {} : {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+      },
+    };
+
+    const response = await fetch(apiUrl, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    // 根据实际API返回调整字段映射
-    const items = data.list || [];
-    const list = items.map((item: any) => ({
-      id: item.id,
-      name: item.name,
-      cover: item.cover,
-      update_time: item.update_time || new Date().toISOString(),
-      score: item.score || 0,
-      episode_count: 1, // 分页API没有集数信息，ShortDramaCard会自动获取
-      description: item.description || '',
-    }));
 
-    return {
-      list,
-      hasMore: data.currentPage < data.totalPages, // 使用totalPages判断是否还有更多
-    };
+    if (isMobile()) {
+      return data; // 内部API已经处理过格式
+    } else {
+      // 外部API的处理逻辑
+      const items = data.list || [];
+      const list = items.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        cover: item.cover,
+        update_time: item.update_time || new Date().toISOString(),
+        score: item.score || 0,
+        episode_count: 1, // 分页API没有集数信息，ShortDramaCard会自动获取
+        description: item.description || '',
+      }));
+
+      return {
+        list,
+        hasMore: data.currentPage < data.totalPages, // 使用totalPages判断是否还有更多
+      };
+    }
   } catch (error) {
     console.error('获取短剧列表失败:', error);
     return { list: [], hasMore: false };
