@@ -3951,7 +3951,7 @@ function PlayPageClient() {
               </div>
 
               {/* 详细信息（豆瓣或bangumi） */}
-              {videoDoubanId && videoDoubanId !== 0 && (
+              {videoDoubanId && videoDoubanId !== 0 && detail?.source !== 'shortdrama' && (
                 <div className='mb-4 flex-shrink-0'>
                   {/* 加载状态 */}
                   {(loadingMovieDetails || loadingBangumiDetails) && !movieDetails && !bangumiDetails && (
@@ -4144,6 +4144,29 @@ function PlayPageClient() {
                   )}
                 </div>
               )}
+
+              {/* 短剧详细信息 */}
+              {detail?.source === 'shortdrama' && (
+                <div className='mb-4 flex-shrink-0'>
+                  <div className='space-y-2 text-sm'>
+                    {/* 集数信息 */}
+                    {detail?.episodes && detail.episodes.length > 0 && (
+                      <div className='flex flex-wrap gap-2'>
+                        <span className='bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-xs'>
+                          共{detail.episodes.length}集
+                        </span>
+                        <span className='bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs'>
+                          短剧
+                        </span>
+                        <span className='bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-full text-xs'>
+                          {detail.year}年
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* 剧情简介 */}
               {(detail?.desc || bangumiDetails?.summary) && (
                 <div
