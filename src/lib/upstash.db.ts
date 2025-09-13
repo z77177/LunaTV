@@ -437,8 +437,10 @@ export class UpstashRedisStorage implements IStorage {
         return cached as PlayStatsResult;
       }
 
-      // 获取所有用户
-      const allUsers = await this.getAllUsers();
+      // 使用与LunaTV-stat相同的方式：从config获取用户列表，避免数据库查询问题
+      const { getConfig } = await import('@/lib/config');
+      const config = await getConfig();
+      const allUsers = config.UserConfig.Users;
       const userStats: UserPlayStat[] = [];
       let totalWatchTime = 0;
       let totalPlays = 0;
@@ -449,14 +451,14 @@ export class UpstashRedisStorage implements IStorage {
       const now = new Date();
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      for (const username of allUsers) {
-        const userStat = await this.getUserPlayStat(username);
+      for (const user of allUsers) {
+        const userStat = await this.getUserPlayStat(user.username);
         userStats.push(userStat);
         totalWatchTime += userStat.totalWatchTime;
         totalPlays += userStat.totalPlays;
 
         // 获取用户的播放记录来统计源和每日数据
-        const records = await this.getAllPlayRecords(username);
+        const records = await this.getAllPlayRecords(user.username);
         Object.values(records).forEach((record) => {
           const sourceName = record.source_name || '未知来源';
           sourceCount[sourceName] = (sourceCount[sourceName] || 0) + 1;
@@ -587,8 +589,10 @@ export class UpstashRedisStorage implements IStorage {
 
   async getContentStats(limit = 10): Promise<ContentStat[]> {
     try {
-      // 获取所有用户的播放记录
-      const allUsers = await this.getAllUsers();
+      // 使用与LunaTV-stat相同的方式：从config获取用户列表
+      const { getConfig } = await import('@/lib/config');
+      const config = await getConfig();
+      const allUsers = config.UserConfig.Users;
       const contentStats: Record<string, {
         source: string;
         id: string;
@@ -602,8 +606,8 @@ export class UpstashRedisStorage implements IStorage {
         lastPlayed: number;
       }> = {};
 
-      for (const username of allUsers) {
-        const records = await this.getAllPlayRecords(username);
+      for (const user of allUsers) {
+        const records = await this.getAllPlayRecords(user.username);
         Object.entries(records).forEach(([key, record]) => {
           if (!contentStats[key]) {
             // 从key中解析source和id
@@ -625,7 +629,7 @@ export class UpstashRedisStorage implements IStorage {
           const stat = contentStats[key];
           stat.playCount += 1;
           stat.totalWatchTime += record.play_time || 0;
-          stat.uniqueUsers.add(username);
+          stat.uniqueUsers.add(user.username);
           if (record.save_time > stat.lastPlayed) {
             stat.lastPlayed = record.save_time;
           }

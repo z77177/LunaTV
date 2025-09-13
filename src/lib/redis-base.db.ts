@@ -562,15 +562,18 @@ export abstract class BaseRedisStorage implements IStorage {
         return cached;
       }
 
-      // 重新计算统计数据
-      const allUsers = await this.getAllUsers();
+      // 使用与LunaTV-stat相同的方式：从config获取用户列表，避免数据库查询问题
+      const { getConfig } = await import('@/lib/config');
+      const config = await getConfig();
+      const allUsers = config.UserConfig.Users;
+
       const userStats: UserPlayStat[] = [];
       let totalWatchTime = 0;
       let totalPlays = 0;
 
       // 收集所有用户统计
-      for (const username of allUsers) {
-        const userStat = await this.getUserPlayStat(username);
+      for (const user of allUsers) {
+        const userStat = await this.getUserPlayStat(user.username);
         userStats.push(userStat);
         totalWatchTime += userStat.totalWatchTime;
         totalPlays += userStat.totalPlays;
@@ -702,8 +705,10 @@ export abstract class BaseRedisStorage implements IStorage {
   // 获取内容热度统计
   async getContentStats(limit = 10): Promise<ContentStat[]> {
     try {
-      // 获取所有用户
-      const allUsers = await this.getAllUsers();
+      // 使用与LunaTV-stat相同的方式：从config获取用户列表
+      const { getConfig } = await import('@/lib/config');
+      const config = await getConfig();
+      const allUsers = config.UserConfig.Users;
       const contentMap = new Map<string, {
         record: PlayRecord;
         playCount: number;
@@ -712,8 +717,8 @@ export abstract class BaseRedisStorage implements IStorage {
       }>();
 
       // 收集所有播放记录
-      for (const username of allUsers) {
-        const playRecords = await this.getAllPlayRecords(username);
+      for (const user of allUsers) {
+        const playRecords = await this.getAllPlayRecords(user.username);
 
         Object.entries(playRecords).forEach(([key, record]) => {
           const contentKey = key; // source+id
@@ -730,7 +735,7 @@ export abstract class BaseRedisStorage implements IStorage {
           const content = contentMap.get(contentKey)!;
           content.playCount++;
           content.totalWatchTime += record.play_time;
-          content.users.add(username);
+          content.users.add(user.username);
         });
       }
 
