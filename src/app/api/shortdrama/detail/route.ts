@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     const videoId = parseInt(id);
-    const episodeNum = episode ? parseInt(episode) : 1;
+    let episodeNum = episode ? parseInt(episode) : 1;
 
     if (isNaN(videoId) || isNaN(episodeNum)) {
       return NextResponse.json(
@@ -30,15 +30,47 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 解析视频，默认使用代理
-    const result = await parseShortDramaEpisode(videoId, episodeNum, true);
+    let result;
+    let totalEpisodes = 0;
 
-    if (result.code !== 0) {
+    // 尝试不同的集数来获取总集数，类似ShortDramaCard的逻辑
+    for (let tryEpisode = episodeNum; tryEpisode <= episodeNum + 5; tryEpisode++) {
+      try {
+        result = await parseShortDramaEpisode(videoId, tryEpisode, true);
+
+        if (result.code === 0 && result.data && result.data.totalEpisodes > 0) {
+          totalEpisodes = result.data.totalEpisodes;
+          break;
+        }
+      } catch (error) {
+        console.warn(`尝试获取第${tryEpisode}集失败:`, error);
+        continue;
+      }
+    }
+
+    // 如果所有尝试都失败，使用最后一次的结果或默认值
+    if (!result || totalEpisodes === 0) {
+      // 最后尝试第0集（有些API使用0-based索引）
+      try {
+        result = await parseShortDramaEpisode(videoId, 0, true);
+        if (result.code === 0 && result.data && result.data.totalEpisodes > 0) {
+          totalEpisodes = result.data.totalEpisodes;
+        }
+      } catch (error) {
+        console.warn('尝试获取第0集也失败:', error);
+      }
+    }
+
+    // 如果仍然获取不到，设置默认值
+    if (!result || result.code !== 0) {
       return NextResponse.json(
-        { error: result.msg || '解析失败' },
+        { error: '解析失败，无法获取视频信息' },
         { status: 400 }
       );
     }
+
+    // 确保至少有1集
+    totalEpisodes = Math.max(totalEpisodes, 1);
 
     // 转换为兼容格式
     // 对于短剧，episodes数组存储的是集数占位符，真实URL需要通过额外API获取
@@ -46,10 +78,10 @@ export async function GET(request: NextRequest) {
       id: result.data!.videoId.toString(),
       title: result.data!.videoName,
       poster: result.data!.cover,
-      episodes: Array.from({ length: result.data!.totalEpisodes }, (_, i) =>
+      episodes: Array.from({ length: totalEpisodes }, (_, i) =>
         `shortdrama:${result.data!.videoId}:${i}` // API实际使用0-based索引
       ),
-      episodes_titles: Array.from({ length: result.data!.totalEpisodes }, (_, i) =>
+      episodes_titles: Array.from({ length: totalEpisodes }, (_, i) =>
         `第${i + 1}集`
       ),
       source: 'shortdrama',
