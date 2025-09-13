@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 如果仍然获取不到，设置默认值
-    if (!result || result.code !== 0) {
+    if (!result || result.code !== 0 || !result.data) {
       return NextResponse.json(
         { error: '解析失败，无法获取视频信息' },
         { status: 400 }
@@ -75,11 +75,11 @@ export async function GET(request: NextRequest) {
     // 转换为兼容格式
     // 对于短剧，episodes数组存储的是集数占位符，真实URL需要通过额外API获取
     const response = {
-      id: result.data!.videoId.toString(),
-      title: result.data!.videoName,
-      poster: result.data!.cover,
+      id: result.data.videoId.toString(),
+      title: result.data.videoName,
+      poster: result.data.cover,
       episodes: Array.from({ length: totalEpisodes }, (_, i) =>
-        `shortdrama:${result.data!.videoId}:${i}` // API实际使用0-based索引
+        `shortdrama:${result.data.videoId}:${i}` // API实际使用0-based索引
       ),
       episodes_titles: Array.from({ length: totalEpisodes }, (_, i) =>
         `第${i + 1}集`
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       source: 'shortdrama',
       source_name: '短剧',
       year: new Date().getFullYear().toString(),
-      desc: result.data!.description,
+      desc: result.data.description,
       type_name: '短剧',
     };
 
