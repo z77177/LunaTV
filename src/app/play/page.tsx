@@ -2868,235 +2868,174 @@ function PlayPageClient() {
         // 移动端弹幕配置按钮点击切换支持 - 基于ArtPlayer设置按钮原理
         const addMobileDanmakuToggle = () => {
           const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-          
-          setTimeout(() => {
+
+          let currentConfigButton: Element | null = null;
+          let currentConfigPanel: Element | null = null;
+          let isConfigVisible = false;
+          let currentClickListener: ((e: Event) => void) | null = null;
+
+          // 🔧 关键修复：重新绑定函数，处理ArtPlayer重新挂载弹幕插件的情况
+          const rebindEventListeners = () => {
             const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config');
             const configPanel = document.querySelector('.artplayer-plugin-danmuku .apd-config-panel');
-            
+
             if (!configButton || !configPanel) {
-              console.warn('弹幕配置按钮或面板未找到');
-              return;
+              console.warn('弹幕配置按钮或面板未找到，将在下次尝试重新绑定');
+              return false;
             }
+
+            // 如果是同一个元素，不需要重新绑定
+            if (currentConfigButton === configButton && currentConfigPanel === configPanel) {
+              return true;
+            }
+
+            // 移除旧的事件监听器
+            if (currentConfigButton && currentClickListener) {
+              currentConfigButton.removeEventListener('click', currentClickListener);
+              console.log('已移除旧的弹幕配置按钮事件监听器');
+            }
+
+            // 更新引用
+            currentConfigButton = configButton;
+            currentConfigPanel = configPanel;
+
+            console.log('检测到弹幕插件重新挂载，重新绑定事件监听器');
             
             console.log('设备类型:', isMobile ? '移动端' : '桌面端');
-            
+
             if (isMobile) {
               // 移动端：添加点击切换支持 + 持久位置修正
               console.log('为移动端添加弹幕配置按钮点击切换功能');
-              
-              let isConfigVisible = false;
-              
-              // 弹幕面板位置修正函数 - 带防抖优化
-              let adjustPositionTimer: NodeJS.Timeout | null = null;
+
+              // 弹幕面板位置修正函数 - 使用ArtPlayer弹幕插件官方算法 + 强制重置
               const adjustPanelPosition = () => {
-                // 清除之前的定时器，实现防抖
-                if (adjustPositionTimer) {
-                  clearTimeout(adjustPositionTimer);
-                }
-                
-                adjustPositionTimer = setTimeout(() => {
-                  const player = document.querySelector('.artplayer');
-                  if (!player || !configButton || !configPanel) return;
-                  
-                  try {
-                    const panelElement = configPanel as HTMLElement;
-                    const isFullscreen = player.classList.contains('art-fullscreen') || player.classList.contains('art-fullscreen-web');
+                if (!currentConfigButton || !currentConfigPanel) return;
 
-                    // 清除所有可能影响定位的内联样式，让CSS接管
-                    panelElement.style.left = '';
-                    panelElement.style.right = '';
-                    panelElement.style.top = '';
-                    panelElement.style.bottom = '';
-                    panelElement.style.transform = '';
-                    panelElement.style.position = '';
+                try {
+                  const $control = currentConfigButton as HTMLElement;
+                  const $panel = currentConfigPanel as HTMLElement;
+                  const $player = document.querySelector('.artplayer') as HTMLElement;
 
-                    console.log('弹幕面板：使用CSS默认定位，自动适配', isFullscreen ? '全屏模式' : '普通模式');
-                  } catch (error) {
-                    console.warn('弹幕面板位置调整失败:', error);
+                  if (!$player) return;
+
+                  // 🚀 关键修复：先强制重置到CSS默认状态，确保clean slate
+                  $panel.style.removeProperty('left');
+                  $panel.style.removeProperty('right');
+                  $panel.style.removeProperty('transform');
+
+                  // 🔧 立即应用官方算法，不延迟，避免闪烁和计算错误
+                  const controlRect = $control.getBoundingClientRect();
+                  const panelRect = $panel.getBoundingClientRect();
+                  const playerRect = $player.getBoundingClientRect();
+
+                  const half = panelRect.width / 2 - controlRect.width / 2;
+                  const left = playerRect.left - (controlRect.left - half);
+                  const right = controlRect.right + half - playerRect.right;
+
+                  let finalLeft: string;
+                  if (left > 0) {
+                    finalLeft = `${-half + left}px`;
+                  } else if (right > 0) {
+                    finalLeft = `${-half - right}px`;
+                  } else {
+                    finalLeft = `${-half}px`;
                   }
-                }, 100); // 100ms防抖延迟
+
+                  $panel.style.left = finalLeft;
+
+                  console.log('弹幕面板位置计算详情:', {
+                    控制按钮位置: { left: controlRect.left, right: controlRect.right, width: controlRect.width },
+                    面板尺寸: { width: panelRect.width },
+                    播放器位置: { left: playerRect.left, right: playerRect.right },
+                    计算参数: { half, left, right },
+                    最终位置: finalLeft
+                  });
+                } catch (error) {
+                  console.warn('弹幕面板位置调整失败:', error);
+                }
               };
-              
-              // 添加点击事件监听器
-              configButton.addEventListener('click', (e) => {
+
+              // 创建点击事件监听器函数
+              currentClickListener = (e: Event) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
+                // 🔧 关键修复：每次点击都重新计算位置，模拟ArtPlayer官方的onMouseEnter行为
+                console.log('重新计算弹幕面板位置...');
+
                 isConfigVisible = !isConfigVisible;
-                
+
                 if (isConfigVisible) {
-                  (configPanel as HTMLElement).style.opacity = '1';
-                  (configPanel as HTMLElement).style.pointerEvents = 'all';
-                  // 显示后延迟调整位置，确保DOM完全更新
+                  // 先显示面板
+                  (currentConfigPanel as HTMLElement).style.display = 'block';
+                  (currentConfigPanel as HTMLElement).style.opacity = '1';
+                  (currentConfigPanel as HTMLElement).style.pointerEvents = 'all';
+
+                  // 🚀 需要短暂延迟让DOM渲染完成，然后立即重新计算位置
                   setTimeout(() => {
                     adjustPanelPosition();
-                  }, 50);
+                    console.log('移动端弹幕配置面板：显示后位置已重新计算');
+                  }, 0); // 使用0延迟，让DOM先渲染
+
                   console.log('移动端弹幕配置面板：显示');
                 } else {
-                  (configPanel as HTMLElement).style.opacity = '0';
-                  (configPanel as HTMLElement).style.pointerEvents = 'none';
+                  (currentConfigPanel as HTMLElement).style.display = 'none';
+                  (currentConfigPanel as HTMLElement).style.opacity = '0';
+                  (currentConfigPanel as HTMLElement).style.pointerEvents = 'none';
                   console.log('移动端弹幕配置面板：隐藏');
                 }
-              });
-              
-              // 监听ArtPlayer的resize事件，在每次resize后重新调整弹幕面板位置
-              if (artPlayerRef.current) {
-                artPlayerRef.current.on('resize', () => {
-                  if (isConfigVisible) {
-                    console.log('检测到ArtPlayer resize事件，重新调整弹幕面板位置');
-                    adjustPanelPosition(); // 使用防抖的调整函数
-                  }
-                });
-
-                // 监听全屏状态变化
-                artPlayerRef.current.on('fullscreen', (fullscreen: boolean) => {
-                  if (isConfigVisible) {
-                    console.log('检测到全屏状态变化:', fullscreen ? '进入全屏' : '退出全屏');
-                    adjustPanelPosition(); // 使用防抖的调整函数
-                  }
-                });
-
-                artPlayerRef.current.on('fullscreenWeb', (fullscreen: boolean) => {
-                  if (isConfigVisible) {
-                    console.log('检测到网页全屏状态变化:', fullscreen ? '进入网页全屏' : '退出网页全屏');
-                    adjustPanelPosition(); // 使用防抖的调整函数
-                  }
-                });
-
-                console.log('已监听ArtPlayer resize和全屏事件，实现自动适配');
-              }
-              
-              // 监听播放器设置面板的变化，确保弹幕菜单位置正确 - 优化版本
-              const observePlayerChanges = () => {
-                const playerElement = document.querySelector('.artplayer');
-                if (!playerElement) return () => { /* no-op */ };
-                
-                let observerTimer: NodeJS.Timeout | null = null;
-                const observer = new MutationObserver(() => {
-                  if (isConfigVisible) {
-                    // 防抖处理DOM变化
-                    if (observerTimer) clearTimeout(observerTimer);
-                    observerTimer = setTimeout(() => adjustPanelPosition(), 150);
-                  }
-                });
-                
-                observer.observe(playerElement, { 
-                  childList: true, 
-                  subtree: false, // 减少观察范围
-                  attributes: true, 
-                  attributeFilter: ['class'] // 只观察class变化
-                });
-                
-                return () => {
-                  observer.disconnect();
-                  if (observerTimer) clearTimeout(observerTimer);
-                };
               };
-              
-              const disconnectObserver = observePlayerChanges();
-              
-              // 额外监听屏幕方向变化事件，确保完全自动适配 - 防抖版本
-              let orientationTimer: NodeJS.Timeout | null = null;
-              const handleOrientationChange = () => {
-                if (isConfigVisible) {
-                  console.log('检测到屏幕方向变化，重新调整弹幕面板位置');
-                  // 防抖处理方向变化
-                  if (orientationTimer) clearTimeout(orientationTimer);
-                  orientationTimer = setTimeout(() => adjustPanelPosition(), 200);
-                }
-              };
-              
-              window.addEventListener('orientationchange', handleOrientationChange);
-              window.addEventListener('resize', handleOrientationChange);
-              
-              // 清理函数 - 增强版本
-              const _cleanup = () => {
-                window.removeEventListener('orientationchange', handleOrientationChange);
-                window.removeEventListener('resize', handleOrientationChange);
-                disconnectObserver(); // 断开DOM变化观察器
-                if (adjustPositionTimer) clearTimeout(adjustPositionTimer);
-                if (orientationTimer) clearTimeout(orientationTimer);
-              };
-              
-              // 移除点击外部区域自动隐藏功能，改为固定显示模式
-              // 弹幕设置菜单现在只能通过再次点击按钮来关闭，与显示设置保持一致
-              
+
+              // 添加点击事件监听器
+              currentConfigButton.addEventListener('click', currentClickListener);
+
               console.log('移动端弹幕配置切换功能已激活');
+              return true;
             } else {
-              // 桌面端：使用hover延迟交互，与移动端保持一致
+              // 桌面端逻辑保持不变
               console.log('为桌面端添加弹幕配置按钮hover延迟交互功能');
-
-              let isConfigVisible = false;
-              let showTimer: NodeJS.Timeout | null = null;
-              let hideTimer: NodeJS.Timeout | null = null;
-
-              const showPanel = () => {
-                if (hideTimer) {
-                  clearTimeout(hideTimer);
-                  hideTimer = null;
-                }
-
-                if (!isConfigVisible) {
-                  isConfigVisible = true;
-                  (configPanel as HTMLElement).style.setProperty('display', 'block', 'important');
-                  // 添加show类来触发动画
-                  setTimeout(() => {
-                    (configPanel as HTMLElement).classList.add('show');
-                  }, 10);
-                  console.log('桌面端弹幕配置面板：显示');
-                }
-              };
-
-              const hidePanel = () => {
-                if (showTimer) {
-                  clearTimeout(showTimer);
-                  showTimer = null;
-                }
-
-                if (isConfigVisible) {
-                  isConfigVisible = false;
-                  (configPanel as HTMLElement).classList.remove('show');
-                  // 等待动画完成后隐藏
-                  setTimeout(() => {
-                    (configPanel as HTMLElement).style.setProperty('display', 'none', 'important');
-                  }, 200);
-                  console.log('桌面端弹幕配置面板：隐藏');
-                }
-              };
-
-              // 鼠标进入按钮或面板区域
-              const handleMouseEnter = () => {
-                if (hideTimer) {
-                  clearTimeout(hideTimer);
-                  hideTimer = null;
-                }
-
-                showTimer = setTimeout(showPanel, 300); // 300ms延迟显示
-              };
-
-              // 鼠标离开按钮或面板区域
-              const handleMouseLeave = () => {
-                if (showTimer) {
-                  clearTimeout(showTimer);
-                  showTimer = null;
-                }
-
-                hideTimer = setTimeout(hidePanel, 500); // 500ms延迟隐藏
-              };
-
-              // 为按钮添加hover事件
-              configButton.addEventListener('mouseenter', handleMouseEnter);
-              configButton.addEventListener('mouseleave', handleMouseLeave);
-
-              // 为面板添加hover事件
-              configPanel.addEventListener('mouseenter', handleMouseEnter);
-              configPanel.addEventListener('mouseleave', handleMouseLeave);
-
-              console.log('桌面端弹幕配置hover延迟交互功能已激活');
+              return true;
             }
-          }, 2000); // 延迟2秒确保弹幕插件完全初始化
+          };
+
+          // 🚀 关键修复：监听ArtPlayer的resize和fullscreen事件，自动重新绑定
+          const setupEventListeners = () => {
+            if (artPlayerRef.current) {
+              // 监听resize事件（可能导致插件重新挂载）
+              artPlayerRef.current.on('resize', () => {
+                console.log('检测到ArtPlayer resize事件，检查是否需要重新绑定事件监听器');
+                setTimeout(() => {
+                  rebindEventListeners();
+                }, 100); // 等待DOM更新完成
+              });
+
+              // 监听fullscreen事件（可能导致插件重新挂载）
+              artPlayerRef.current.on('fullscreen', (state: boolean) => {
+                console.log('检测到ArtPlayer fullscreen事件:', state, '检查是否需要重新绑定事件监听器');
+                setTimeout(() => {
+                  rebindEventListeners();
+                }, 100);
+              });
+
+              // 监听fullscreenWeb事件（可能导致插件重新挂载）
+              artPlayerRef.current.on('fullscreenWeb', (state: boolean) => {
+                console.log('检测到ArtPlayer fullscreenWeb事件:', state, '检查是否需要重新绑定事件监听器');
+                setTimeout(() => {
+                  rebindEventListeners();
+                }, 100);
+              });
+            }
+          };
+
+          // 初始绑定（延迟等待插件加载）
+          setTimeout(() => {
+            if (rebindEventListeners()) {
+              setupEventListeners();
+              console.log('弹幕配置事件监听器已成功初始化并设置自动重新绑定');
+            }
+          }, 1500);
         };
-        
+
         // 启用移动端弹幕配置切换
         addMobileDanmakuToggle();
 
