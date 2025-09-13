@@ -11,6 +11,7 @@ import {
   GetBangumiCalendarData,
 } from '@/lib/bangumi.client';
 import { getRecommendedShortDramas } from '@/lib/shortdrama.client';
+import { cleanExpiredCache } from '@/lib/shortdrama-cache';
 import { ShortDramaItem } from '@/lib/types';
 // 客户端收藏 API
 import {
@@ -99,6 +100,9 @@ function HomeClient() {
   const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
 
   useEffect(() => {
+    // 清理过期缓存
+    cleanExpiredCache().catch(console.error);
+
     const fetchRecommendData = async () => {
       try {
         setLoading(true);

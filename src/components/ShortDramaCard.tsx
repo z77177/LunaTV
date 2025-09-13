@@ -7,6 +7,12 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { ShortDramaItem } from '@/lib/types';
+import {
+  SHORTDRAMA_CACHE_EXPIRE,
+  getCacheKey,
+  getCache,
+  setCache,
+} from '@/lib/shortdrama-cache';
 
 interface ShortDramaCardProps {
   drama: ShortDramaItem;
@@ -21,18 +27,16 @@ export default function ShortDramaCard({
 }: ShortDramaCardProps) {
   const [realEpisodeCount, setRealEpisodeCount] = useState<number>(drama.episode_count);
 
-  // 获取真实集数（带缓存）
+  // 获取真实集数（带统一缓存）
   useEffect(() => {
     const fetchEpisodeCount = async () => {
-      // 检查缓存
-      const cacheKey = `shortdrama_episodes_${drama.id}`;
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached) {
-        const episodes = parseInt(cached);
-        if (episodes > 0) {
-          setRealEpisodeCount(episodes);
-          return;
-        }
+      const cacheKey = getCacheKey('episodes', { id: drama.id });
+
+      // 检查统一缓存
+      const cached = await getCache(cacheKey);
+      if (cached && typeof cached === 'number' && cached > 0) {
+        setRealEpisodeCount(cached);
+        return;
       }
 
       try {
@@ -54,11 +58,16 @@ export default function ShortDramaCard({
 
         if (result && result.totalEpisodes > 0) {
           setRealEpisodeCount(result.totalEpisodes);
-          // 缓存结果
-          sessionStorage.setItem(cacheKey, result.totalEpisodes.toString());
+          // 使用统一缓存系统缓存结果
+          await setCache(cacheKey, result.totalEpisodes, SHORTDRAMA_CACHE_EXPIRE.episodes);
+        } else {
+          // 如果解析失败，缓存失败结果避免重复请求
+          await setCache(cacheKey, 1, SHORTDRAMA_CACHE_EXPIRE.episodes / 24); // 1小时后重试
         }
       } catch (error) {
         console.error('获取集数失败:', error);
+        // 网络错误时也缓存失败结果
+        await setCache(cacheKey, 1, SHORTDRAMA_CACHE_EXPIRE.episodes / 24); // 1小时后重试
       }
     };
 
