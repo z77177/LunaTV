@@ -65,36 +65,40 @@ export async function getRecommendedShortDramas(
   size = 10
 ): Promise<ShortDramaItem[]> {
   try {
-    const params = new URLSearchParams();
-    if (category) params.append('category', category.toString());
-    params.append('size', size.toString());
+    const apiUrl = isMobile()
+      ? `/api/shortdrama/recommend?${category ? `category=${category}&` : ''}size=${size}`
+      : `${SHORTDRAMA_API_BASE}/vod/recommend?${category ? `category=${category}&` : ''}size=${size}`;
 
-    const response = await fetch(
-      `${SHORTDRAMA_API_BASE}/vod/recommend?${params.toString()}`,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'application/json',
-        },
-      }
-    );
+    const fetchOptions = isMobile() ? {} : {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+      },
+    };
+
+    const response = await fetch(apiUrl, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    // 根据实际API返回调整字段映射
-    const items = data.items || [];
-    return items.map((item: any) => ({
-      id: item.vod_id || item.id,
-      name: item.vod_name || item.name,
-      cover: item.vod_pic || item.cover,
-      update_time: item.vod_time || item.update_time || new Date().toISOString(),
-      score: item.vod_score || item.score || 0,
-      episode_count: parseInt(item.vod_remarks?.replace(/[^\d]/g, '') || '1'),
-      description: item.vod_content || item.description || '',
-    }));
+
+    if (isMobile()) {
+      return data; // 内部API已经处理过格式
+    } else {
+      // 外部API的处理逻辑
+      const items = data.items || [];
+      return items.map((item: any) => ({
+        id: item.vod_id || item.id,
+        name: item.vod_name || item.name,
+        cover: item.vod_pic || item.cover,
+        update_time: item.vod_time || item.update_time || new Date().toISOString(),
+        score: item.vod_score || item.score || 0,
+        episode_count: parseInt(item.vod_remarks?.replace(/[^\d]/g, '') || '1'),
+        description: item.vod_content || item.description || '',
+      }));
+    }
   } catch (error) {
     console.error('获取推荐短剧失败:', error);
     return [];

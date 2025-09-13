@@ -1,9 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getShortDramaList } from '@/lib/shortdrama.client';
-
 // 标记为动态路由
 export const dynamic = 'force-dynamic';
+
+// 服务端专用函数，直接调用外部API
+async function getShortDramaListInternal(
+  category: number,
+  page = 1,
+  size = 20
+) {
+  const response = await fetch(
+    `https://api.r2afosne.dpdns.org/vod/list?categoryId=${category}&page=${page}&size=${size}`,
+    {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const items = data.list || [];
+  const list = items.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    cover: item.cover,
+    update_time: item.update_time || new Date().toISOString(),
+    score: item.score || 0,
+    episode_count: 1, // 分页API没有集数信息，ShortDramaCard会自动获取
+    description: item.description || '',
+  }));
+
+  return {
+    list,
+    hasMore: data.currentPage < data.totalPages,
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +66,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const result = await getShortDramaList(category, pageNum, pageSize);
+    const result = await getShortDramaListInternal(category, pageNum, pageSize);
     return NextResponse.json(result);
   } catch (error) {
     console.error('获取短剧列表失败:', error);
