@@ -509,13 +509,18 @@ export abstract class BaseRedisStorage implements IStorage {
   }
 
   async setCache(key: string, data: any, expireSeconds?: number): Promise<void> {
-    const cacheKey = this.cacheKey(key);
-    const value = JSON.stringify(data);
-    
-    if (expireSeconds) {
-      await this.withRetry(() => this.client.setEx(cacheKey, expireSeconds, value));
-    } else {
-      await this.withRetry(() => this.client.set(cacheKey, value));
+    try {
+      const cacheKey = this.cacheKey(key);
+      const value = JSON.stringify(data);
+
+      if (expireSeconds) {
+        await this.withRetry(() => this.client.setEx(cacheKey, expireSeconds, value));
+      } else {
+        await this.withRetry(() => this.client.set(cacheKey, value));
+      }
+    } catch (error) {
+      console.error(`${this.config.clientName} setCache error (key: ${key}):`, error);
+      throw error; // 重新抛出错误以便上层处理
     }
   }
 
