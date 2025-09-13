@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     const videoId = parseInt(id);
-    let episodeNum = episode ? parseInt(episode) : 1;
+    const episodeNum = episode ? parseInt(episode) : 1;
 
     if (isNaN(videoId) || isNaN(episodeNum)) {
       return NextResponse.json(
@@ -30,50 +30,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let result: Awaited<ReturnType<typeof parseShortDramaEpisode>> | undefined;
-    let totalEpisodes = 0;
+    // 先尝试指定集数
+    let result = await parseShortDramaEpisode(videoId, episodeNum, true);
 
-    // 尝试不同的集数来获取总集数，类似ShortDramaCard的逻辑
-    for (let tryEpisode = episodeNum; tryEpisode <= episodeNum + 5; tryEpisode++) {
-      try {
-        result = await parseShortDramaEpisode(videoId, tryEpisode, true);
-
-        if (result.code === 0 && result.data && result.data.totalEpisodes > 0) {
-          totalEpisodes = result.data.totalEpisodes;
-          break;
-        }
-      } catch (error) {
-        console.warn(`尝试获取第${tryEpisode}集失败:`, error);
-        continue;
-      }
+    // 如果失败，尝试其他集数
+    if (result.code !== 0 || !result.data || !result.data.totalEpisodes) {
+      result = await parseShortDramaEpisode(videoId, episodeNum === 1 ? 2 : 1, true);
     }
 
-    // 如果所有尝试都失败，使用最后一次的结果或默认值
-    if (!result || totalEpisodes === 0) {
-      // 最后尝试第0集（有些API使用0-based索引）
-      try {
-        result = await parseShortDramaEpisode(videoId, 0, true);
-        if (result.code === 0 && result.data && result.data.totalEpisodes > 0) {
-          totalEpisodes = result.data.totalEpisodes;
-        }
-      } catch (error) {
-        console.warn('尝试获取第0集也失败:', error);
-      }
+    // 如果还是失败，尝试第0集
+    if (result.code !== 0 || !result.data || !result.data.totalEpisodes) {
+      result = await parseShortDramaEpisode(videoId, 0, true);
     }
 
-    // 如果仍然获取不到，设置默认值
-    if (!result || result.code !== 0 || !result.data) {
+    if (result.code !== 0 || !result.data) {
       return NextResponse.json(
-        { error: '解析失败，无法获取视频信息' },
+        { error: result.msg || '解析失败' },
         { status: 400 }
       );
     }
 
-    // 确保至少有1集
-    totalEpisodes = Math.max(totalEpisodes, 1);
+    const totalEpisodes = Math.max(result.data.totalEpisodes || 1, 1);
 
     // 转换为兼容格式
-    // 对于短剧，episodes数组存储的是集数占位符，真实URL需要通过额外API获取
     const response = {
       id: result.data.videoId.toString(),
       title: result.data.videoName,
