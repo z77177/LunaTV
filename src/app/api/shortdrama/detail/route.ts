@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let result;
+    let result: Awaited<ReturnType<typeof parseShortDramaEpisode>> | undefined;
     let totalEpisodes = 0;
 
     // 尝试不同的集数来获取总集数，类似ShortDramaCard的逻辑
