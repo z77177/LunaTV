@@ -195,7 +195,7 @@ function PlayPageClient() {
   // 加载详情（豆瓣或bangumi）
   useEffect(() => {
     const loadMovieDetails = async () => {
-      if (!videoDoubanId || videoDoubanId === 0) {
+      if (!videoDoubanId || videoDoubanId === 0 || detail?.source === 'shortdrama') {
         return;
       }
 
