@@ -3965,7 +3965,7 @@ function PlayPageClient() {
                   {bangumiDetails && (
                     <div className='space-y-2 text-sm'>
                       {/* Bangumi评分 */}
-                      {bangumiDetails.rating?.score && (
+                      {bangumiDetails.rating?.score && parseFloat(bangumiDetails.rating.score) > 0 && (
                         <div className='flex items-center gap-2'>
                           <span className='font-semibold text-gray-700 dark:text-gray-300'>Bangumi评分: </span>
                           <div className='flex items-center'>
@@ -4043,7 +4043,7 @@ function PlayPageClient() {
                   {movieDetails && (
                     <div className='space-y-2 text-sm'>
                       {/* 豆瓣评分 */}
-                      {movieDetails.rate && (
+                      {movieDetails.rate && movieDetails.rate !== "0" && parseFloat(movieDetails.rate) > 0 && (
                         <div className='flex items-center gap-2'>
                           <span className='font-semibold text-gray-700 dark:text-gray-300'>豆瓣评分: </span>
                           <div className='flex items-center'>
