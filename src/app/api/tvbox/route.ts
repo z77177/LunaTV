@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
       wallpaper: `${baseUrl}/logo.png`, // 使用项目Logo作为壁纸
 
       // 影视源配置
-      sites: enabledSources.map((source) => {
+      sites: await Promise.all(enabledSources.map(async (source) => {
         // 智能的type判断逻辑：
         // 1. 如果api地址包含 "/provide/vod" 且不包含 "at/xml"，则认为是JSON类型 (type=1)
         // 2. 如果api地址包含 "at/xml"，则认为是XML类型 (type=0)
@@ -192,6 +192,35 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // 动态获取源站分类
+        let categories: string[] = ["电影", "电视剧", "综艺", "动漫", "纪录片", "短剧"]; // 默认分类
+
+        try {
+          // 尝试获取源站的分类数据
+          const categoriesUrl = `${source.api}?ac=list`;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+
+          const response = await fetch(categoriesUrl, {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'TVBox/1.0.0'
+            }
+          });
+
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.class && Array.isArray(data.class)) {
+              categories = data.class.map((cat: any) => cat.type_name || cat.name).filter((name: string) => name);
+            }
+          }
+        } catch (error) {
+          // 获取分类失败时使用默认分类
+          console.warn(`获取源站 ${source.name} 分类失败，使用默认分类:`, error);
+        }
+
         return {
           key: source.key || source.name,
           name: source.name,
@@ -202,11 +231,9 @@ export async function GET(request: NextRequest) {
           filterable: 1, // 支持分类筛选
           ext: source.detail || source.api, // 如果没有详情地址，使用API地址作为详情地址
           timeout: 30, // 30秒超时
-          categories: [
-            "电影", "电视剧", "综艺", "动漫", "纪录片", "短剧"
-          ]
+          categories: categories // 使用动态获取的分类
         };
-      }),
+      })),
 
       // 解析源配置（添加一些常用的解析源）
       parses: [
