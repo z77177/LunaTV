@@ -144,6 +144,24 @@ export default function ShortDramaPage() {
                 onChange={(e) => handleSearch(e.target.value)}
               />
             </div>
+            {/* 缓存测试按钮 */}
+            <button
+              onClick={async () => {
+                try {
+                  // 清除ClientCache
+                  await fetch('/api/cache?prefix=shortdrama-', { method: 'DELETE' });
+                  // 清除localStorage
+                  Object.keys(localStorage).filter(k => k.startsWith('shortdrama-')).forEach(k => localStorage.removeItem(k));
+                  alert('缓存已清除，页面即将刷新');
+                  window.location.reload();
+                } catch (e) {
+                  alert('清除缓存失败: ' + (e as Error).message);
+                }
+              }}
+              className="mt-2 px-4 py-2 bg-red-500 text-white rounded text-sm"
+            >
+              🧹 清除缓存 (测试)
+            </button>
           </div>
 
           {/* 分类筛选 */}
