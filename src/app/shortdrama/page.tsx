@@ -301,6 +301,47 @@ export default function ShortDramaPage() {
             >
               🔄 强制重置
             </button>
+            {/* 测试直接调用外部API */}
+            <button
+              onClick={async () => {
+                try {
+                  console.log('🌐 测试移动端直接调用外部API...');
+
+                  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                  console.log('是否移动设备:', isMobileDevice);
+
+                  // 直接调用外部API测试CORS
+                  const response = await fetch('https://api.r2afosne.dpdns.org/vod/list?categoryId=1&page=1&size=5', {
+                    headers: {
+                      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                      'Accept': 'application/json',
+                    },
+                    mode: 'cors'
+                  });
+
+                  console.log('🎯 外部API响应状态:', response.status);
+                  console.log('🎯 外部API响应头:', Object.fromEntries(response.headers.entries()));
+
+                  if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                  }
+
+                  const data = await response.json();
+                  console.log('🎯 外部API返回数据:', data);
+
+                  const firstItem = data.list?.[0];
+                  alert(`✅ 外部API调用成功！\n设备类型: ${isMobileDevice ? '移动端' : '桌面端'}\n获取 ${data.list?.length || 0} 条数据\n第一条: ${firstItem?.name}\n时间: ${firstItem?.update_time}`);
+
+                } catch (e) {
+                  console.error('❌ 外部API调用失败:', e);
+                  const errorMsg = e instanceof Error ? e.message : String(e);
+                  alert(`❌ 外部API调用失败!\n错误: ${errorMsg}\n\n这说明移动端需要API代理`);
+                }
+              }}
+              className="mt-2 px-4 py-2 bg-orange-500 text-white rounded text-sm ml-2"
+            >
+              🌐 测试外部API
+            </button>
           </div>
 
           {/* 分类筛选 */}

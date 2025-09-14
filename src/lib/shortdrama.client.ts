@@ -20,13 +20,16 @@ const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
-// 获取API基础URL - 移动端使用内部API代理，桌面端直接调用外部API
+// 获取API基础URL - 统一使用外部API，解决移动端缓存问题
 const getApiBase = (endpoint: string) => {
-  if (isMobile()) {
-    return `/api/shortdrama${endpoint}`;
-  }
-  // 桌面端使用外部API的完整路径
+  // 临时测试：移动端也直接调用外部API
   return `${SHORTDRAMA_API_BASE}/vod${endpoint}`;
+
+  // 原来的逻辑（如果直接调用有CORS问题再恢复）
+  // if (isMobile()) {
+  //   return `/api/shortdrama${endpoint}`;
+  // }
+  // return `${SHORTDRAMA_API_BASE}/vod${endpoint}`;
 };
 
 // 获取短剧分类列表
@@ -42,12 +45,13 @@ export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
 
     const apiUrl = getApiBase('/categories');
 
-    // 移动端使用内部API，不需要headers
-    const fetchOptions = isMobile() ? {} : {
+    // 统一使用外部API headers，添加CORS处理
+    const fetchOptions = {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'application/json',
       },
+      mode: 'cors' as const,
     };
 
     const response = await fetch(apiUrl, fetchOptions);
@@ -58,17 +62,12 @@ export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
 
     const data = await response.json();
 
-    let result: ShortDramaCategory[];
-    // 内部API直接返回数组，外部API返回带categories的对象
-    if (isMobile()) {
-      result = data; // 内部API已经处理过格式
-    } else {
-      const categories = data.categories || [];
-      result = categories.map((item: any) => ({
-        type_id: item.type_id,
-        type_name: item.type_name,
-      }));
-    }
+    // 统一处理外部API返回格式
+    const categories = data.categories || [];
+    const result = categories.map((item: any) => ({
+      type_id: item.type_id,
+      type_name: item.type_name,
+    }));
 
     // 缓存结果
     await setCache(cacheKey, result, SHORTDRAMA_CACHE_EXPIRE.categories);
@@ -93,15 +92,14 @@ export async function getRecommendedShortDramas(
       return cached;
     }
 
-    const apiUrl = isMobile()
-      ? `/api/shortdrama/recommend?${category ? `category=${category}&` : ''}size=${size}`
-      : `${SHORTDRAMA_API_BASE}/vod/recommend?${category ? `category=${category}&` : ''}size=${size}`;
+    const apiUrl = `${SHORTDRAMA_API_BASE}/vod/recommend?${category ? `category=${category}&` : ''}size=${size}`;
 
-    const fetchOptions = isMobile() ? {} : {
+    const fetchOptions = {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'application/json',
       },
+      mode: 'cors' as const,
     };
 
     const response = await fetch(apiUrl, fetchOptions);
@@ -112,22 +110,17 @@ export async function getRecommendedShortDramas(
 
     const data = await response.json();
 
-    let result: ShortDramaItem[];
-    if (isMobile()) {
-      result = data; // 内部API已经处理过格式
-    } else {
-      // 外部API的处理逻辑
-      const items = data.items || [];
-      result = items.map((item: any) => ({
-        id: item.vod_id || item.id,
-        name: item.vod_name || item.name,
-        cover: item.vod_pic || item.cover,
-        update_time: item.vod_time || item.update_time || new Date().toISOString(),
-        score: item.vod_score || item.score || 0,
-        episode_count: parseInt(item.vod_remarks?.replace(/[^\d]/g, '') || '1'),
-        description: item.vod_content || item.description || '',
-      }));
-    }
+    // 统一处理外部API格式
+    const items = data.items || [];
+    const result = items.map((item: any) => ({
+      id: item.vod_id || item.id,
+      name: item.vod_name || item.name,
+      cover: item.vod_pic || item.cover,
+      update_time: item.vod_time || item.update_time || new Date().toISOString(),
+      score: item.vod_score || item.score || 0,
+      episode_count: parseInt(item.vod_remarks?.replace(/[^\d]/g, '') || '1'),
+      description: item.vod_content || item.description || '',
+    }));
 
     // 缓存结果
     await setCache(cacheKey, result, SHORTDRAMA_CACHE_EXPIRE.recommends);
@@ -153,15 +146,14 @@ export async function getShortDramaList(
       return cached;
     }
 
-    const apiUrl = isMobile()
-      ? `/api/shortdrama/list?categoryId=${category}&page=${page}&size=${size}`
-      : `${SHORTDRAMA_API_BASE}/vod/list?categoryId=${category}&page=${page}&size=${size}`;
+    const apiUrl = `${SHORTDRAMA_API_BASE}/vod/list?categoryId=${category}&page=${page}&size=${size}`;
 
-    const fetchOptions = isMobile() ? {} : {
+    const fetchOptions = {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'application/json',
       },
+      mode: 'cors' as const,
     };
 
     const response = await fetch(apiUrl, fetchOptions);
@@ -172,27 +164,22 @@ export async function getShortDramaList(
 
     const data = await response.json();
 
-    let result: { list: ShortDramaItem[]; hasMore: boolean };
-    if (isMobile()) {
-      result = data; // 内部API已经处理过格式
-    } else {
-      // 外部API的处理逻辑
-      const items = data.list || [];
-      const list = items.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        cover: item.cover,
-        update_time: item.update_time || new Date().toISOString(),
-        score: item.score || 0,
-        episode_count: 1, // 分页API没有集数信息，ShortDramaCard会自动获取
-        description: item.description || '',
-      }));
+    // 统一处理外部API格式
+    const items = data.list || [];
+    const list = items.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      cover: item.cover,
+      update_time: item.update_time || new Date().toISOString(),
+      score: item.score || 0,
+      episode_count: 1, // 分页API没有集数信息，ShortDramaCard会自动获取
+      description: item.description || '',
+    }));
 
-      result = {
-        list,
-        hasMore: data.currentPage < data.totalPages, // 使用totalPages判断是否还有更多
-      };
-    }
+    const result = {
+      list,
+      hasMore: data.currentPage < data.totalPages, // 使用totalPages判断是否还有更多
+    };
 
     // 缓存结果 - 第一页缓存时间更长
     const cacheTime = page === 1 ? SHORTDRAMA_CACHE_EXPIRE.lists * 2 : SHORTDRAMA_CACHE_EXPIRE.lists;
