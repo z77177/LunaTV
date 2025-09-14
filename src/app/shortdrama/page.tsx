@@ -204,6 +204,36 @@ export default function ShortDramaPage() {
             >
               🔍 详细调试
             </button>
+            {/* 绕过缓存测试 */}
+            <button
+              onClick={async () => {
+                try {
+                  // 直接绕过所有缓存层
+                  const timestamp = Date.now();
+                  const response = await fetch(`/api/shortdrama/list?categoryId=1&page=1&size=20&_bypass=${timestamp}`, {
+                    cache: 'no-store',
+                    headers: {
+                      'Cache-Control': 'no-cache',
+                      'Pragma': 'no-cache'
+                    }
+                  });
+
+                  const data = await response.json();
+                  console.log('绕过缓存的数据:', data);
+
+                  // 直接设置到页面状态
+                  setDramas(data.list || []);
+                  setHasMore(data.hasMore || false);
+
+                  alert(`绕过缓存成功！获取到 ${data.list?.length || 0} 条数据`);
+                } catch (e) {
+                  alert('绕过缓存失败: ' + (e as Error).message);
+                }
+              }}
+              className="mt-2 px-4 py-2 bg-green-500 text-white rounded text-sm ml-2"
+            >
+              🚀 绕过缓存
+            </button>
           </div>
 
           {/* 分类筛选 */}
