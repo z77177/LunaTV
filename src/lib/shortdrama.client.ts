@@ -43,8 +43,8 @@ export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
     const apiUrl = getApiBase('/categories');
 
     // 移动端使用内部API，桌面端调用外部API
-    const fetchOptions = isMobile() ? {
-      cache: 'no-store' as const,
+    const fetchOptions: RequestInit = isMobile() ? {
+      cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
@@ -55,7 +55,7 @@ export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'application/json',
       },
-      mode: 'cors' as const,
+      mode: 'cors',
     };
 
     const response = await fetch(apiUrl, fetchOptions);
@@ -162,8 +162,8 @@ export async function getShortDramaList(
       ? `/api/shortdrama/list?categoryId=${category}&page=${page}&size=${size}&_t=${timestamp}`
       : `${SHORTDRAMA_API_BASE}/vod/list?categoryId=${category}&page=${page}&size=${size}`;
 
-    const fetchOptions = isMobile() ? {
-      cache: 'no-store' as const,
+    const fetchOptions: RequestInit = isMobile() ? {
+      cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
@@ -174,7 +174,7 @@ export async function getShortDramaList(
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'application/json',
       },
-      mode: 'cors' as const,
+      mode: 'cors',
     };
 
     const response = await fetch(apiUrl, fetchOptions);
