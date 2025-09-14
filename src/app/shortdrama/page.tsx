@@ -158,9 +158,51 @@ export default function ShortDramaPage() {
                   alert('清除缓存失败: ' + (e as Error).message);
                 }
               }}
-              className="mt-2 px-4 py-2 bg-red-500 text-white rounded text-sm"
+              className="mt-2 px-4 py-2 bg-red-500 text-white rounded text-sm mr-2"
             >
               🧹 清除缓存 (测试)
+            </button>
+            {/* 详细调试按钮 */}
+            <button
+              onClick={async () => {
+                try {
+                  console.log('🔍 开始调试API调用...');
+
+                  // 添加随机参数避免缓存
+                  const timestamp = Date.now();
+                  const url = `/api/shortdrama/list?categoryId=1&page=1&size=3&_t=${timestamp}`;
+
+                  console.log('📡 调用URL:', url);
+                  const response = await fetch(url);
+
+                  console.log('📥 响应状态:', response.status);
+                  console.log('📥 响应头:', Object.fromEntries(response.headers.entries()));
+
+                  const data = await response.json();
+                  console.log('📦 响应数据:', data);
+
+                  const firstItem = data.list?.[0];
+                  const debugInfo = {
+                    timestamp: new Date().toISOString(),
+                    isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+                    responseHeaders: Object.fromEntries(response.headers.entries()),
+                    firstItem: firstItem ? {
+                      id: firstItem.id,
+                      name: firstItem.name,
+                      update_time: firstItem.update_time
+                    } : null,
+                    count: data.list?.length || 0
+                  };
+
+                  alert('调试信息:\\n' + JSON.stringify(debugInfo, null, 2));
+                } catch (e) {
+                  console.error('调试失败:', e);
+                  alert('调试失败: ' + (e as Error).message);
+                }
+              }}
+              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded text-sm"
+            >
+              🔍 详细调试
             </button>
           </div>
 
