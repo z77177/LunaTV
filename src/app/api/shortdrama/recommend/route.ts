@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getCacheTime } from '@/lib/config';
+
 // 标记为动态路由
 export const dynamic = 'force-dynamic';
 
@@ -57,11 +59,13 @@ export async function GET(request: NextRequest) {
 
     const result = await getRecommendedShortDramasInternal(categoryNum, pageSize);
 
-    // 设置与网页端一致的缓存策略：推荐缓存1小时
-    const maxAge = 1 * 60 * 60; // 1小时转秒
+    // 设置与豆瓣一致的缓存策略
+    const cacheTime = await getCacheTime();
     const response = NextResponse.json(result);
-    response.headers.set('Cache-Control', `public, max-age=${maxAge}, s-maxage=${maxAge}`);
-    response.headers.set('Vary', 'Accept-Encoding');
+    response.headers.set('Cache-Control', `public, max-age=${cacheTime}, s-maxage=${cacheTime}`);
+    response.headers.set('CDN-Cache-Control', `public, s-maxage=${cacheTime}`);
+    response.headers.set('Vercel-CDN-Cache-Control', `public, s-maxage=${cacheTime}`);
+    response.headers.set('Netlify-Vary', 'query');
 
     return response;
   } catch (error) {
