@@ -161,7 +161,7 @@ div[data-media-provider] video {
 }
 
 /* 隐藏移动端竖屏时的 pip 按钮 */
-@media (max-width: 768px) {
+@media (max-width: 768px) and (orientation: portrait) {
   .art-control-pip {
     display: none !important;
   }
@@ -172,6 +172,33 @@ div[data-media-provider] video {
 
   .art-control-volume {
     display: none !important;
+  }
+}
+
+/* 修复音量面板闪烁问题 - 稳定hover区域 */
+@media (min-width: 769px) {
+  .art-control-volume {
+    position: relative;
+  }
+
+  .art-control-volume::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -5px;
+    right: -5px;
+    bottom: 0;
+    z-index: 1;
+  }
+
+  .art-volume-panel {
+    transition: opacity 0.3s ease !important;
+    transform: translateY(0) !important;
+  }
+
+  .art-control-volume:hover .art-volume-panel {
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 }
 
