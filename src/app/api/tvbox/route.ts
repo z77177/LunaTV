@@ -40,20 +40,21 @@ async function cleanExpiredRateLimitCache(): Promise<void> {
   }
 }
 
-// TVBox源格式接口
+// TVBox源格式接口 (基于官方标准)
 interface TVBoxSource {
   key: string;
   name: string;
-  type: number; // 0=影视源, 1=直播源, 3=解析源
+  type: number; // 0=XML接口, 1=JSON接口, 3=Spider/JAR接口
   api: string;
   searchable?: number; // 0=不可搜索, 1=可搜索
   quickSearch?: number; // 0=不支持快速搜索, 1=支持快速搜索
   filterable?: number; // 0=不支持分类筛选, 1=支持分类筛选
-  ext?: string; // 扩展参数
-  jar?: string; // jar包地址
-  playUrl?: string; // 播放解析地址
-  categories?: string[]; // 分类
-  timeout?: number; // 超时时间(秒)
+  ext?: string; // 扩展数据字段，可包含配置规则或外部文件URL
+  jar?: string; // 自定义JAR文件地址
+  playerType?: number; // 播放器类型 (0: 系统, 1: ijk, 2: exo, 10: mxplayer, -1: 使用设置页默认)
+  playerUrl?: string; // 站点解析URL
+  categories?: string[]; // 自定义资源分类和排序
+  hide?: number; // 是否隐藏源站 (1: 隐藏, 0: 显示)
 }
 
 interface TVBoxConfig {
@@ -229,8 +230,9 @@ export async function GET(request: NextRequest) {
           searchable: 1, // 可搜索
           quickSearch: 1, // 支持快速搜索
           filterable: 1, // 支持分类筛选
-          ext: source.detail || source.api, // 如果没有详情地址，使用API地址作为详情地址
-          timeout: 30, // 30秒超时
+          ext: '', // 扩展数据字段，用于配置规则或外部文件URL
+          playerUrl: '', // 站点解析URL
+          hide: 0, // 是否隐藏源站 (1: 隐藏, 0: 显示)
           categories: categories // 使用动态获取的分类
         };
       })),
