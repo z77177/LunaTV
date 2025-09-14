@@ -221,11 +221,19 @@ export default function ShortDramaPage() {
                   const data = await response.json();
                   console.log('绕过缓存的数据:', data);
 
+                  // 记录设置前的状态
+                  console.log('设置前的dramas长度:', dramas.length);
+                  console.log('设置前第一条:', dramas[0]);
+
                   // 直接设置到页面状态
                   setDramas(data.list || []);
                   setHasMore(data.hasMore || false);
 
-                  alert(`绕过缓存成功！获取到 ${data.list?.length || 0} 条数据`);
+                  // 强制页面重新渲染
+                  setLoading(false);
+
+                  const newFirstItem = data.list?.[0];
+                  alert(`绕过缓存成功！\n获取到 ${data.list?.length || 0} 条数据\n第一条: ${newFirstItem?.name}\n时间: ${newFirstItem?.update_time}`);
                 } catch (e) {
                   alert('绕过缓存失败: ' + (e as Error).message);
                 }
