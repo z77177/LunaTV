@@ -25,6 +25,7 @@ export default function ShortDramaPage() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const observer = useRef<IntersectionObserver>();
   const lastDramaElementRef = useCallback(
@@ -242,6 +243,64 @@ export default function ShortDramaPage() {
             >
               🚀 绕过缓存
             </button>
+            {/* 强制重置状态 */}
+            <button
+              onClick={async () => {
+                try {
+                  console.log('🔄 开始强制重置状态...');
+
+                  // 1. 完全清空所有状态
+                  setDramas([]);
+                  setLoading(true);
+                  setHasMore(true);
+                  setPage(1);
+
+                  // 2. 清理所有缓存
+                  await fetch('/api/cache?prefix=shortdrama-', { method: 'DELETE' });
+                  Object.keys(localStorage).filter(k => k.startsWith('shortdrama-')).forEach(k => localStorage.removeItem(k));
+
+                  // 3. 短暂等待确保状态已重置
+                  await new Promise(resolve => setTimeout(resolve, 100));
+
+                  // 4. 强制重新获取数据
+                  const timestamp = Date.now();
+                  const response = await fetch(`/api/shortdrama/list?categoryId=${selectedCategory}&page=1&size=20&_force=${timestamp}`, {
+                    cache: 'no-store',
+                    headers: {
+                      'Cache-Control': 'no-cache, no-store, must-revalidate',
+                      'Pragma': 'no-cache',
+                      'Expires': '0'
+                    }
+                  });
+
+                  if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                  }
+
+                  const data = await response.json();
+                  console.log('🆕 强制获取的新数据:', data);
+
+                  // 5. 重新设置状态
+                  setDramas(data.list || []);
+                  setHasMore(data.hasMore || false);
+                  setLoading(false);
+
+                  // 6. 强制完整重新渲染
+                  setRefreshKey(prev => prev + 1);
+
+                  const firstItem = data.list?.[0];
+                  alert(`✅ 强制重置成功！\n获取 ${data.list?.length || 0} 条最新数据\n第一条: ${firstItem?.name}\n更新时间: ${firstItem?.update_time}`);
+
+                } catch (e) {
+                  console.error('强制重置失败:', e);
+                  setLoading(false);
+                  alert('❌ 强制重置失败: ' + (e as Error).message);
+                }
+              }}
+              className="mt-2 px-4 py-2 bg-purple-500 text-white rounded text-sm ml-2"
+            >
+              🔄 强制重置
+            </button>
           </div>
 
           {/* 分类筛选 */}
@@ -272,10 +331,13 @@ export default function ShortDramaPage() {
           )}
 
           {/* 短剧网格 */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div
+            key={`drama-grid-${refreshKey}`}
+            className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+          >
             {dramas.map((drama, index) => (
               <div
-                key={`${drama.id}-${index}`}
+                key={`${drama.id}-${index}-${refreshKey}`}
                 ref={index === dramas.length - 1 ? lastDramaElementRef : null}
               >
                 <ShortDramaCard drama={drama} />
