@@ -30,13 +30,11 @@ export async function GET() {
   try {
     const categories = await getShortDramaCategoriesInternal();
 
-    // 设置与豆瓣一致的缓存策略
-    const cacheTime = await getCacheTime();
+    // 临时禁用缓存进行测试
     const response = NextResponse.json(categories);
-    response.headers.set('Cache-Control', `public, max-age=${cacheTime}, s-maxage=${cacheTime}`);
-    response.headers.set('CDN-Cache-Control', `public, s-maxage=${cacheTime}`);
-    response.headers.set('Vercel-CDN-Cache-Control', `public, s-maxage=${cacheTime}`);
-    response.headers.set('Netlify-Vary', 'query');
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
 
     return response;
   } catch (error) {
