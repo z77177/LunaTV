@@ -25,7 +25,6 @@ export default function ShortDramaPage() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const observer = useRef<IntersectionObserver>();
   const lastDramaElementRef = useCallback(
@@ -145,203 +144,6 @@ export default function ShortDramaPage() {
                 onChange={(e) => handleSearch(e.target.value)}
               />
             </div>
-            {/* 缓存测试按钮 */}
-            <button
-              onClick={async () => {
-                try {
-                  // 清除ClientCache
-                  await fetch('/api/cache?prefix=shortdrama-', { method: 'DELETE' });
-                  // 清除localStorage
-                  Object.keys(localStorage).filter(k => k.startsWith('shortdrama-')).forEach(k => localStorage.removeItem(k));
-                  alert('缓存已清除，页面即将刷新');
-                  window.location.reload();
-                } catch (e) {
-                  alert('清除缓存失败: ' + (e as Error).message);
-                }
-              }}
-              className="mt-2 px-4 py-2 bg-red-500 text-white rounded text-sm mr-2"
-            >
-              🧹 清除缓存 (测试)
-            </button>
-            {/* 详细调试按钮 */}
-            <button
-              onClick={async () => {
-                try {
-                  console.log('🔍 开始调试API调用...');
-
-                  // 添加随机参数避免缓存
-                  const timestamp = Date.now();
-                  const url = `/api/shortdrama/list?categoryId=1&page=1&size=3&_t=${timestamp}`;
-
-                  console.log('📡 调用URL:', url);
-                  const response = await fetch(url);
-
-                  console.log('📥 响应状态:', response.status);
-                  console.log('📥 响应头:', Object.fromEntries(response.headers.entries()));
-
-                  const data = await response.json();
-                  console.log('📦 响应数据:', data);
-
-                  const firstItem = data.list?.[0];
-                  const debugInfo = {
-                    timestamp: new Date().toISOString(),
-                    isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-                    responseHeaders: Object.fromEntries(response.headers.entries()),
-                    firstItem: firstItem ? {
-                      id: firstItem.id,
-                      name: firstItem.name,
-                      update_time: firstItem.update_time
-                    } : null,
-                    count: data.list?.length || 0
-                  };
-
-                  alert('调试信息:\\n' + JSON.stringify(debugInfo, null, 2));
-                } catch (e) {
-                  console.error('调试失败:', e);
-                  alert('调试失败: ' + (e as Error).message);
-                }
-              }}
-              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded text-sm"
-            >
-              🔍 详细调试
-            </button>
-            {/* 绕过缓存测试 */}
-            <button
-              onClick={async () => {
-                try {
-                  // 直接绕过所有缓存层
-                  const timestamp = Date.now();
-                  const response = await fetch(`/api/shortdrama/list?categoryId=1&page=1&size=20&_bypass=${timestamp}`, {
-                    cache: 'no-store',
-                    headers: {
-                      'Cache-Control': 'no-cache',
-                      'Pragma': 'no-cache'
-                    }
-                  });
-
-                  const data = await response.json();
-                  console.log('绕过缓存的数据:', data);
-
-                  // 记录设置前的状态
-                  console.log('设置前的dramas长度:', dramas.length);
-                  console.log('设置前第一条:', dramas[0]);
-
-                  // 直接设置到页面状态
-                  setDramas(data.list || []);
-                  setHasMore(data.hasMore || false);
-
-                  // 强制页面重新渲染
-                  setLoading(false);
-
-                  const newFirstItem = data.list?.[0];
-                  alert(`绕过缓存成功！\n获取到 ${data.list?.length || 0} 条数据\n第一条: ${newFirstItem?.name}\n时间: ${newFirstItem?.update_time}`);
-                } catch (e) {
-                  alert('绕过缓存失败: ' + (e as Error).message);
-                }
-              }}
-              className="mt-2 px-4 py-2 bg-green-500 text-white rounded text-sm ml-2"
-            >
-              🚀 绕过缓存
-            </button>
-            {/* 强制重置状态 */}
-            <button
-              onClick={async () => {
-                try {
-                  console.log('🔄 开始强制重置状态...');
-
-                  // 1. 完全清空所有状态
-                  setDramas([]);
-                  setLoading(true);
-                  setHasMore(true);
-                  setPage(1);
-
-                  // 2. 清理所有缓存
-                  await fetch('/api/cache?prefix=shortdrama-', { method: 'DELETE' });
-                  Object.keys(localStorage).filter(k => k.startsWith('shortdrama-')).forEach(k => localStorage.removeItem(k));
-
-                  // 3. 短暂等待确保状态已重置
-                  await new Promise(resolve => setTimeout(resolve, 100));
-
-                  // 4. 强制重新获取数据
-                  const timestamp = Date.now();
-                  const response = await fetch(`/api/shortdrama/list?categoryId=${selectedCategory}&page=1&size=20&_force=${timestamp}`, {
-                    cache: 'no-store',
-                    headers: {
-                      'Cache-Control': 'no-cache, no-store, must-revalidate',
-                      'Pragma': 'no-cache',
-                      'Expires': '0'
-                    }
-                  });
-
-                  if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                  }
-
-                  const data = await response.json();
-                  console.log('🆕 强制获取的新数据:', data);
-
-                  // 5. 重新设置状态
-                  setDramas(data.list || []);
-                  setHasMore(data.hasMore || false);
-                  setLoading(false);
-
-                  // 6. 强制完整重新渲染
-                  setRefreshKey(prev => prev + 1);
-
-                  const firstItem = data.list?.[0];
-                  alert(`✅ 强制重置成功！\n获取 ${data.list?.length || 0} 条最新数据\n第一条: ${firstItem?.name}\n更新时间: ${firstItem?.update_time}`);
-
-                } catch (e) {
-                  console.error('强制重置失败:', e);
-                  setLoading(false);
-                  alert('❌ 强制重置失败: ' + (e as Error).message);
-                }
-              }}
-              className="mt-2 px-4 py-2 bg-purple-500 text-white rounded text-sm ml-2"
-            >
-              🔄 强制重置
-            </button>
-            {/* 测试直接调用外部API */}
-            <button
-              onClick={async () => {
-                try {
-                  console.log('🌐 测试移动端直接调用外部API...');
-
-                  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                  console.log('是否移动设备:', isMobileDevice);
-
-                  // 直接调用外部API测试CORS
-                  const response = await fetch('https://api.r2afosne.dpdns.org/vod/list?categoryId=1&page=1&size=5', {
-                    headers: {
-                      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                      'Accept': 'application/json',
-                    },
-                    mode: 'cors'
-                  });
-
-                  console.log('🎯 外部API响应状态:', response.status);
-                  console.log('🎯 外部API响应头:', Object.fromEntries(response.headers.entries()));
-
-                  if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                  }
-
-                  const data = await response.json();
-                  console.log('🎯 外部API返回数据:', data);
-
-                  const firstItem = data.list?.[0];
-                  alert(`✅ 外部API调用成功！\n设备类型: ${isMobileDevice ? '移动端' : '桌面端'}\n获取 ${data.list?.length || 0} 条数据\n第一条: ${firstItem?.name}\n时间: ${firstItem?.update_time}`);
-
-                } catch (e) {
-                  console.error('❌ 外部API调用失败:', e);
-                  const errorMsg = e instanceof Error ? e.message : String(e);
-                  alert(`❌ 外部API调用失败!\n错误: ${errorMsg}\n\n这说明移动端需要API代理`);
-                }
-              }}
-              className="mt-2 px-4 py-2 bg-orange-500 text-white rounded text-sm ml-2"
-            >
-              🌐 测试外部API
-            </button>
           </div>
 
           {/* 分类筛选 */}
@@ -372,13 +174,10 @@ export default function ShortDramaPage() {
           )}
 
           {/* 短剧网格 */}
-          <div
-            key={`drama-grid-${refreshKey}`}
-            className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
-          >
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {dramas.map((drama, index) => (
               <div
-                key={`${drama.id}-${index}-${refreshKey}`}
+                key={`${drama.id}-${index}`}
                 ref={index === dramas.length - 1 ? lastDramaElementRef : null}
               >
                 <ShortDramaCard drama={drama} />
