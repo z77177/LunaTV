@@ -175,9 +175,17 @@ div[data-media-provider] video {
   }
 }
 
-/* 🎯 小屏幕时隐藏画中画，让全屏按钮优先显示 */
+/* 🎯 小屏幕时隐藏画中画、AirPlay、网页全屏，让真全屏按钮优先显示 */
 @media (max-width: 768px) {
   .art-control-pip {
+    display: none !important;
+  }
+
+  .art-control-airplay {
+    display: none !important;
+  }
+
+  .art-control-fullscreenWeb {
     display: none !important;
   }
 }
