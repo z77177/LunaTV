@@ -2514,30 +2514,29 @@ function PlayPageClient() {
           {
             position: 'right',
             index: 35, // 比画中画的index: 40更小，优先级更高
-            tooltip: '全屏', // 会被mounted覆盖
+            tooltip: '全屏', // 初始tooltip，会被mounted中的逻辑覆盖
             mounted: function($control: HTMLElement) {
-              const art = artPlayerRef.current;
-              const { proxy, icons, i18n } = art;
+              // 完全按照ArtPlayer源码fullscreen.js的逻辑
+              const { icons, i18n } = artPlayerRef.current;
 
-              // 完全复制源码的append调用
+              // 使用ArtPlayer原版的图标
               const $fullscreenOn = document.createElement('div');
               $fullscreenOn.innerHTML = icons.fullscreenOn;
-              $control.appendChild($fullscreenOn);
-
               const $fullscreenOff = document.createElement('div');
               $fullscreenOff.innerHTML = icons.fullscreenOff;
+
+              // 添加到控件
+              $control.appendChild($fullscreenOn);
               $control.appendChild($fullscreenOff);
 
-              // 完全复制源码的setStyle调用
+              // 初始隐藏退出全屏图标
               $fullscreenOff.style.display = 'none';
 
-              // 完全复制源码的proxy调用
-              $control.addEventListener('click', () => {
-                art.fullscreen = !art.fullscreen;
-              });
+              // 设置初始tooltip
+              $control.setAttribute('aria-label', i18n.get('Fullscreen'));
 
-              // 完全复制源码的事件监听
-              art.on('fullscreen', (state: boolean) => {
+              // 监听全屏状态变化 - 完全复制原版逻辑
+              artPlayerRef.current.on('fullscreen', (state) => {
                 if (state) {
                   $control.setAttribute('aria-label', i18n.get('Exit Fullscreen'));
                   $fullscreenOn.style.display = 'none';
@@ -2548,6 +2547,12 @@ function PlayPageClient() {
                   $fullscreenOff.style.display = 'none';
                 }
               });
+            },
+            click: function () {
+              // 完全复制原版点击逻辑
+              if (artPlayerRef.current) {
+                artPlayerRef.current.fullscreen = !artPlayerRef.current.fullscreen;
+              }
             },
           },
           // 🚀 简单弹幕发送按钮（仅Web端显示）
