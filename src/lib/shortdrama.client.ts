@@ -108,18 +108,12 @@ export async function getRecommendedShortDramas(
       }
     }
 
-    const timestamp = Date.now();
     const apiUrl = isMobile()
-      ? `/api/shortdrama/recommend?${category ? `category=${category}&` : ''}size=${size}&_t=${timestamp}`
+      ? `/api/shortdrama/recommend?${category ? `category=${category}&` : ''}size=${size}`
       : `${SHORTDRAMA_API_BASE}/vod/recommend?${category ? `category=${category}&` : ''}size=${size}`;
 
     const fetchOptions: RequestInit = isMobile() ? {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
+      // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
     } : {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
