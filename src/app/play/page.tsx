@@ -2257,7 +2257,7 @@ function PlayPageClient() {
         flip: false,
         playbackRate: true,
         aspectRatio: false,
-        fullscreen: false, // 禁用默认全屏按钮，使用自定义的优先级更高的全屏按钮
+        fullscreen: true,
         fullscreenWeb: true,
         subtitleOffset: false,
         miniProgressBar: false,
@@ -2508,51 +2508,6 @@ function PlayPageClient() {
             tooltip: '播放下一集',
             click: function () {
               handleNextEpisode();
-            },
-          },
-          // 🎯 优先显示的全屏按钮 - 完全复制ArtPlayer原版fullscreen.js逻辑
-          {
-            position: 'right',
-            index: 35, // 比画中画的index: 40更小，优先级更高
-            tooltip: '全屏', // 初始tooltip，会被mounted中的逻辑覆盖
-            mounted: function($control) {
-              // 完全按照ArtPlayer源码fullscreen.js的逻辑
-              const { icons, i18n } = artPlayerRef.current;
-
-              // 使用ArtPlayer原版的图标
-              const $fullscreenOn = document.createElement('div');
-              $fullscreenOn.innerHTML = icons.fullscreenOn;
-              const $fullscreenOff = document.createElement('div');
-              $fullscreenOff.innerHTML = icons.fullscreenOff;
-
-              // 添加到控件
-              $control.appendChild($fullscreenOn);
-              $control.appendChild($fullscreenOff);
-
-              // 初始隐藏退出全屏图标
-              $fullscreenOff.style.display = 'none';
-
-              // 设置初始tooltip
-              $control.setAttribute('aria-label', i18n.get('Fullscreen'));
-
-              // 监听全屏状态变化 - 完全复制原版逻辑
-              artPlayerRef.current.on('fullscreen', (state) => {
-                if (state) {
-                  $control.setAttribute('aria-label', i18n.get('Exit Fullscreen'));
-                  $fullscreenOn.style.display = 'none';
-                  $fullscreenOff.style.display = 'inline-flex';
-                } else {
-                  $control.setAttribute('aria-label', i18n.get('Fullscreen'));
-                  $fullscreenOn.style.display = 'inline-flex';
-                  $fullscreenOff.style.display = 'none';
-                }
-              });
-            },
-            click: function () {
-              // 完全复制原版点击逻辑
-              if (artPlayerRef.current) {
-                artPlayerRef.current.fullscreen = !artPlayerRef.current.fullscreen;
-              }
             },
           },
           // 🚀 简单弹幕发送按钮（仅Web端显示）
