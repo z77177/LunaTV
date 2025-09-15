@@ -175,6 +175,13 @@ div[data-media-provider] video {
   }
 }
 
+/* 🎯 小屏幕时隐藏画中画，让全屏按钮优先显示 */
+@media (max-width: 768px) {
+  .art-control-pip {
+    display: none !important;
+  }
+}
+
 /* 修复音量控制hover区域 - 精确优化版本 */
 .art-control-volume {
   position: relative !important;
