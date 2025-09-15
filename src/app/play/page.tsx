@@ -2515,7 +2515,7 @@ function PlayPageClient() {
             position: 'right',
             index: 35, // 比画中画的index: 40更小，优先级更高
             tooltip: '全屏', // 初始tooltip，会被mounted中的逻辑覆盖
-            mounted: function($control) {
+            mounted: function($control: HTMLElement) {
               // 完全按照ArtPlayer源码fullscreen.js的逻辑
               const { icons, i18n } = artPlayerRef.current;
 
