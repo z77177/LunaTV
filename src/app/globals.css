@@ -184,10 +184,6 @@ div[data-media-provider] video {
   .art-control-fullscreenWeb {
     display: none !important;
   }
-
-  .art-control-airplay {
-    display: none !important;
-  }
 }
 
 
