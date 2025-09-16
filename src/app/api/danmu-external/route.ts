@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -486,7 +486,7 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
       const danmakuRegex = /<d p="([^"]*)"[^>]*>([^<]*)<\/d>/g;
       const danmuList: DanmuItem[] = [];
       let match;
-      let count = 0;
+      const count = 0;
       
       // 🚀 激进性能优化策略 - 基于ArtPlayer源码深度分析
       // 核心问题: 大量弹幕导致内存占用和计算密集
@@ -494,7 +494,7 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
 
       const SEGMENT_DURATION = 300; // 5分钟分段
       const MAX_DANMU_PER_SEGMENT = 500; // 每段最大弹幕数
-      const MAX_CONCURRENT_DANMU = 50; // 同时显示的最大弹幕数
+      // const MAX_CONCURRENT_DANMU = 50; // 同时显示的最大弹幕数 - 在前端控制
       const BATCH_SIZE = 200; // 减小批处理大小，更频繁让出控制权
 
       const timeSegments: { [key: number]: DanmuItem[] } = {};
@@ -518,7 +518,7 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
               trimmedText.includes('视频不错') ||
               trimmedText.includes('666') ||
               /^\d+$/.test(trimmedText) || // 纯数字弹幕
-              /^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(trimmedText)) { // 纯标点符号
+              /^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(trimmedText)) { // 纯标点符号
             continue;
           }
 
