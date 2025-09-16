@@ -3,7 +3,6 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
-
 import Hls from 'hls.js';
 import { Heart, ChevronUp } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -2593,7 +2592,7 @@ function PlayPageClient() {
 
                   // 🔥 过滤纯数字或纯符号弹幕，减少无意义渲染
                   if (/^\d+$/.test(text)) return false
-                  if (/^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(text)) return false
+                  if (/^[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(text)) return false
 
                   // 🔥 过滤常见低质量弹幕，提升整体质量
                   const lowQualityPatterns = [
