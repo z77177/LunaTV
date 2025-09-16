@@ -488,37 +488,63 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
       let match;
       let count = 0;
       
-      while ((match = danmakuRegex.exec(responseText)) !== null && count < 10000) {
+      // 移除10000条弹幕限制，采用性能优化策略
+      // 基于ArtPlayer源码的优化:
+      // 1. 批量处理减少DOM操作
+      // 2. 预过滤无效弹幕
+      // 3. 避免重复计算
+      const BATCH_SIZE = 1000; // 批量处理大小
+      let batchCount = 0;
+
+      while ((match = danmakuRegex.exec(responseText)) !== null) {
         try {
           const pAttr = match[1];
           const text = match[2];
-          
+
           if (!pAttr || !text) continue;
-          
+
+          // 预过滤: 跳过明显无效的弹幕
+          const trimmedText = text.trim();
+          if (trimmedText.length === 0 ||
+              trimmedText.length > 100 || // 过长弹幕
+              trimmedText.includes('弹幕正在赶来')) {
+            continue;
+          }
+
           // XML格式: p="时间,模式,字号,颜色,时间戳,池,用户ID,ID"
           const params = pAttr.split(',');
           if (params.length < 4) continue;
-          
+
           const time = parseFloat(params[0]) || 0;
           const mode = parseInt(params[1]) || 0;
           const colorInt = parseInt(params[3]) || 16777215; // 默认白色
-          
+
+          // 只处理合理时间范围内的弹幕 (0-24小时)
+          if (time < 0 || time > 86400) continue;
+
           // 将整数颜色转换为十六进制
           const color = '#' + colorInt.toString(16).padStart(6, '0').toUpperCase();
-          
+
           // XML模式转换: 1-3滚动, 4顶部, 5底部
           let artplayerMode = 0; // 默认滚动
           if (mode === 4) artplayerMode = 1; // 顶部
           else if (mode === 5) artplayerMode = 2; // 底部
-          
+
           danmuList.push({
-            text: text.trim(),
+            text: trimmedText,
             time: time,
             color: color,
             mode: artplayerMode,
           });
-          
+
           count++;
+          batchCount++;
+
+          // 批量处理: 每1000条给JS事件循环一个喘息机会
+          if (batchCount >= BATCH_SIZE) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            batchCount = 0;
+          }
         } catch (error) {
           console.error(`❌ 解析第${count}条XML弹幕失败:`, error);
         }
@@ -532,13 +558,11 @@ async function fetchDanmuFromXMLAPI(videoUrl: string): Promise<DanmuItem[]> {
         continue; // 尝试下一个API
       }
       
-      // 过滤和排序
-      const filteredDanmu = danmuList.filter(item => 
-        item.text.length > 0 && 
-        !item.text.includes('弹幕正在赶来') && 
-        !item.text.includes('官方弹幕库') &&
-        item.time >= 0
-      ).sort((a, b) => a.time - b.time);
+      // 优化后的排序，避免重复过滤 (已在上面预过滤)
+      // 只需要简单排序和去重官方弹幕库
+      const filteredDanmu = danmuList
+        .filter(item => !item.text.includes('官方弹幕库'))
+        .sort((a, b) => a.time - b.time);
       
       console.log(`✅ ${apiName}成功解析 ${filteredDanmu.length} 条有效弹幕`);
       
