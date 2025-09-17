@@ -28,6 +28,7 @@ import { parseCustomTimeFormat } from '@/lib/time';
 
 import EpgScrollableRow from '@/components/EpgScrollableRow';
 import PageLayout from '@/components/PageLayout';
+import XGPlayer from '@/components/XGPlayer';
 
 // 扩展 HTMLVideoElement 类型以支持 hls 属性
 declare global {
@@ -244,9 +245,8 @@ function LivePageClient() {
     return cleanedPrograms;
   };
 
-  // 播放器引用
-  const artPlayerRef = useRef<any>(null);
-  const artRef = useRef<HTMLDivElement | null>(null);
+  // XGPlayer引用
+  const xgPlayerRef = useRef<any>(null);
 
   // 分组标签滚动相关
   const groupContainerRef = useRef<HTMLDivElement>(null);
@@ -645,53 +645,13 @@ function LivePageClient() {
     // 重置不支持的类型状态
     setUnsupportedType(null);
 
-    if (artPlayerRef.current) {
+    if (xgPlayerRef.current) {
       try {
-        // 先暂停播放
-        if (artPlayerRef.current.video) {
-          artPlayerRef.current.video.pause();
-          artPlayerRef.current.video.src = '';
-          artPlayerRef.current.video.load();
-        }
-
-        // 销毁 HLS 实例
-        if (artPlayerRef.current.video && artPlayerRef.current.video.hls) {
-          artPlayerRef.current.video.hls.destroy();
-          artPlayerRef.current.video.hls = null;
-        }
-
-        // 销毁 FLV 实例 - 增强清理逻辑
-        if (artPlayerRef.current.video && artPlayerRef.current.video.flv) {
-          try {
-            // 先停止加载
-            if (artPlayerRef.current.video.flv.unload) {
-              artPlayerRef.current.video.flv.unload();
-            }
-            // 销毁播放器
-            artPlayerRef.current.video.flv.destroy();
-            // 确保引用被清空
-            artPlayerRef.current.video.flv = null;
-          } catch (flvError) {
-            console.warn('FLV实例销毁时出错:', flvError);
-            // 强制清空引用
-            artPlayerRef.current.video.flv = null;
-          }
-        }
-
-        // 移除所有事件监听器
-        artPlayerRef.current.off('ready');
-        artPlayerRef.current.off('loadstart');
-        artPlayerRef.current.off('loadeddata');
-        artPlayerRef.current.off('canplay');
-        artPlayerRef.current.off('waiting');
-        artPlayerRef.current.off('error');
-
-        // 销毁 ArtPlayer 实例
-        artPlayerRef.current.destroy();
-        artPlayerRef.current = null;
+        xgPlayerRef.current.destroy();
+        xgPlayerRef.current = null;
       } catch (err) {
-        console.warn('清理播放器资源时出错:', err);
-        artPlayerRef.current = null;
+        console.warn('清理XGPlayer资源时出错:', err);
+        xgPlayerRef.current = null;
       }
     }
   };
@@ -1349,40 +1309,46 @@ function LivePageClient() {
 
       // 上箭头 = 音量+
       if (e.key === 'ArrowUp') {
-        if (artPlayerRef.current && artPlayerRef.current.volume < 1) {
-          artPlayerRef.current.volume =
-            Math.round((artPlayerRef.current.volume + 0.1) * 10) / 10;
-          artPlayerRef.current.notice.show = `音量: ${Math.round(
-            artPlayerRef.current.volume * 100
-          )}`;
-          e.preventDefault();
+        if (xgPlayerRef.current) {
+          const player = xgPlayerRef.current;
+          if (player.volume < 1) {
+            player.volume = Math.round((player.volume + 0.1) * 10) / 10;
+            console.log(`音量: ${Math.round(player.volume * 100)}%`);
+            e.preventDefault();
+          }
         }
       }
 
       // 下箭头 = 音量-
       if (e.key === 'ArrowDown') {
-        if (artPlayerRef.current && artPlayerRef.current.volume > 0) {
-          artPlayerRef.current.volume =
-            Math.round((artPlayerRef.current.volume - 0.1) * 10) / 10;
-          artPlayerRef.current.notice.show = `音量: ${Math.round(
-            artPlayerRef.current.volume * 100
-          )}`;
-          e.preventDefault();
+        if (xgPlayerRef.current) {
+          const player = xgPlayerRef.current;
+          if (player.volume > 0) {
+            player.volume = Math.round((player.volume - 0.1) * 10) / 10;
+            console.log(`音量: ${Math.round(player.volume * 100)}%`);
+            e.preventDefault();
+          }
         }
       }
 
       // 空格 = 播放/暂停
       if (e.key === ' ') {
-        if (artPlayerRef.current) {
-          artPlayerRef.current.toggle();
+        if (xgPlayerRef.current) {
+          const player = xgPlayerRef.current;
+          if (player.paused) {
+            player.play();
+          } else {
+            player.pause();
+          }
           e.preventDefault();
         }
       }
 
       // f 键 = 切换全屏
       if (e.key === 'f' || e.key === 'F') {
-        if (artPlayerRef.current) {
-          artPlayerRef.current.fullscreen = !artPlayerRef.current.fullscreen;
+        if (xgPlayerRef.current) {
+          const player = xgPlayerRef.current;
+          player.fullscreen = !player.fullscreen;
           e.preventDefault();
         }
       }
@@ -1579,10 +1545,37 @@ function LivePageClient() {
             {/* 播放器 */}
             <div className={`h-full transition-all duration-300 ease-in-out ${isChannelListCollapsed ? 'col-span-1' : 'md:col-span-3'}`}>
               <div className='relative w-full h-[300px] lg:h-full'>
-                <div
-                  ref={artRef}
-                  className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg border border-white/0 dark:border-white/30'
-                ></div>
+                <XGPlayer
+                  ref={xgPlayerRef}
+                  url={videoUrl ? `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSource?.key || ''}` : ''}
+                  type="live"
+                  poster={currentChannel?.logo}
+                  width="100%"
+                  height="100%"
+                  autoplay={true}
+                  muted={false}
+                  volume={0.7}
+                  hlsConfig={{
+                    debug: false,
+                    enableWorker: !isMobile && !isSafari && devicePerformance !== 'low',
+                    lowLatencyMode: !isMobile && devicePerformance === 'high',
+                    loader: undefined // 将在XGPlayer组件内部处理
+                  }}
+                  onReady={(player) => {
+                    console.log('XGPlayer ready for live streaming');
+                    xgPlayerRef.current = player; // 保存XGPlayer实例
+                  }}
+                  onPlay={() => setIsVideoLoading(false)}
+                  onPause={() => console.log('Live stream paused')}
+                  onError={(error) => {
+                    console.error('XGPlayer error:', error);
+                    setUnsupportedType('player-error');
+                  }}
+                  onTimeUpdate={() => {
+                    // 直播模式不需要时间更新处理
+                  }}
+                  className="w-full h-full rounded-xl overflow-hidden shadow-lg border border-white/0 dark:border-white/30"
+                />
 
                 {/* 不支持的直播类型提示 */}
                 {unsupportedType && (

@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import EpisodeSelector from '@/components/EpisodeSelector';
 import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import PageLayout from '@/components/PageLayout';
-import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
+import XGPlayer from '@/components/XGPlayer';
 import { ClientCache } from '@/lib/client-cache';
 import {
   deleteFavorite,
@@ -381,8 +381,11 @@ function PlayPageClient() {
   const episodeSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const danmuPluginStateRef = useRef<any>(null); // 保存弹幕插件状态
 
-  const artPlayerRef = useRef<any>(null);
-  const artRef = useRef<HTMLDivElement | null>(null);
+  // XGPlayer引用 - 基于真实XGPlayer API
+  const xgPlayerRef = useRef<any>(null);
+
+  // 弹幕数据状态 - 基于danmu.js格式
+  const [danmuComments, setDanmuComments] = useState<any[]>([]);
 
   // Wake Lock 相关
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -1036,39 +1039,17 @@ function PlayPageClient() {
     // 清理弹幕状态引用
     danmuPluginStateRef.current = null;
     
-    if (artPlayerRef.current) {
+    if (xgPlayerRef.current) {
       try {
-        // 1. 清理弹幕插件的WebWorker
-        if (artPlayerRef.current.plugins?.artplayerPluginDanmuku) {
-          const danmukuPlugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
-          
-          // 尝试获取并清理WebWorker
-          if (danmukuPlugin.worker && typeof danmukuPlugin.worker.terminate === 'function') {
-            danmukuPlugin.worker.terminate();
-            console.log('弹幕WebWorker已清理');
-          }
-          
-          // 清空弹幕数据
-          if (typeof danmukuPlugin.reset === 'function') {
-            danmukuPlugin.reset();
-          }
-        }
+        // 销毁XGPlayer实例
+        xgPlayerRef.current.destroy();
+        xgPlayerRef.current = null;
 
-        // 2. 销毁HLS实例
-        if (artPlayerRef.current.video.hls) {
-          artPlayerRef.current.video.hls.destroy();
-          console.log('HLS实例已销毁');
-        }
-
-        // 3. 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
-        artPlayerRef.current.destroy(false);
-        artPlayerRef.current = null;
-
-        console.log('播放器资源已清理');
+        console.log('XGPlayer资源已清理');
       } catch (err) {
-        console.warn('清理播放器资源时出错:', err);
+        console.warn('清理XGPlayer资源时出错:', err);
         // 即使出错也要确保引用被清空
-        artPlayerRef.current = null;
+        xgPlayerRef.current = null;
       }
     }
   };
@@ -1105,63 +1086,8 @@ function PlayPageClient() {
       setSkipConfig(newConfig);
       if (!newConfig.enable && !newConfig.intro_time && !newConfig.outro_time) {
         await deleteSkipConfig(currentSourceRef.current, currentIdRef.current);
-        artPlayerRef.current.setting.update({
-          name: '跳过片头片尾',
-          html: '跳过片头片尾',
-          switch: skipConfigRef.current.enable,
-          onSwitch: function (item: any) {
-            const newConfig = {
-              ...skipConfigRef.current,
-              enable: !item.switch,
-            };
-            handleSkipConfigChange(newConfig);
-            return !item.switch;
-          },
-        });
-        artPlayerRef.current.setting.update({
-          name: '设置片头',
-          html: '设置片头',
-          icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="12" r="2" fill="#ffffff"/><path d="M9 12L17 12" stroke="#ffffff" stroke-width="2"/><path d="M17 6L17 18" stroke="#ffffff" stroke-width="2"/></svg>',
-          tooltip:
-            skipConfigRef.current.intro_time === 0
-              ? '设置片头时间'
-              : `${formatTime(skipConfigRef.current.intro_time)}`,
-          onClick: function () {
-            const currentTime = artPlayerRef.current?.currentTime || 0;
-            if (currentTime > 0) {
-              const newConfig = {
-                ...skipConfigRef.current,
-                intro_time: currentTime,
-              };
-              handleSkipConfigChange(newConfig);
-              return `${formatTime(currentTime)}`;
-            }
-          },
-        });
-        artPlayerRef.current.setting.update({
-          name: '设置片尾',
-          html: '设置片尾',
-          icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 6L7 18" stroke="#ffffff" stroke-width="2"/><path d="M7 12L15 12" stroke="#ffffff" stroke-width="2"/><circle cx="19" cy="12" r="2" fill="#ffffff"/></svg>',
-          tooltip:
-            skipConfigRef.current.outro_time >= 0
-              ? '设置片尾时间'
-              : `-${formatTime(-skipConfigRef.current.outro_time)}`,
-          onClick: function () {
-            const outroTime =
-              -(
-                artPlayerRef.current?.duration -
-                artPlayerRef.current?.currentTime
-              ) || 0;
-            if (outroTime < 0) {
-              const newConfig = {
-                ...skipConfigRef.current,
-                outro_time: outroTime,
-              };
-              handleSkipConfigChange(newConfig);
-              return `-${formatTime(-outroTime)}`;
-            }
-          },
-        });
+        // XGPlayer不支持setting系统，跳过片头片尾功能需要通过其他方式实现
+        console.log('跳过片头片尾配置已删除');
       } else {
         await saveSkipConfig(
           currentSourceRef.current,
@@ -1246,28 +1172,24 @@ function PlayPageClient() {
     // 防抖处理弹幕数据操作（避免频繁切换时的性能问题）
     danmuOperationTimeoutRef.current = setTimeout(async () => {
       try {
-        if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-          const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
-          
+        if (xgPlayerRef.current?.danmu) {
+          const danmuPlugin = xgPlayerRef.current.danmu;
+
           if (nextState) {
             // 开启弹幕：使用更温和的加载方式
             console.log('🚀 优化后开启外部弹幕...');
-            
+
             // 使用requestIdleCallback优化性能（如果可用）
             const loadDanmu = async () => {
               const externalDanmu = await loadExternalDanmu();
               // 二次确认状态，防止快速切换导致的状态不一致
-              if (externalDanmuEnabledRef.current && artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                plugin.load(externalDanmu);
-                plugin.show();
+              if (externalDanmuEnabledRef.current && xgPlayerRef.current?.danmu) {
+                // 基于XGPlayer danmu源码的updateComments方法
+                danmuPlugin.updateComments(externalDanmu, true);
                 console.log('✅ 外部弹幕已优化加载:', externalDanmu.length, '条');
-                
-                if (artPlayerRef.current && externalDanmu.length > 0) {
-                  artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
-                }
               }
             };
-            
+
             // 使用 requestIdleCallback 或 setTimeout 来确保不阻塞主线程
             if (typeof requestIdleCallback !== 'undefined') {
               requestIdleCallback(loadDanmu, { timeout: 1000 });
@@ -1275,15 +1197,10 @@ function PlayPageClient() {
               setTimeout(loadDanmu, 50);
             }
           } else {
-            // 关闭弹幕：立即处理
+            // 关闭弹幕：基于XGPlayer danmu源码的clear方法
             console.log('🚀 优化后关闭外部弹幕...');
-            plugin.load([]);
-            plugin.hide();
+            danmuPlugin.clear();
             console.log('✅ 外部弹幕已关闭');
-            
-            if (artPlayerRef.current) {
-              artPlayerRef.current.notice.show = '外部弹幕已关闭';
-            }
           }
         }
       } catch (error) {
@@ -1423,52 +1340,33 @@ function PlayPageClient() {
     }
     
     // 如果播放器已经存在且弹幕插件已加载，重新加载弹幕
-    if (artPlayerRef.current && artPlayerRef.current.plugins?.artplayerPluginDanmuku) {
+    if (xgPlayerRef.current && xgPlayerRef.current.danmu) {
       console.log('🚀 集数变化，优化后重新加载弹幕');
-      
-      // 保存当前弹幕插件状态
-      danmuPluginStateRef.current = {
-        isHide: artPlayerRef.current.plugins.artplayerPluginDanmuku.isHide,
-        isStop: artPlayerRef.current.plugins.artplayerPluginDanmuku.isStop,
-        option: artPlayerRef.current.plugins.artplayerPluginDanmuku.option
-      };
-      
+
       // 使用防抖处理弹幕重新加载
       episodeSwitchTimeoutRef.current = setTimeout(async () => {
         try {
-          // 确保播放器和插件仍然存在（防止快速切换时的状态不一致）
-          if (!artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+          // 确保播放器和弹幕插件仍然存在（防止快速切换时的状态不一致）
+          if (!xgPlayerRef.current?.danmu) {
             console.warn('⚠️ 集数切换后弹幕插件不存在，跳过弹幕加载');
             return;
           }
-          
+
           const externalDanmu = await loadExternalDanmu(); // 这里会检查开关状态
           console.log('🔄 集数变化后外部弹幕加载结果:', externalDanmu);
-          
+
           // 再次确认插件状态
-          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-            const plugin = artPlayerRef.current.plugins.artplayerPluginDanmuku;
-            
+          if (xgPlayerRef.current?.danmu) {
+            const danmuPlugin = xgPlayerRef.current.danmu;
+
             if (externalDanmu.length > 0) {
               console.log('✅ 向播放器插件重新加载弹幕数据:', externalDanmu.length, '条');
-              plugin.load(externalDanmu);
-              
-              // 恢复弹幕插件的状态
-              if (danmuPluginStateRef.current) {
-                if (!danmuPluginStateRef.current.isHide) {
-                  plugin.show();
-                }
-              }
-              
-              if (artPlayerRef.current) {
-                artPlayerRef.current.notice.show = `已加载 ${externalDanmu.length} 条弹幕`;
-              }
+              // 基于XGPlayer danmu源码的updateComments方法
+              danmuPlugin.updateComments(externalDanmu, true);
             } else {
               console.log('📭 集数变化后没有弹幕数据可加载');
-              // 不自动清空，保持用户体验
-              if (artPlayerRef.current) {
-                artPlayerRef.current.notice.show = '暂无弹幕数据';
-              }
+              // 清空弹幕数据
+              danmuPlugin.clear();
             }
           }
         } catch (error) {
@@ -2182,31 +2080,19 @@ function PlayPageClient() {
       '投屏策略': isIOS || isSafari ? '🍎 AirPlay (WebKit)' : isChrome ? '📺 Chromecast (Cast API)' : '❌ 不支持投屏'
     });
 
-    // 优先使用ArtPlayer的switch方法，避免重建播放器
-    if (artPlayerRef.current && !loading) {
+    // 优先使用XGPlayer的switchURL方法，避免重建播放器
+    if (xgPlayerRef.current && !loading) {
       try {
         // 🚀 优化：不在这里处理弹幕，让 useEffect 统一处理
-        // 保存当前弹幕状态，但不清空弹幕（避免闪烁）
-        if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-          danmuPluginStateRef.current = {
-            isHide: artPlayerRef.current.plugins.artplayerPluginDanmuku.isHide,
-            isStop: artPlayerRef.current.plugins.artplayerPluginDanmuku.isStop,
-            option: artPlayerRef.current.plugins.artplayerPluginDanmuku.option
-          };
-          console.log('🔄 已保存弹幕状态，准备切换视频');
+        // XGPlayer不需要保存弹幕状态，因为弹幕会重新加载
+
+        // 使用XGPlayer的switchURL方法切换URL - 基于player.js源码
+        if (xgPlayerRef.current?.switchURL) {
+          xgPlayerRef.current.switchURL(videoUrl);
         }
-        
-        // 使用ArtPlayer的switch方法切换URL
-        artPlayerRef.current.switch = videoUrl;
-        artPlayerRef.current.title = `${videoTitle} - 第${currentEpisodeIndex + 1}集`;
-        artPlayerRef.current.poster = videoCover;
-        
-        if (artPlayerRef.current?.video) {
-          ensureVideoSource(
-            artPlayerRef.current.video as HTMLVideoElement,
-            videoUrl
-          );
-        }
+
+        console.log('🔄 视频源已切换，准备重新加载');
+      } catch (error) {
         
         // 🚀 移除原有的 setTimeout 弹幕加载逻辑，交由 useEffect 统一优化处理
         
@@ -3789,10 +3675,38 @@ function PlayPageClient() {
                 }`}
             >
               <div className='relative w-full h-[300px] lg:h-full'>
-                <div
-                  ref={artRef}
+                <XGPlayer
+                  ref={xgPlayerRef}
+                  url={videoUrl}
+                  type="vod"
+                  danmuComments={danmuComments}
+                  danmuConfig={{
+                    enable: true,
+                    panel: true,
+                    fontSize: 14,
+                    opacity: 1,
+                    channelSize: 24,
+                    area: { start: 0, end: 1 }
+                  }}
+                  autoplay={true}
+                  volume={0.6}
                   className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg'
-                ></div>
+                  onReady={(player) => {
+                    console.log('XGPlayer VOD ready:', player);
+                  }}
+                  onPlay={() => {
+                    console.log('XGPlayer VOD playing');
+                  }}
+                  onPause={() => {
+                    console.log('XGPlayer VOD paused');
+                  }}
+                  onTimeUpdate={(currentTime) => {
+                    // Handle time update for progress tracking
+                  }}
+                  onDanmuSend={(comment) => {
+                    console.log('Danmu sent:', comment);
+                  }}
+                />
 
                 {/* 换源加载蒙层 */}
                 {isVideoLoading && (

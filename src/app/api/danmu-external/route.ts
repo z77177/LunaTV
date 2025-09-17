@@ -21,6 +21,21 @@ interface DanmuItem {
   mode?: number;
 }
 
+// XGPlayer弹幕格式转换函数 - 基于danmu.js源码
+function convertToXGPlayerFormat(danmuList: DanmuItem[]): any[] {
+  return danmuList.map((item, index) => ({
+    id: `danmu_${index}`,                    // 唯一ID
+    start: Math.round(item.time * 1000),     // 转换为毫秒 (danmu.js要求)
+    txt: item.text,                          // 弹幕文本
+    mode: item.mode === 1 ? 'top' :          // 基于danmu.js源码的模式定义
+          item.mode === 2 ? 'bottom' : 'scroll', // top顶部居中, bottom底部居中, scroll滚动
+    style: {
+      color: item.color || '#FFFFFF',        // 颜色
+      fontSize: '14px'                       // 默认字体大小
+    }
+  }));
+}
+
 // 从caiji.cyou API搜索视频链接
 async function searchFromCaijiAPI(title: string, episode?: string | null): Promise<PlatformUrl[]> {
   try {
@@ -812,8 +827,8 @@ export async function GET(request: NextRequest) {
       console.log('❌ 未找到任何视频平台链接，返回空弹幕结果');
       console.log('💡 建议: 检查标题是否正确，或者该内容可能暂不支持弹幕');
       
-      return NextResponse.json({ 
-        danmu: [],
+      return NextResponse.json({
+        danmu: [], // 返回空的XGPlayer格式数组
         platforms: [],
         total: 0,
         message: `未找到"${title}"的视频平台链接，无法获取弹幕数据`
@@ -882,16 +897,16 @@ export async function GET(request: NextRequest) {
     console.log(`弹幕去重: ${allDanmu.length} -> ${uniqueDanmu.length} 条`);
 
     return NextResponse.json({
-      danmu: uniqueDanmu,
+      danmu: convertToXGPlayerFormat(uniqueDanmu), // 直接返回XGPlayer格式
       platforms: platformInfo,
       total: uniqueDanmu.length,
     });
 
   } catch (error) {
     console.error('外部弹幕获取失败:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: '获取外部弹幕失败',
-      danmu: []
+      danmu: [] // 返回空的XGPlayer格式数组
     }, { status: 500 });
   }
 }
