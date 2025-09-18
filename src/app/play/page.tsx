@@ -2401,7 +2401,7 @@ function PlayPageClient() {
         const isEpisodeChange = isEpisodeChangingRef.current;
         const currentTime = artPlayerRef.current.currentTime || 0;
 
-        let switchPromise;
+        let switchPromise: Promise<any>;
         if (isEpisodeChange) {
           console.log(`🎯 开始切换集数: ${videoUrl} (重置播放时间到0)`);
           // 切换集数时重置播放时间到0
