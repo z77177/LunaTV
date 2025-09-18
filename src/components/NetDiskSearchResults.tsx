@@ -327,7 +327,8 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                 const isCopied = copiedItems[linkKey];
                 const isTitleExpanded = expandedTitles[linkKey];
                 const title = link.note || '未命名资源';
-                const shouldShowExpand = title.length > 30;
+                const shouldShowExpandMobile = title.length > 30;
+                const shouldShowExpandDesktop = title.length > 80;
 
                 return (
                   <div key={index} className="p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
@@ -336,23 +337,57 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
                         {/* 资源标题 */}
                         <div className="mb-2">
                           <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 break-words pr-2">
+                            {/* 移动端显示 */}
                             <span className="block sm:hidden">
-                              {shouldShowExpand ? (
-                                <>
-                                  {isTitleExpanded ? title : `${title.substring(0, 30)}...`}
-                                  <button
-                                    onClick={() => toggleTitleExpansion(linkKey)}
-                                    className="ml-2 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-normal underline"
-                                  >
-                                    {isTitleExpanded ? '收起' : '展开'}
-                                  </button>
-                                </>
+                              {shouldShowExpandMobile ? (
+                                <div className="space-y-2">
+                                  <span>{isTitleExpanded ? title : `${title.substring(0, 30)}...`}</span>
+                                  <div className="flex justify-start">
+                                    <button
+                                      onClick={() => toggleTitleExpansion(linkKey)}
+                                      className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-800/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs font-medium rounded-md border border-blue-200 dark:border-blue-700 transition-all duration-200 ease-in-out"
+                                    >
+                                      <span>{isTitleExpanded ? '收起' : '展开'}</span>
+                                      <svg
+                                        className={`h-3 w-3 transition-transform duration-200 ${isTitleExpanded ? 'rotate-180' : ''}`}
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
+                                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </div>
                               ) : (
                                 title
                               )}
                             </span>
-                            <span className="hidden sm:block line-clamp-3">
-                              {title}
+                            {/* 桌面端显示 */}
+                            <span className="hidden sm:block">
+                              {shouldShowExpandDesktop ? (
+                                <div className="space-y-2">
+                                  <span className={`block ${isTitleExpanded ? '' : 'line-clamp-2'}`}>
+                                    {title}
+                                  </span>
+                                  <button
+                                    onClick={() => toggleTitleExpansion(linkKey)}
+                                    className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-800/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs font-medium rounded-md border border-blue-200 dark:border-blue-700 transition-all duration-200 ease-in-out"
+                                  >
+                                    <span>{isTitleExpanded ? '收起' : '展开'}</span>
+                                    <svg
+                                      className={`h-3 w-3 transition-transform duration-200 ${isTitleExpanded ? 'rotate-180' : ''}`}
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="line-clamp-2">
+                                  {title}
+                                </span>
+                              )}
                             </span>
                           </h4>
                         </div>
