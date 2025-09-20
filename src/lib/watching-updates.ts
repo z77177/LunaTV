@@ -174,33 +174,33 @@ export async function checkWatchingUpdates(): Promise<void> {
  */
 async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Promise<{ hasUpdate: boolean; newEpisodes: number; latestEpisodes: number }> {
   try {
-    // 首先尝试直接用source_name调用API（原始方式）
-    let response = await fetch(`/api/detail?source=${record.source_name}&id=${videoId}`);
+    let sourceKey = record.source_name;
 
-    // 如果失败，尝试通过API获取可用数据源进行映射
-    if (!response.ok && response.status === 400) {
-      try {
-        // 获取可用的API源列表
-        const sourcesResponse = await fetch('/api/sources');
-        if (sourcesResponse.ok) {
-          const sources = await sourcesResponse.json();
+    // 先尝试获取可用数据源进行映射
+    try {
+      const sourcesResponse = await fetch('/api/sources');
+      if (sourcesResponse.ok) {
+        const sources = await sourcesResponse.json();
 
-          // 查找匹配的数据源
-          const matchedSource = sources.find((source: any) =>
-            source.key === record.source_name ||
-            source.name === record.source_name
-          );
+        // 查找匹配的数据源
+        const matchedSource = sources.find((source: any) =>
+          source.key === record.source_name ||
+          source.name === record.source_name
+        );
 
-          if (matchedSource) {
-            // 用匹配的key重新调用
-            response = await fetch(`/api/detail?source=${matchedSource.key}&id=${videoId}`);
-          }
+        if (matchedSource) {
+          sourceKey = matchedSource.key;
+          console.log(`映射数据源: ${record.source_name} -> ${sourceKey}`);
+        } else {
+          console.warn(`找不到数据源 ${record.source_name} 的映射，使用原始名称`);
         }
-      } catch (mappingError) {
-        console.warn('数据源映射失败:', mappingError);
       }
+    } catch (mappingError) {
+      console.warn('数据源映射失败，使用原始名称:', mappingError);
     }
 
+    // 使用映射后的key调用API
+    const response = await fetch(`/api/detail?source=${sourceKey}&id=${videoId}`);
     if (!response.ok) {
       console.warn(`获取${record.title}详情失败:`, response.status);
       return { hasUpdate: false, newEpisodes: 0, latestEpisodes: record.total_episodes };
