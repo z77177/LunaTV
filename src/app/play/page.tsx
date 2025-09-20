@@ -3245,52 +3245,8 @@ function PlayPageClient() {
               console.log('🚀 弹幕菜单hover状态已立即恢复');
             };
 
-            // 🔥 关键修复：禁用全屏模式下的动态位置计算
-            const disableFullscreenPanelPositioning = () => {
-              setTimeout(() => {
-                if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                  console.log('🔍 开始查找并修复弹幕面板定位逻辑...');
-
-                  // 重写所有mouseenter事件，禁用全屏下的动态定位
-                  const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config');
-                  const styleButton = document.querySelector('.artplayer-plugin-danmuku .apd-style');
-
-                  if (configButton && styleButton) {
-                    // 移除原有的mouseenter事件
-                    const newConfigButton = configButton.cloneNode(true) as HTMLElement;
-                    const newStyleButton = styleButton.cloneNode(true) as HTMLElement;
-
-                    configButton.parentNode?.replaceChild(newConfigButton, configButton);
-                    styleButton.parentNode?.replaceChild(newStyleButton, styleButton);
-
-                    // 添加新的mouseenter事件（不进行动态定位）
-                    newConfigButton.addEventListener('mouseenter', () => {
-                      const panel = newConfigButton.querySelector('.apd-config-panel') as HTMLElement;
-                      if (panel) {
-                        panel.style.left = '-160px'; // 固定居中
-                        console.log('🎯 配置面板：使用固定定位');
-                      }
-                    });
-
-                    newStyleButton.addEventListener('mouseenter', () => {
-                      const panel = newStyleButton.querySelector('.apd-style-panel') as HTMLElement;
-                      if (panel) {
-                        panel.style.left = '-100px'; // 固定居中
-                        console.log('🎯 样式面板：使用固定定位');
-                      }
-                    });
-
-                    console.log('✅ 已重写弹幕面板mouseenter事件，禁用动态定位');
-                  }
-                }
-              }, 2000); // 延迟确保插件完全加载
-            };
-
             // 立即执行一次恢复
             setTimeout(immediateRestore, 100);
-
-            // 执行动态定位修复
-            disableFullscreenPanelPositioning();
 
           }, 1500); // 等待弹幕插件加载
         };
