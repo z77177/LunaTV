@@ -65,21 +65,17 @@ export async function GET(request: NextRequest) {
     const userStats = await db.getUserPlayStat(authInfo.username);
 
     // 获取用户配置信息来获取真实的创建时间
-    let userCreatedAt = Date.now();
+    // 设置项目开始时间，2025年9月14日（与管理员统计保持一致）
+    const PROJECT_START_DATE = new Date('2025-09-14').getTime();
+    let userCreatedAt = PROJECT_START_DATE;
 
     // 对于所有用户（包括站长），都尝试从配置中获取创建时间
     const user = config.UserConfig.Users.find(
       (u) => u.username === authInfo.username
     );
 
-    if (user && user.createdAt) {
-      userCreatedAt = user.createdAt;
-      console.log(`用户 ${authInfo.username} 的创建时间:`, userCreatedAt, new Date(userCreatedAt));
-    } else {
-      // 如果是站长且不在用户配置中，或者是没有createdAt的用户
-      console.log(`用户 ${authInfo.username} 没有createdAt字段，使用当前时间`);
-      console.log('这可能是站长用户或旧用户，建议在管理员配置中添加创建时间');
-    }
+    // 使用与管理员统计相同的逻辑
+    userCreatedAt = user?.createdAt || PROJECT_START_DATE;
 
     // 增强统计数据：添加注册天数和登录天数计算
     const registrationDays = calculateRegistrationDays(userCreatedAt);
