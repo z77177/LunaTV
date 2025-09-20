@@ -3066,11 +3066,11 @@ function PlayPageClient() {
                   pointer-events: auto !important;
                 }
 
-                /* 🔥 全屏模式下弹幕菜单hover彻底修复 - 仅按钮触发 */
-                .art-fullscreen .artplayer-plugin-danmuku .apd-config.btn-hovered .apd-config-panel,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-config.btn-hovered .apd-config-panel,
-                .art-fullscreen .artplayer-plugin-danmuku .apd-style.btn-hovered .apd-style-panel,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-style.btn-hovered .apd-style-panel {
+                /* 🔥 全屏模式下弹幕菜单hover彻底修复 - 最高优先级 */
+                .art-fullscreen .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+                .art-fullscreen-web .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+                .art-fullscreen .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel,
+                .art-fullscreen-web .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
                   opacity: 1 !important;
                   pointer-events: auto !important;
                   visibility: visible !important;
@@ -3099,22 +3099,12 @@ function PlayPageClient() {
                   pointer-events: auto !important;
                 }
 
-                /* 非全屏模式恢复原生hover（保持原有行为） */
+                /* 非全屏模式恢复原生hover */
                 .artplayer:not(.art-fullscreen):not(.art-fullscreen-web) .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
                 .artplayer:not(.art-fullscreen):not(.art-fullscreen-web) .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
                   opacity: 1 !important;
                   pointer-events: auto !important;
                   visibility: visible !important;
-                }
-
-                /* 🚫 禁用全屏模式下的原生CSS hover，只允许自定义类控制 */
-                .art-fullscreen .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-                .art-fullscreen .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
-                  opacity: 0 !important;
-                  pointer-events: none !important;
-                  visibility: hidden !important;
                 }
 
                 /* 仅在拖拽进度条时隐藏（所有模式） */
@@ -3273,78 +3263,24 @@ function PlayPageClient() {
                     configButton.parentNode?.replaceChild(newConfigButton, configButton);
                     styleButton.parentNode?.replaceChild(newStyleButton, styleButton);
 
-                    // 🎯 精确的按钮hover控制 - 只在按钮区域触发
-                    newConfigButton.addEventListener('mouseenter', (e) => {
-                      // 确保鼠标确实在按钮本身上
-                      if (e.target === newConfigButton || newConfigButton.contains(e.target as Node)) {
-                        const panel = newConfigButton.querySelector('.apd-config-panel') as HTMLElement;
-                        if (panel) {
-                          newConfigButton.classList.add('btn-hovered');
-                          panel.style.left = '-160px'; // 固定居中
-                          console.log('🎯 配置按钮：鼠标进入，显示面板');
-                        }
-                      }
-                    });
-
-                    newConfigButton.addEventListener('mouseleave', (e) => {
-                      // 检查鼠标是否离开按钮区域（不是移动到面板上）
+                    // 添加新的mouseenter事件（不进行动态定位）
+                    newConfigButton.addEventListener('mouseenter', () => {
                       const panel = newConfigButton.querySelector('.apd-config-panel') as HTMLElement;
-                      if (!panel?.contains(e.relatedTarget as Node)) {
-                        newConfigButton.classList.remove('btn-hovered');
-                        console.log('🎯 配置按钮：鼠标离开，隐藏面板');
+                      if (panel) {
+                        panel.style.left = '-160px'; // 固定居中
+                        console.log('🎯 配置面板：使用固定定位');
                       }
                     });
 
-                    newStyleButton.addEventListener('mouseenter', (e) => {
-                      // 确保鼠标确实在按钮本身上
-                      if (e.target === newStyleButton || newStyleButton.contains(e.target as Node)) {
-                        const panel = newStyleButton.querySelector('.apd-style-panel') as HTMLElement;
-                        if (panel) {
-                          newStyleButton.classList.add('btn-hovered');
-                          panel.style.left = '-100px'; // 固定居中
-                          console.log('🎯 样式按钮：鼠标进入，显示面板');
-                        }
-                      }
-                    });
-
-                    newStyleButton.addEventListener('mouseleave', (e) => {
-                      // 检查鼠标是否离开按钮区域（不是移动到面板上）
+                    newStyleButton.addEventListener('mouseenter', () => {
                       const panel = newStyleButton.querySelector('.apd-style-panel') as HTMLElement;
-                      if (!panel?.contains(e.relatedTarget as Node)) {
-                        newStyleButton.classList.remove('btn-hovered');
-                        console.log('🎯 样式按钮：鼠标离开，隐藏面板');
+                      if (panel) {
+                        panel.style.left = '-100px'; // 固定居中
+                        console.log('🎯 样式面板：使用固定定位');
                       }
                     });
 
-                    // 🎯 添加面板的hover事件，确保可以在面板上操作
-                    const configPanel = newConfigButton.querySelector('.apd-config-panel') as HTMLElement;
-                    const stylePanel = newStyleButton.querySelector('.apd-style-panel') as HTMLElement;
-
-                    if (configPanel) {
-                      configPanel.addEventListener('mouseenter', () => {
-                        newConfigButton.classList.add('btn-hovered');
-                        console.log('🎯 配置面板：鼠标进入面板区域');
-                      });
-
-                      configPanel.addEventListener('mouseleave', () => {
-                        newConfigButton.classList.remove('btn-hovered');
-                        console.log('🎯 配置面板：鼠标离开面板区域');
-                      });
-                    }
-
-                    if (stylePanel) {
-                      stylePanel.addEventListener('mouseenter', () => {
-                        newStyleButton.classList.add('btn-hovered');
-                        console.log('🎯 样式面板：鼠标进入面板区域');
-                      });
-
-                      stylePanel.addEventListener('mouseleave', () => {
-                        newStyleButton.classList.remove('btn-hovered');
-                        console.log('🎯 样式面板：鼠标离开面板区域');
-                      });
-                    }
-
-                    console.log('✅ 已重写弹幕面板事件，实现精确hover控制');
+                    console.log('✅ 已重写弹幕面板mouseenter事件，禁用动态定位');
                   }
                 }
               }, 2000); // 延迟确保插件完全加载
