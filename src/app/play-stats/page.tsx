@@ -135,6 +135,8 @@ const PlayStatsPage: React.FC = () => {
 
       const data = await response.json();
       console.log('用户个人统计数据获取成功:', data);
+      console.log('个人统计中的注册天数:', data.registrationDays);
+      console.log('个人统计中的登录天数:', data.loginDays);
       setUserStats(data);
     } catch (err) {
       console.error('获取用户个人统计数据失败:', err);
