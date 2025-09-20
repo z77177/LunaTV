@@ -203,7 +203,7 @@ const PlayStatsPage: React.FC = () => {
 
   // 追番更新检查
   useEffect(() => {
-    if (authInfo) {
+    if (!isAdmin && authInfo) {
       const checkUpdates = async () => {
         const cached = getCachedWatchingUpdates();
         if (cached) {
@@ -218,7 +218,7 @@ const PlayStatsPage: React.FC = () => {
 
       checkUpdates();
     }
-  }, [authInfo]);
+  }, [isAdmin, authInfo]);
 
   // 处理追番更新卡片点击
   const handleWatchingUpdatesClick = () => {
