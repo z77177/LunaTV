@@ -295,9 +295,8 @@ export function setupPeriodicUpdateCheck(intervalMinutes = 30): () => void {
  */
 export function setupVisibilityChangeCheck(): () => void {
   if (typeof window === 'undefined') {
-    return () => {
-      // Empty function for server-side rendering
-    };
+    // 服务器端渲染时返回空操作函数
+    return () => void 0;
   }
 
   const handleVisibilityChange = () => {
@@ -421,7 +420,7 @@ export async function checkVideoUpdate(sourceName: string, videoId: string): Pro
  */
 export function subscribeToWatchingUpdatesEvent(callback: (hasUpdates: boolean, updatedCount: number) => void): () => void {
   if (typeof window === 'undefined') {
-    return () => {};
+    return () => void 0;
   }
 
   const handleUpdate = (event: CustomEvent) => {
