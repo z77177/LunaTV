@@ -66,20 +66,36 @@ export async function GET(request: NextRequest) {
 
     // 获取用户配置信息来获取真实的创建时间
     let userCreatedAt = Date.now();
-    if (authInfo.username === username) {
-      // 站长用户，使用环境变量或默认值
-      userCreatedAt = Date.now();
+
+    // 对于所有用户（包括站长），都尝试从配置中获取创建时间
+    const user = config.UserConfig.Users.find(
+      (u) => u.username === authInfo.username
+    );
+
+    if (user && user.createdAt) {
+      userCreatedAt = user.createdAt;
+      console.log(`用户 ${authInfo.username} 的创建时间:`, userCreatedAt, new Date(userCreatedAt));
     } else {
-      // 普通用户，从配置中获取创建时间
-      const user = config.UserConfig.Users.find(
-        (u) => u.username === authInfo.username
-      );
-      if (user && user.createdAt) {
-        userCreatedAt = user.createdAt;
-      }
+      // 如果是站长且不在用户配置中，或者是没有createdAt的用户
+      console.log(`用户 ${authInfo.username} 没有createdAt字段，使用当前时间`);
+      console.log('这可能是站长用户或旧用户，建议在管理员配置中添加创建时间');
     }
 
     // 增强统计数据：添加注册天数和登录天数计算
+    const registrationDays = calculateRegistrationDays(userCreatedAt);
+    const loginDays = userStats.firstWatchDate && userStats.firstWatchDate > 0
+      ? calculateRegistrationDays(userStats.firstWatchDate)
+      : 0;
+
+    console.log('注册天数计算:', {
+      userCreatedAt,
+      userCreatedAtDate: new Date(userCreatedAt),
+      registrationDays,
+      firstWatchDate: userStats.firstWatchDate,
+      firstWatchDateDate: userStats.firstWatchDate ? new Date(userStats.firstWatchDate) : null,
+      loginDays
+    });
+
     const enhancedStats = {
       ...userStats,
       // 确保新字段有默认值
@@ -87,11 +103,9 @@ export async function GET(request: NextRequest) {
       firstWatchDate: userStats.firstWatchDate ?? userStats.lastPlayTime ?? Date.now(),
       lastUpdateTime: userStats.lastUpdateTime ?? Date.now(),
       // 注册天数计算（基于真实的用户创建时间）
-      registrationDays: calculateRegistrationDays(userCreatedAt),
+      registrationDays,
       // 登录天数计算（基于首次观看时间，类似Alpha逻辑）
-      loginDays: userStats.firstWatchDate && userStats.firstWatchDate > 0
-        ? calculateRegistrationDays(userStats.firstWatchDate)
-        : 0
+      loginDays
     };
 
     return NextResponse.json(enhancedStats, { status: 200 });
