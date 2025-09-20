@@ -383,7 +383,7 @@ const PlayStatsPage: React.FC = () => {
     );
   }
 
-  // 渲染管理员统计页面
+  // 管理员统计页面渲染
   if (isAdmin && statsData && userStats) {
     return (
       <PageLayout activePath="/play-stats">
@@ -1054,8 +1054,7 @@ const PlayStatsPage: React.FC = () => {
               </div>
             </>
           )}
-
-        {/* 返回顶部悬浮按钮 */}
+        </div>
         <button
           onClick={scrollToTop}
           className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
