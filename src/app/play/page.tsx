@@ -3066,54 +3066,20 @@ function PlayPageClient() {
                   pointer-events: auto !important;
                 }
 
-                /* 🔥 全屏模式下弹幕菜单hover彻底修复 - 最高优先级 */
-                .art-fullscreen .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-                .art-fullscreen .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
-                  opacity: 1 !important;
-                  pointer-events: auto !important;
-                  visibility: visible !important;
-                  display: block !important;
-                  transition: none !important;
-                  z-index: 9999 !important;
-                }
-
-                /* 全屏模式下弹幕控制按钮强制启用事件 */
-                .art-fullscreen .artplayer-plugin-danmuku .apd-config,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-config,
-                .art-fullscreen .artplayer-plugin-danmuku .apd-style,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-style {
-                  pointer-events: auto !important;
-                }
-
-                /* 全屏模式下面板内容区域强制启用交互 */
-                .art-fullscreen .artplayer-plugin-danmuku .apd-config-panel,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-config-panel,
-                .art-fullscreen .artplayer-plugin-danmuku .apd-style-panel,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-style-panel,
-                .art-fullscreen .artplayer-plugin-danmuku .apd-config-panel *,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-config-panel *,
-                .art-fullscreen .artplayer-plugin-danmuku .apd-style-panel *,
-                .art-fullscreen-web .artplayer-plugin-danmuku .apd-style-panel * {
-                  pointer-events: auto !important;
-                }
-
-                /* 非全屏模式恢复原生hover */
-                .artplayer:not(.art-fullscreen):not(.art-fullscreen-web) .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-                .artplayer:not(.art-fullscreen):not(.art-fullscreen-web) .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
+                /* 恢复ArtPlayer原生的hover显示机制 */
+                .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+                .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
                   opacity: 1 !important;
                   pointer-events: auto !important;
                   visibility: visible !important;
                 }
 
-                /* 仅在拖拽进度条时隐藏（所有模式） */
+                /* 仅在实际拖拽进度条时才禁用弹幕hover */
                 .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
                 .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
                   opacity: 0 !important;
                   pointer-events: none !important;
                   visibility: hidden !important;
-                  transition: opacity 0.1s ease-out !important;
                 }
 
                 /* 确保进度条层级足够高，避免被弹幕面板遮挡 */
@@ -3122,9 +3088,9 @@ function PlayPageClient() {
                   z-index: 1000 !important;
                 }
 
-                /* 面板背景在非hover状态下不拦截事件（仅非全屏模式） */
-                .artplayer:not(.art-fullscreen):not(.art-fullscreen-web) .artplayer-plugin-danmuku .apd-config-panel:not(:hover),
-                .artplayer:not(.art-fullscreen):not(.art-fullscreen-web) .artplayer-plugin-danmuku .apd-style-panel:not(:hover) {
+                /* 面板背景在非hover状态下不拦截事件，但允许hover检测 */
+                .artplayer-plugin-danmuku .apd-config-panel:not(:hover),
+                .artplayer-plugin-danmuku .apd-style-panel:not(:hover) {
                   pointer-events: none;
                 }
 
@@ -3146,24 +3112,10 @@ function PlayPageClient() {
             const handleProgressMouseDown = (event: MouseEvent) => {
               // 只有左键才开始拖拽检测
               if (event.button === 0) {
+                isDraggingProgress = true;
                 const artplayer = document.querySelector('.artplayer') as HTMLElement;
-                const isFullscreen = artplayer?.classList.contains('art-fullscreen') ||
-                                    artplayer?.classList.contains('art-fullscreen-web');
-
-                if (isFullscreen) {
-                  // 全屏模式下延迟100ms避免误触发，更稳定
-                  setTimeout(() => {
-                    if (event.buttons === 1) {
-                      isDraggingProgress = true;
-                      artplayer?.setAttribute('data-dragging', 'true');
-                      console.log('🎯 全屏模式拖拽开始');
-                    }
-                  }, 100);
-                } else {
-                  isDraggingProgress = true;
-                  if (artplayer) {
-                    artplayer.setAttribute('data-dragging', 'true');
-                  }
+                if (artplayer) {
+                  artplayer.setAttribute('data-dragging', 'true');
                 }
               }
             };
@@ -3245,52 +3197,8 @@ function PlayPageClient() {
               console.log('🚀 弹幕菜单hover状态已立即恢复');
             };
 
-            // 🔥 关键修复：禁用全屏模式下的动态位置计算
-            const disableFullscreenPanelPositioning = () => {
-              setTimeout(() => {
-                if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                  console.log('🔍 开始查找并修复弹幕面板定位逻辑...');
-
-                  // 重写所有mouseenter事件，禁用全屏下的动态定位
-                  const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config');
-                  const styleButton = document.querySelector('.artplayer-plugin-danmuku .apd-style');
-
-                  if (configButton && styleButton) {
-                    // 移除原有的mouseenter事件
-                    const newConfigButton = configButton.cloneNode(true) as HTMLElement;
-                    const newStyleButton = styleButton.cloneNode(true) as HTMLElement;
-
-                    configButton.parentNode?.replaceChild(newConfigButton, configButton);
-                    styleButton.parentNode?.replaceChild(newStyleButton, styleButton);
-
-                    // 添加新的mouseenter事件（不进行动态定位）
-                    newConfigButton.addEventListener('mouseenter', () => {
-                      const panel = newConfigButton.querySelector('.apd-config-panel') as HTMLElement;
-                      if (panel) {
-                        panel.style.left = '-160px'; // 固定居中
-                        console.log('🎯 配置面板：使用固定定位');
-                      }
-                    });
-
-                    newStyleButton.addEventListener('mouseenter', () => {
-                      const panel = newStyleButton.querySelector('.apd-style-panel') as HTMLElement;
-                      if (panel) {
-                        panel.style.left = '-100px'; // 固定居中
-                        console.log('🎯 样式面板：使用固定定位');
-                      }
-                    });
-
-                    console.log('✅ 已重写弹幕面板mouseenter事件，禁用动态定位');
-                  }
-                }
-              }, 2000); // 延迟确保插件完全加载
-            };
-
             // 立即执行一次恢复
             setTimeout(immediateRestore, 100);
-
-            // 执行动态定位修复
-            disableFullscreenPanelPositioning();
 
           }, 1500); // 等待弹幕插件加载
         };
