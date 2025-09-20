@@ -890,6 +890,14 @@ const PlayStatsPage: React.FC = () => {
                     注册天数
                   </div>
                 </div>
+                <div className='p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800'>
+                  <div className='text-2xl font-bold text-orange-800 dark:text-orange-300'>
+                    {userStats.loginDays || 0}
+                  </div>
+                  <div className='text-sm text-orange-600 dark:text-orange-400'>
+                    登录天数
+                  </div>
+                </div>
                 <div className='p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800'>
                   <div className='text-2xl font-bold text-purple-800 dark:text-purple-300'>
                     {userStats.totalMovies || userStats.totalPlays || 0}
@@ -1153,6 +1161,14 @@ const PlayStatsPage: React.FC = () => {
               </div>
               <div className='text-sm text-green-600 dark:text-green-400'>
                 注册天数
+              </div>
+            </div>
+            <div className='p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800'>
+              <div className='text-2xl font-bold text-orange-800 dark:text-orange-300'>
+                {userStats.loginDays || 0}
+              </div>
+              <div className='text-sm text-orange-600 dark:text-orange-400'>
+                登录天数
               </div>
             </div>
             <div className='p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800'>

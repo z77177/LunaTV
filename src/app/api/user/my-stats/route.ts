@@ -64,15 +64,32 @@ export async function GET(request: NextRequest) {
     // 获取用户个人统计数据
     const userStats = await db.getUserPlayStat(authInfo.username);
 
-    // 增强统计数据：添加注册天数计算
+    // 获取用户配置信息来获取真实的创建时间
+    let userCreatedAt = Date.now();
+    if (authInfo.username === username) {
+      // 站长用户，使用环境变量或默认值
+      userCreatedAt = Date.now();
+    } else {
+      // 普通用户，从配置中获取创建时间
+      const user = config.UserConfig.Users.find(
+        (u) => u.username === authInfo.username
+      );
+      if (user && user.createdAt) {
+        userCreatedAt = user.createdAt;
+      }
+    }
+
+    // 增强统计数据：添加注册天数和登录天数计算
     const enhancedStats = {
       ...userStats,
       // 确保新字段有默认值
       totalMovies: userStats.totalMovies ?? userStats.totalPlays ?? 0,
       firstWatchDate: userStats.firstWatchDate ?? userStats.lastPlayTime ?? Date.now(),
       lastUpdateTime: userStats.lastUpdateTime ?? Date.now(),
-      // 注册天数计算（基于首次观看时间）
-      registrationDays: userStats.firstWatchDate
+      // 注册天数计算（基于真实的用户创建时间）
+      registrationDays: calculateRegistrationDays(userCreatedAt),
+      // 登录天数计算（基于首次观看时间，类似Alpha逻辑）
+      loginDays: userStats.firstWatchDate && userStats.firstWatchDate > 0
         ? calculateRegistrationDays(userStats.firstWatchDate)
         : 0
     };
