@@ -1,6 +1,7 @@
 'use client';
 
 import { getAllPlayRecords, PlayRecord, generateStorageKey } from './db.client';
+import { getAvailableApiSites } from './config';
 
 // 缓存键
 const WATCHING_UPDATES_CACHE_KEY = 'moontv_watching_updates';
@@ -174,9 +175,22 @@ export async function checkWatchingUpdates(): Promise<void> {
  */
 async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Promise<{ hasUpdate: boolean; newEpisodes: number; latestEpisodes: number }> {
   try {
-    console.log(`正在检查 ${record.title} 的更新状态...`);
+    // 首先获取可用的API站点列表
+    const apiSites = await getAvailableApiSites();
 
-    const response = await fetch(`/api/detail?source=${record.source_name}&id=${videoId}`);
+    // 将source_name映射到key - 可能通过name或key匹配
+    const apiSite = apiSites.find(site =>
+      site.key === record.source_name ||
+      site.name === record.source_name
+    );
+
+    if (!apiSite) {
+      console.warn(`找不到数据源 ${record.source_name} 对应的API配置`);
+      return { hasUpdate: false, newEpisodes: 0, latestEpisodes: record.total_episodes };
+    }
+
+    // 使用映射后的key调用API
+    const response = await fetch(`/api/detail?source=${apiSite.key}&id=${videoId}`);
     if (!response.ok) {
       console.warn(`获取${record.title}详情失败:`, response.status);
       return { hasUpdate: false, newEpisodes: 0, latestEpisodes: record.total_episodes };
