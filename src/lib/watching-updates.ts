@@ -174,9 +174,33 @@ export async function checkWatchingUpdates(): Promise<void> {
  */
 async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Promise<{ hasUpdate: boolean; newEpisodes: number; latestEpisodes: number }> {
   try {
-    console.log(`正在检查 ${record.title} 的更新状态...`);
+    // 首先尝试直接用source_name调用API（原始方式）
+    let response = await fetch(`/api/detail?source=${record.source_name}&id=${videoId}`);
 
-    const response = await fetch(`/api/detail?source=${record.source_name}&id=${videoId}`);
+    // 如果失败，尝试通过API获取可用数据源进行映射
+    if (!response.ok && response.status === 400) {
+      try {
+        // 获取可用的API源列表
+        const sourcesResponse = await fetch('/api/sources');
+        if (sourcesResponse.ok) {
+          const sources = await sourcesResponse.json();
+
+          // 查找匹配的数据源
+          const matchedSource = sources.find((source: any) =>
+            source.key === record.source_name ||
+            source.name === record.source_name
+          );
+
+          if (matchedSource) {
+            // 用匹配的key重新调用
+            response = await fetch(`/api/detail?source=${matchedSource.key}&id=${videoId}`);
+          }
+        }
+      } catch (mappingError) {
+        console.warn('数据源映射失败:', mappingError);
+      }
+    }
+
     if (!response.ok) {
       console.warn(`获取${record.title}详情失败:`, response.status);
       return { hasUpdate: false, newEpisodes: 0, latestEpisodes: record.total_episodes };
