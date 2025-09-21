@@ -1256,7 +1256,7 @@ const PlayStatsPage: React.FC = () => {
             {/* 新集数更新 */}
             <div
               className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                watchingUpdates?.updatedCount > 0
+                (watchingUpdates?.updatedCount || 0) > 0
                   ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30'
                   : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
               }`}
@@ -1264,14 +1264,14 @@ const PlayStatsPage: React.FC = () => {
               title={(watchingUpdates?.updatedCount || 0) > 0 ? '点击查看新集数详情' : '暂无新集数更新'}
             >
               <div className={`text-2xl font-bold ${
-                watchingUpdates?.updatedCount > 0
+                (watchingUpdates?.updatedCount || 0) > 0
                   ? 'text-red-800 dark:text-red-300'
                   : 'text-gray-800 dark:text-gray-300'
               }`}>
                 {watchingUpdates?.updatedCount || 0}
               </div>
               <div className={`text-sm ${
-                watchingUpdates?.updatedCount > 0
+                (watchingUpdates?.updatedCount || 0) > 0
                   ? 'text-red-600 dark:text-red-400'
                   : 'text-gray-600 dark:text-gray-400'
               }`}>
@@ -1287,7 +1287,7 @@ const PlayStatsPage: React.FC = () => {
             {/* 继续观看提醒 */}
             <div
               className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                watchingUpdates?.continueWatchingCount > 0
+                (watchingUpdates?.continueWatchingCount || 0) > 0
                   ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30'
                   : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
               }`}
@@ -1295,14 +1295,14 @@ const PlayStatsPage: React.FC = () => {
               title={(watchingUpdates?.continueWatchingCount || 0) > 0 ? '点击查看继续观看详情' : '暂无待续看剧集'}
             >
               <div className={`text-2xl font-bold ${
-                watchingUpdates?.continueWatchingCount > 0
+                (watchingUpdates?.continueWatchingCount || 0) > 0
                   ? 'text-blue-800 dark:text-blue-300'
                   : 'text-gray-800 dark:text-gray-300'
               }`}>
                 {watchingUpdates?.continueWatchingCount || 0}
               </div>
               <div className={`text-sm ${
-                watchingUpdates?.continueWatchingCount > 0
+                (watchingUpdates?.continueWatchingCount || 0) > 0
                   ? 'text-blue-600 dark:text-blue-400'
                   : 'text-gray-600 dark:text-gray-400'
               }`}>
