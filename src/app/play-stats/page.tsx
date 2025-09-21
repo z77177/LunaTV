@@ -167,9 +167,26 @@ const PlayStatsPage: React.FC = () => {
   }, [isAdmin, fetchAdminStats, fetchUserStats]);
 
   // 处理刷新按钮点击
-  const handleRefreshClick = () => {
+  const handleRefreshClick = async () => {
     console.log('刷新按钮被点击');
-    fetchStats();
+
+    try {
+      // 清除追番更新缓存
+      localStorage.removeItem('moontv_watching_updates');
+      localStorage.removeItem('moontv_last_update_check');
+      console.log('已清除追番更新缓存');
+
+      // 重新检查追番更新
+      await checkWatchingUpdates();
+      console.log('已重新检查追番更新');
+
+      // 重新获取统计数据
+      await fetchStats();
+      console.log('已重新获取统计数据');
+
+    } catch (error) {
+      console.error('刷新数据失败:', error);
+    }
   };
 
   // 切换用户详情展开状态（仅管理员）
@@ -247,9 +264,24 @@ const PlayStatsPage: React.FC = () => {
     if (watchingUpdates && ((watchingUpdates.updatedCount || 0) > 0 || (watchingUpdates.continueWatchingCount || 0) > 0)) {
       console.log('条件满足，显示弹窗');
       setShowWatchingUpdates(true);
+      console.log('setShowWatchingUpdates(true) 已调用');
+
+      // 强制刷新状态
+      setTimeout(() => {
+        setShowWatchingUpdates(prev => {
+          console.log('强制状态更新，当前值:', prev);
+          return true;
+        });
+      }, 100);
     } else {
       console.log('条件不满足，不显示弹窗');
     }
+  };
+
+  // 测试函数：强制显示弹窗
+  const forceShowPopup = () => {
+    console.log('强制显示弹窗');
+    setShowWatchingUpdates(true);
   };
 
   // 关闭追番更新详情
@@ -1018,6 +1050,25 @@ const PlayStatsPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* 测试按钮 - 调试弹窗显示 */}
+              <div className="mt-4">
+                <button
+                  onClick={() => {
+                    console.log('测试按钮点击，强制显示弹窗');
+                    console.log('当前状态:', {
+                      showWatchingUpdates,
+                      watchingUpdates,
+                      condition: showWatchingUpdates && watchingUpdates
+                    });
+                    setShowWatchingUpdates(true);
+                    console.log('设置后 showWatchingUpdates 应为 true');
+                  }}
+                  className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm"
+                >
+                  测试弹窗显示
+                </button>
+              </div>
+
               {/* 最近播放记录 */}
               <div>
                 <h3 className='text-xl font-semibold text-gray-900 dark:text-white mb-6'>
@@ -1130,6 +1181,131 @@ const PlayStatsPage: React.FC = () => {
         >
           <ChevronUp className='w-6 h-6 transition-transform group-hover:scale-110' />
         </button>
+
+        {/* 追番更新详情弹窗 - 管理员模式 */}
+        {showWatchingUpdates && watchingUpdates && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden">
+              {/* 标题栏 */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM8 17l-3-3 3-3m5 0l3 3-3 3" />
+                  </svg>
+                  追番更新提醒
+                </h3>
+                <button
+                  onClick={handleCloseWatchingUpdates}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* 内容区域 */}
+              <div className="p-4 max-h-[60vh] overflow-y-auto">
+                {/* 新集数更新 */}
+                {(watchingUpdates.updatedCount || 0) > 0 && (
+                  <div className="mb-6">
+                    <div className="mb-4 text-center">
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                        {watchingUpdates.updatedCount}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        部剧集有新集数更新
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {watchingUpdates.updatedSeries
+                        .filter(series => series.hasNewEpisode)
+                        .map((series, index) => (
+                          <div
+                            key={`new-${series.title}_${series.year}_${index}`}
+                            className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800"
+                          >
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {series.title}
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              来源: {series.source_name} | 年份: {series.year}
+                            </div>
+                            <div className="text-sm text-red-600 dark:text-red-400 mt-1">
+                              新增 {series.newEpisodes} 集！
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 继续观看提醒 */}
+                {(watchingUpdates.continueWatchingCount || 0) > 0 && (
+                  <div className="mb-6">
+                    <div className="mb-4 text-center">
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {watchingUpdates.continueWatchingCount}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        个剧集需要继续观看
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {watchingUpdates.updatedSeries
+                        .filter(series => series.hasContinueWatching)
+                        .map((series, index) => (
+                          <div
+                            key={`continue-${series.title}_${series.year}_${index}`}
+                            className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+                          >
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {series.title}
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              来源: {series.source_name} | 年份: {series.year}
+                            </div>
+                            <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                              已观看第 {series.currentEpisode} 集，还有 {series.remainingEpisodes} 集未看
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 无提醒状态 */}
+                {(watchingUpdates.updatedCount || 0) === 0 && (watchingUpdates.continueWatchingCount || 0) === 0 && (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <svg className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM8 17l-3-3 3-3m5 0l3 3-3 3" />
+                    </svg>
+                    <p>暂无追番提醒</p>
+                    <p className="text-sm mt-2">
+                      系统会定期检查您的观看进度
+                    </p>
+                  </div>
+                )}
+
+                <div className="text-xs text-gray-500 dark:text-gray-500 text-center mt-4">
+                  {formatLastUpdate(watchingUpdates.timestamp)}
+                </div>
+              </div>
+
+              {/* 底部按钮 */}
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={handleCloseWatchingUpdates}
+                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  我知道了
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </PageLayout>
     );
   }

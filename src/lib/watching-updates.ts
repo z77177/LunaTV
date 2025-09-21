@@ -94,6 +94,7 @@ export async function checkWatchingUpdates(): Promise<void> {
     });
 
     console.log(`找到 ${candidateRecords.length} 个可能有更新的剧集`);
+    console.log('候选记录详情:', candidateRecords.map(r => ({ title: r.title, index: r.index, total: r.total_episodes })));
 
     let hasAnyUpdates = false;
     let updatedCount = 0;
@@ -130,8 +131,10 @@ export async function checkWatchingUpdates(): Promise<void> {
         if (updateInfo.hasContinueWatching) {
           hasAnyUpdates = true;
           continueWatchingCount++;
+          console.log(`${record.title} 计入继续观看计数，当前总数: ${continueWatchingCount}`);
         }
 
+        console.log(`${record.title} 检查结果: hasUpdate=${updateInfo.hasUpdate}, hasContinueWatching=${updateInfo.hasContinueWatching}`);
         return seriesInfo;
       } catch (error) {
         console.error(`检查 ${record.title} 更新失败:`, error);
