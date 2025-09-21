@@ -15,6 +15,7 @@ export interface WatchingUpdate {
   hasUpdates: boolean;
   timestamp: number;
   updatedCount: number;
+  continueWatchingCount: number; // 新增：需要继续观看的剧集数量
   updatedSeries: {
     title: string;
     source_name: string;
@@ -22,7 +23,9 @@ export interface WatchingUpdate {
     currentEpisode: number;
     totalEpisodes: number;
     hasNewEpisode: boolean;
+    hasContinueWatching: boolean; // 新增：是否需要继续观看
     newEpisodes?: number;
+    remainingEpisodes?: number; // 新增：剩余集数
     latestEpisodes?: number;
   }[];
 }
@@ -31,6 +34,7 @@ interface WatchingUpdatesCache {
   hasUpdates: boolean;
   timestamp: number;
   updatedCount: number;
+  continueWatchingCount: number;
   updatedSeries: WatchingUpdate['updatedSeries'];
 }
 
@@ -75,6 +79,7 @@ export async function checkWatchingUpdates(): Promise<void> {
         hasUpdates: false,
         timestamp: currentTime,
         updatedCount: 0,
+        continueWatchingCount: 0,
         updatedSeries: []
       };
       cacheWatchingUpdates(emptyResult);
@@ -92,6 +97,7 @@ export async function checkWatchingUpdates(): Promise<void> {
 
     let hasAnyUpdates = false;
     let updatedCount = 0;
+    let continueWatchingCount = 0;
     const updatedSeries: WatchingUpdate['updatedSeries'] = [];
 
     // 并发检查所有记录的更新状态
@@ -108,7 +114,9 @@ export async function checkWatchingUpdates(): Promise<void> {
           currentEpisode: record.index,
           totalEpisodes: record.total_episodes,
           hasNewEpisode: updateInfo.hasUpdate,
+          hasContinueWatching: updateInfo.hasContinueWatching,
           newEpisodes: updateInfo.newEpisodes,
+          remainingEpisodes: updateInfo.remainingEpisodes,
           latestEpisodes: updateInfo.latestEpisodes
         };
 
@@ -117,6 +125,11 @@ export async function checkWatchingUpdates(): Promise<void> {
         if (updateInfo.hasUpdate) {
           hasAnyUpdates = true;
           updatedCount++;
+        }
+
+        if (updateInfo.hasContinueWatching) {
+          hasAnyUpdates = true;
+          continueWatchingCount++;
         }
 
         return seriesInfo;
@@ -130,7 +143,9 @@ export async function checkWatchingUpdates(): Promise<void> {
           currentEpisode: record.index,
           totalEpisodes: record.total_episodes,
           hasNewEpisode: false,
+          hasContinueWatching: false,
           newEpisodes: 0,
+          remainingEpisodes: 0,
           latestEpisodes: record.total_episodes
         };
         updatedSeries.push(seriesInfo);
@@ -140,13 +155,14 @@ export async function checkWatchingUpdates(): Promise<void> {
 
     await Promise.all(updatePromises);
 
-    console.log(`检查完成: ${hasAnyUpdates ? `发现${updatedCount}部剧集有更新` : '暂无更新'}`);
+    console.log(`检查完成: ${hasAnyUpdates ? `发现${updatedCount}部剧集有新集数更新，${continueWatchingCount}部剧集需要继续观看` : '暂无更新'}`);
 
     // 缓存结果
     const result: WatchingUpdate = {
       hasUpdates: hasAnyUpdates,
       timestamp: currentTime,
       updatedCount,
+      continueWatchingCount,
       updatedSeries
     };
 
@@ -172,7 +188,7 @@ export async function checkWatchingUpdates(): Promise<void> {
 /**
  * 检查单个剧集的更新状态（调用真实API）
  */
-async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Promise<{ hasUpdate: boolean; newEpisodes: number; latestEpisodes: number }> {
+async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Promise<{ hasUpdate: boolean; hasContinueWatching: boolean; newEpisodes: number; remainingEpisodes: number; latestEpisodes: number }> {
   try {
     let sourceKey = record.source_name;
 
@@ -203,32 +219,39 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Pro
     const response = await fetch(`/api/detail?source=${sourceKey}&id=${videoId}`);
     if (!response.ok) {
       console.warn(`获取${record.title}详情失败:`, response.status);
-      return { hasUpdate: false, newEpisodes: 0, latestEpisodes: record.total_episodes };
+      return { hasUpdate: false, hasContinueWatching: false, newEpisodes: 0, remainingEpisodes: 0, latestEpisodes: record.total_episodes };
     }
 
     const detailData = await response.json();
     const latestEpisodes = detailData.episodes ? detailData.episodes.length : 0;
 
-    // 比较集数，判断是否有新集数
+    // 检查两种情况：
+    // 1. 新集数更新：总集数增加了
     const hasUpdate = latestEpisodes > record.total_episodes;
     const newEpisodes = hasUpdate ? latestEpisodes - record.total_episodes : 0;
 
-    // 简化逻辑：只要有新集数就显示更新，不管用户看到第几集
-    // 这样看第1集或第11集都能检测到从11集更新到16集的情况
-    const shouldShowUpdate = hasUpdate;
+    // 2. 继续观看提醒：用户还没看完现有集数
+    const hasContinueWatching = record.index < latestEpisodes;
+    const remainingEpisodes = hasContinueWatching ? latestEpisodes - record.index : 0;
 
-    if (shouldShowUpdate) {
-      console.log(`${record.title} 发现更新: ${record.total_episodes} -> ${latestEpisodes} 集`);
+    if (hasUpdate) {
+      console.log(`${record.title} 发现新集数: ${record.total_episodes} -> ${latestEpisodes} 集，新增${newEpisodes}集`);
+    }
+
+    if (hasContinueWatching) {
+      console.log(`${record.title} 继续观看提醒: 当前第${record.index}集，共${latestEpisodes}集，还有${remainingEpisodes}集未看`);
     }
 
     return {
-      hasUpdate: shouldShowUpdate,
+      hasUpdate,
+      hasContinueWatching,
       newEpisodes,
+      remainingEpisodes,
       latestEpisodes
     };
   } catch (error) {
     console.error(`检查${record.title}更新失败:`, error);
-    return { hasUpdate: false, newEpisodes: 0, latestEpisodes: record.total_episodes };
+    return { hasUpdate: false, hasContinueWatching: false, newEpisodes: 0, remainingEpisodes: 0, latestEpisodes: record.total_episodes };
   }
 }
 
@@ -259,6 +282,7 @@ function cacheWatchingUpdates(data: WatchingUpdate): void {
       hasUpdates: data.hasUpdates,
       timestamp: data.timestamp,
       updatedCount: data.updatedCount,
+      continueWatchingCount: data.continueWatchingCount,
       updatedSeries: data.updatedSeries
     };
     localStorage.setItem(WATCHING_UPDATES_CACHE_KEY, JSON.stringify(cacheData));
@@ -353,6 +377,7 @@ export function getDetailedWatchingUpdates(): WatchingUpdate | null {
       hasUpdates: data.hasUpdates,
       timestamp: data.timestamp,
       updatedCount: data.updatedCount,
+      continueWatchingCount: data.continueWatchingCount,
       updatedSeries: data.updatedSeries
     };
   } catch (error) {

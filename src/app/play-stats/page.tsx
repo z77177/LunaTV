@@ -240,7 +240,7 @@ const PlayStatsPage: React.FC = () => {
 
   // 处理追番更新卡片点击
   const handleWatchingUpdatesClick = () => {
-    if (watchingUpdates && watchingUpdates.hasUpdates) {
+    if (watchingUpdates && (watchingUpdates.updatedCount > 0 || watchingUpdates.continueWatchingCount > 0)) {
       setShowWatchingUpdates(true);
     }
   };
@@ -948,32 +948,64 @@ const PlayStatsPage: React.FC = () => {
                     常用来源
                   </div>
                 </div>
+                {/* 新集数更新 */}
                 <div
                   className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                    watchingUpdates?.hasUpdates
+                    watchingUpdates?.updatedCount > 0
                       ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30'
                       : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
                   }`}
                   onClick={handleWatchingUpdatesClick}
-                  title={watchingUpdates?.hasUpdates ? '点击查看更新详情' : '暂无剧集更新'}
+                  title={watchingUpdates?.updatedCount > 0 ? '点击查看新集数详情' : '暂无新集数更新'}
                 >
                   <div className={`text-2xl font-bold ${
-                    watchingUpdates?.hasUpdates
+                    watchingUpdates?.updatedCount > 0
                       ? 'text-red-800 dark:text-red-300'
                       : 'text-gray-800 dark:text-gray-300'
                   }`}>
                     {watchingUpdates?.updatedCount || 0}
                   </div>
                   <div className={`text-sm ${
-                    watchingUpdates?.hasUpdates
+                    watchingUpdates?.updatedCount > 0
                       ? 'text-red-600 dark:text-red-400'
                       : 'text-gray-600 dark:text-gray-400'
                   }`}>
-                    追番更新
+                    新集数更新
                   </div>
-                  {watchingUpdates?.hasUpdates && (
+                  {watchingUpdates?.updatedCount > 0 && (
                     <div className='text-xs text-red-500 dark:text-red-400 mt-1'>
-                      有新集数！
+                      有新集数发布！
+                    </div>
+                  )}
+                </div>
+
+                {/* 继续观看提醒 */}
+                <div
+                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                    watchingUpdates?.continueWatchingCount > 0
+                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                      : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
+                  }`}
+                  onClick={handleWatchingUpdatesClick}
+                  title={watchingUpdates?.continueWatchingCount > 0 ? '点击查看继续观看详情' : '暂无待续看剧集'}
+                >
+                  <div className={`text-2xl font-bold ${
+                    watchingUpdates?.continueWatchingCount > 0
+                      ? 'text-blue-800 dark:text-blue-300'
+                      : 'text-gray-800 dark:text-gray-300'
+                  }`}>
+                    {watchingUpdates?.continueWatchingCount || 0}
+                  </div>
+                  <div className={`text-sm ${
+                    watchingUpdates?.continueWatchingCount > 0
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}>
+                    继续观看
+                  </div>
+                  {watchingUpdates?.continueWatchingCount > 0 && (
+                    <div className='text-xs text-blue-500 dark:text-blue-400 mt-1'>
+                      有剧集待续看！
                     </div>
                   )}
                 </div>
@@ -1221,32 +1253,64 @@ const PlayStatsPage: React.FC = () => {
                 常用来源
               </div>
             </div>
+            {/* 新集数更新 */}
             <div
               className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                watchingUpdates?.hasUpdates
+                watchingUpdates?.updatedCount > 0
                   ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30'
                   : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
               }`}
               onClick={handleWatchingUpdatesClick}
-              title={watchingUpdates?.hasUpdates ? '点击查看更新详情' : '暂无剧集更新'}
+              title={watchingUpdates?.updatedCount > 0 ? '点击查看新集数详情' : '暂无新集数更新'}
             >
               <div className={`text-2xl font-bold ${
-                watchingUpdates?.hasUpdates
+                watchingUpdates?.updatedCount > 0
                   ? 'text-red-800 dark:text-red-300'
                   : 'text-gray-800 dark:text-gray-300'
               }`}>
                 {watchingUpdates?.updatedCount || 0}
               </div>
               <div className={`text-sm ${
-                watchingUpdates?.hasUpdates
+                watchingUpdates?.updatedCount > 0
                   ? 'text-red-600 dark:text-red-400'
                   : 'text-gray-600 dark:text-gray-400'
               }`}>
-                追番更新
+                新集数更新
               </div>
-              {watchingUpdates?.hasUpdates && (
+              {watchingUpdates?.updatedCount > 0 && (
                 <div className='text-xs text-red-500 dark:text-red-400 mt-1'>
-                  有新集数！
+                  有新集数发布！
+                </div>
+              )}
+            </div>
+
+            {/* 继续观看提醒 */}
+            <div
+              className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                watchingUpdates?.continueWatchingCount > 0
+                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                  : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
+              }`}
+              onClick={handleWatchingUpdatesClick}
+              title={watchingUpdates?.continueWatchingCount > 0 ? '点击查看继续观看详情' : '暂无待续看剧集'}
+            >
+              <div className={`text-2xl font-bold ${
+                watchingUpdates?.continueWatchingCount > 0
+                  ? 'text-blue-800 dark:text-blue-300'
+                  : 'text-gray-800 dark:text-gray-300'
+              }`}>
+                {watchingUpdates?.continueWatchingCount || 0}
+              </div>
+              <div className={`text-sm ${
+                watchingUpdates?.continueWatchingCount > 0
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}>
+                继续观看
+              </div>
+              {watchingUpdates?.continueWatchingCount > 0 && (
+                <div className='text-xs text-blue-500 dark:text-blue-400 mt-1'>
+                  有剧集待续看！
                 </div>
               )}
             </div>
