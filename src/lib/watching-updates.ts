@@ -83,9 +83,9 @@ export async function checkWatchingUpdates(): Promise<void> {
       return;
     }
 
-    // 筛选多集剧且未看完的记录
+    // 筛选多集剧的记录（与Alpha版本保持一致，不限制是否看完）
     const candidateRecords = records.filter(record => {
-      return record.total_episodes > 1 && record.index < record.total_episodes;
+      return record.total_episodes > 1;
     });
 
     console.log(`找到 ${candidateRecords.length} 个可能有更新的剧集`);
@@ -209,14 +209,13 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Pro
     const detailData = await response.json();
     const latestEpisodes = detailData.episodes ? detailData.episodes.length : 0;
 
-    // 比较集数，如果用户已看到最新集且没有新增集数，则不计入更新
+    // 比较集数，判断是否有新集数
     const hasUpdate = latestEpisodes > record.total_episodes;
-    const userWatchedLatest = record.index >= record.total_episodes;
     const newEpisodes = hasUpdate ? latestEpisodes - record.total_episodes : 0;
 
-    // 只有当有新集数且用户没有看到最新集时才算作更新
-    // 如果用户已经看到了当前记录的最新集，且总集数没有增加，则不显示更新
-    const shouldShowUpdate = hasUpdate && (!userWatchedLatest || latestEpisodes > record.total_episodes);
+    // 简化逻辑：只要有新集数就显示更新，不管用户看到第几集
+    // 这样看第1集或第11集都能检测到从11集更新到16集的情况
+    const shouldShowUpdate = hasUpdate;
 
     if (shouldShowUpdate) {
       console.log(`${record.title} 发现更新: ${record.total_episodes} -> ${latestEpisodes} 集`);
