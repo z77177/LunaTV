@@ -174,9 +174,33 @@ export async function checkWatchingUpdates(): Promise<void> {
  */
 async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Promise<{ hasUpdate: boolean; newEpisodes: number; latestEpisodes: number }> {
   try {
-    console.log(`正在检查 ${record.title} 的更新状态...`);
+    let sourceKey = record.source_name;
 
-    const response = await fetch(`/api/detail?source=${record.source_name}&id=${videoId}`);
+    // 先尝试获取可用数据源进行映射
+    try {
+      const sourcesResponse = await fetch('/api/sources');
+      if (sourcesResponse.ok) {
+        const sources = await sourcesResponse.json();
+
+        // 查找匹配的数据源
+        const matchedSource = sources.find((source: any) =>
+          source.key === record.source_name ||
+          source.name === record.source_name
+        );
+
+        if (matchedSource) {
+          sourceKey = matchedSource.key;
+          console.log(`映射数据源: ${record.source_name} -> ${sourceKey}`);
+        } else {
+          console.warn(`找不到数据源 ${record.source_name} 的映射，使用原始名称`);
+        }
+      }
+    } catch (mappingError) {
+      console.warn('数据源映射失败，使用原始名称:', mappingError);
+    }
+
+    // 使用映射后的key调用API
+    const response = await fetch(`/api/detail?source=${sourceKey}&id=${videoId}`);
     if (!response.ok) {
       console.warn(`获取${record.title}详情失败:`, response.status);
       return { hasUpdate: false, newEpisodes: 0, latestEpisodes: record.total_episodes };
@@ -295,9 +319,8 @@ export function setupPeriodicUpdateCheck(intervalMinutes = 30): () => void {
  */
 export function setupVisibilityChangeCheck(): () => void {
   if (typeof window === 'undefined') {
-    return () => {
-      // Empty function for server-side rendering
-    };
+    // 服务器端渲染时返回空操作函数
+    return () => void 0;
   }
 
   const handleVisibilityChange = () => {
@@ -421,7 +444,7 @@ export async function checkVideoUpdate(sourceName: string, videoId: string): Pro
  */
 export function subscribeToWatchingUpdatesEvent(callback: (hasUpdates: boolean, updatedCount: number) => void): () => void {
   if (typeof window === 'undefined') {
-    return () => {};
+    return () => void 0;
   }
 
   const handleUpdate = (event: CustomEvent) => {
