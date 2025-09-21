@@ -956,7 +956,7 @@ const PlayStatsPage: React.FC = () => {
                       : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
                   }`}
                   onClick={handleWatchingUpdatesClick}
-                  title={watchingUpdates?.updatedCount > 0 ? '点击查看新集数详情' : '暂无新集数更新'}
+                  title={(watchingUpdates?.updatedCount || 0) > 0 ? '点击查看新集数详情' : '暂无新集数更新'}
                 >
                   <div className={`text-2xl font-bold ${
                     (watchingUpdates?.updatedCount || 0) > 0
@@ -987,7 +987,7 @@ const PlayStatsPage: React.FC = () => {
                       : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
                   }`}
                   onClick={handleWatchingUpdatesClick}
-                  title={watchingUpdates?.continueWatchingCount > 0 ? '点击查看继续观看详情' : '暂无待续看剧集'}
+                  title={(watchingUpdates?.continueWatchingCount || 0) > 0 ? '点击查看继续观看详情' : '暂无待续看剧集'}
                 >
                   <div className={`text-2xl font-bold ${
                     (watchingUpdates?.continueWatchingCount || 0) > 0
@@ -1261,7 +1261,7 @@ const PlayStatsPage: React.FC = () => {
                   : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
               }`}
               onClick={handleWatchingUpdatesClick}
-              title={watchingUpdates?.updatedCount > 0 ? '点击查看新集数详情' : '暂无新集数更新'}
+              title={(watchingUpdates?.updatedCount || 0) > 0 ? '点击查看新集数详情' : '暂无新集数更新'}
             >
               <div className={`text-2xl font-bold ${
                 watchingUpdates?.updatedCount > 0
@@ -1292,7 +1292,7 @@ const PlayStatsPage: React.FC = () => {
                   : 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-900/30'
               }`}
               onClick={handleWatchingUpdatesClick}
-              title={watchingUpdates?.continueWatchingCount > 0 ? '点击查看继续观看详情' : '暂无待续看剧集'}
+              title={(watchingUpdates?.continueWatchingCount || 0) > 0 ? '点击查看继续观看详情' : '暂无待续看剧集'}
             >
               <div className={`text-2xl font-bold ${
                 watchingUpdates?.continueWatchingCount > 0
