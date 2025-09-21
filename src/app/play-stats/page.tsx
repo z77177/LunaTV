@@ -1050,24 +1050,6 @@ const PlayStatsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* 测试按钮 - 调试弹窗显示 */}
-              <div className="mt-4">
-                <button
-                  onClick={() => {
-                    console.log('测试按钮点击，强制显示弹窗');
-                    console.log('当前状态:', {
-                      showWatchingUpdates,
-                      watchingUpdates,
-                      condition: showWatchingUpdates && watchingUpdates
-                    });
-                    setShowWatchingUpdates(true);
-                    console.log('设置后 showWatchingUpdates 应为 true');
-                  }}
-                  className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm"
-                >
-                  测试弹窗显示
-                </button>
-              </div>
 
               {/* 最近播放记录 */}
               <div>
