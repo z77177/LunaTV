@@ -20,6 +20,9 @@ export interface WatchingUpdate {
     title: string;
     source_name: string;
     year: string;
+    cover: string; // 添加封面属性
+    sourceKey: string; // 添加source key
+    videoId: string; // 添加video id
     currentEpisode: number;
     totalEpisodes: number;
     hasNewEpisode: boolean;
@@ -112,6 +115,9 @@ export async function checkWatchingUpdates(): Promise<void> {
           title: record.title,
           source_name: record.source_name,
           year: record.year,
+          cover: record.cover,
+          sourceKey: sourceName,
+          videoId: videoId,
           currentEpisode: record.index,
           totalEpisodes: record.total_episodes,
           hasNewEpisode: updateInfo.hasUpdate,
@@ -139,10 +145,14 @@ export async function checkWatchingUpdates(): Promise<void> {
       } catch (error) {
         console.error(`检查 ${record.title} 更新失败:`, error);
         // 返回默认状态
+        const [sourceName, videoId] = record.id.split('+');
         const seriesInfo = {
           title: record.title,
           source_name: record.source_name,
           year: record.year,
+          cover: record.cover,
+          sourceKey: sourceName,
+          videoId: videoId,
           currentEpisode: record.index,
           totalEpisodes: record.total_episodes,
           hasNewEpisode: false,
@@ -288,7 +298,13 @@ function cacheWatchingUpdates(data: WatchingUpdate): void {
       continueWatchingCount: data.continueWatchingCount,
       updatedSeries: data.updatedSeries
     };
+    console.log('准备缓存的数据:', cacheData);
     localStorage.setItem(WATCHING_UPDATES_CACHE_KEY, JSON.stringify(cacheData));
+    console.log('数据已写入缓存');
+
+    // 验证写入结果
+    const verification = localStorage.getItem(WATCHING_UPDATES_CACHE_KEY);
+    console.log('缓存验证 - 实际存储的数据:', verification);
   } catch (error) {
     console.error('缓存更新信息失败:', error);
   }
@@ -369,20 +385,30 @@ export function setupVisibilityChangeCheck(): () => void {
 export function getDetailedWatchingUpdates(): WatchingUpdate | null {
   try {
     const cached = localStorage.getItem(WATCHING_UPDATES_CACHE_KEY);
-    if (!cached) return null;
+    console.log('从缓存读取原始数据:', cached);
+    if (!cached) {
+      console.log('缓存为空');
+      return null;
+    }
 
     const data: WatchingUpdatesCache = JSON.parse(cached);
+    console.log('解析后的缓存数据:', data);
     const isExpired = Date.now() - data.timestamp > CACHE_DURATION;
 
-    if (isExpired) return null;
+    if (isExpired) {
+      console.log('缓存已过期');
+      return null;
+    }
 
-    return {
+    const result = {
       hasUpdates: data.hasUpdates,
       timestamp: data.timestamp,
       updatedCount: data.updatedCount,
       continueWatchingCount: data.continueWatchingCount,
       updatedSeries: data.updatedSeries
     };
+    console.log('返回给页面的数据:', result);
+    return result;
   } catch (error) {
     console.error('读取详细更新信息失败:', error);
     return null;
