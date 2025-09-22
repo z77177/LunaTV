@@ -1734,25 +1734,73 @@ function PlayPageClient() {
           }
         }
         
-        // 如果没有精确匹配，检查是否有基本相关的结果
+        // 智能匹配：英文标题严格匹配，中文标题宽松匹配
         let finalResults = bestResults;
 
+        // 如果没有精确匹配，根据语言类型进行不同策略的匹配
         if (bestResults.length === 0) {
-          // 对所有结果进行基本相关性过滤
-          const queryWords = videoTitleRef.current.toLowerCase().replace(/[^\w\s\u4e00-\u9fff]/g, '').split(/\s+/).filter(w => w.length > 1);
+          const queryTitle = videoTitleRef.current.toLowerCase().trim();
+          const allCandidates = allResults;
 
-          const relevantResults = allResults.filter(result => {
-            const title = result.title.toLowerCase();
-            // 至少要包含一个主要关键词才算相关
-            return queryWords.some(word => title.includes(word));
-          });
+          // 检测查询主要语言（英文 vs 中文）
+          const englishChars = (queryTitle.match(/[a-z\s]/g) || []).length;
+          const chineseChars = (queryTitle.match(/[\u4e00-\u9fff]/g) || []).length;
+          const isEnglishQuery = englishChars > chineseChars;
 
-          if (relevantResults.length > 0) {
+          console.log(`搜索语言检测: ${isEnglishQuery ? '英文' : '中文'} - "${queryTitle}"`);
+
+          let relevantMatches;
+
+          if (isEnglishQuery) {
+            // 英文查询：严格匹配，避免不相关结果
+            console.log('使用英文严格匹配策略');
+            relevantMatches = allCandidates.filter(result => {
+              const title = result.title.toLowerCase();
+              const normalizedQuery = queryTitle.replace(/[^\w]/g, '');
+              const normalizedTitle = title.replace(/[^\w]/g, '');
+
+              // 要求高相似度匹配（至少80%字符匹配）
+              const commonChars = [...normalizedQuery].filter(char => normalizedTitle.includes(char)).length;
+              const similarity = commonChars / normalizedQuery.length;
+              if (similarity >= 0.8) {
+                console.log(`英文匹配 (${(similarity*100).toFixed(1)}%): "${result.title}"`);
+                return true;
+              }
+              return false;
+            });
+          } else {
+            // 中文查询：宽松匹配，保持现有行为
+            console.log('使用中文宽松匹配策略');
+            relevantMatches = allCandidates.filter(result => {
+              const title = result.title.toLowerCase();
+              const normalizedQuery = queryTitle.replace(/[^\w\u4e00-\u9fff]/g, '');
+              const normalizedTitle = title.replace(/[^\w\u4e00-\u9fff]/g, '');
+
+              // 包含匹配或50%相似度
+              if (normalizedTitle.includes(normalizedQuery) || normalizedQuery.includes(normalizedTitle)) {
+                console.log(`中文包含匹配: "${result.title}"`);
+                return true;
+              }
+
+              const commonChars = [...normalizedQuery].filter(char => normalizedTitle.includes(char)).length;
+              const similarity = commonChars / normalizedQuery.length;
+              if (similarity >= 0.5) {
+                console.log(`中文相似匹配 (${(similarity*100).toFixed(1)}%): "${result.title}"`);
+                return true;
+              }
+              return false;
+            });
+          }
+
+          console.log(`匹配结果: ${relevantMatches.length}/${allCandidates.length}`);
+
+          const maxResults = isEnglishQuery ? 5 : 20; // 英文更严格控制结果数
+          if (relevantMatches.length > 0 && relevantMatches.length <= maxResults) {
             finalResults = Array.from(
-              new Map(relevantResults.map(item => [`${item.source}-${item.id}`, item])).values()
+              new Map(relevantMatches.map(item => [`${item.source}-${item.id}`, item])).values()
             );
           } else {
-            // 没有相关结果，返回空数组
+            console.log('没有找到合理的匹配，返回空结果');
             finalResults = [];
           }
         }
