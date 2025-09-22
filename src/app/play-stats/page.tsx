@@ -1026,7 +1026,7 @@ const PlayStatsPage: React.FC = () => {
                                 onDelete={undefined}
                               />
                               {/* 新集数提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-[1.05]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-105"></div>
                             </div>
                             {/* 新集数徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-50">
@@ -1058,7 +1058,7 @@ const PlayStatsPage: React.FC = () => {
                                 onDelete={undefined}
                               />
                               {/* 新集数提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-[1.05]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-105"></div>
                             </div>
                             {/* 新集数徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-50">
@@ -1107,7 +1107,7 @@ const PlayStatsPage: React.FC = () => {
                                 onDelete={undefined}
                               />
                               {/* 继续观看提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-[1.05]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-105"></div>
                             </div>
                             {/* 继续观看徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-50">
@@ -1139,7 +1139,7 @@ const PlayStatsPage: React.FC = () => {
                                 onDelete={undefined}
                               />
                               {/* 继续观看提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-[1.05]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-105"></div>
                             </div>
                             {/* 继续观看徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-50">
@@ -1491,7 +1491,7 @@ const PlayStatsPage: React.FC = () => {
                             onDelete={undefined}
                           />
                           {/* 新集数提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-[1.05]"></div>
+                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-105"></div>
                         </div>
                         {/* 新集数徽章 */}
                         <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-50">
@@ -1524,7 +1524,7 @@ const PlayStatsPage: React.FC = () => {
                             onDelete={undefined}
                           />
                           {/* 新集数提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-[1.05]"></div>
+                          <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-105"></div>
                         </div>
                         {/* 新集数徽章 */}
                         <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-50">
@@ -1574,7 +1574,7 @@ const PlayStatsPage: React.FC = () => {
                             onDelete={undefined}
                           />
                           {/* 继续观看提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-[1.05]"></div>
+                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-105"></div>
                         </div>
                         {/* 继续观看标识 */}
                         <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50">
@@ -1607,7 +1607,7 @@ const PlayStatsPage: React.FC = () => {
                             onDelete={undefined}
                           />
                           {/* 继续观看提示光环效果 */}
-                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-[1.05]"></div>
+                          <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-10 transition-transform duration-200 ease-out group-hover:scale-105"></div>
                         </div>
                         {/* 继续观看标识 */}
                         <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50">
