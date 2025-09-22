@@ -628,7 +628,7 @@ function PlayPageClient() {
     }
 
     // 完全去除所有标点符号
-    const noPunctuation = query.replace(/[：；，。！？、""''（）【】《》:;,.!?'()[\]<>]/g, '');
+    const noPunctuation = query.replace(/[：；，。！？、""''（）【】《》:;,.!?"'()[\]<>]/g, '');
     if (noPunctuation !== query && noPunctuation.trim()) {
       variants.push(noPunctuation);
     }
@@ -1731,12 +1731,28 @@ function PlayPageClient() {
           }
         }
         
-        // 如果没有精确匹配，返回所有结果让用户选择
-        const finalResults = bestResults.length > 0 ? bestResults : 
-          // 去重所有结果
-          Array.from(
-            new Map(allResults.map(item => [`${item.source}-${item.id}`, item])).values()
-          );
+        // 如果没有精确匹配，检查是否有基本相关的结果
+        let finalResults = bestResults;
+
+        if (bestResults.length === 0) {
+          // 对所有结果进行基本相关性过滤
+          const queryWords = videoTitleRef.current.toLowerCase().replace(/[^\w\s\u4e00-\u9fff]/g, '').split(/\s+/).filter(w => w.length > 1);
+
+          const relevantResults = allResults.filter(result => {
+            const title = result.title.toLowerCase();
+            // 至少要包含一个主要关键词才算相关
+            return queryWords.some(word => title.includes(word));
+          });
+
+          if (relevantResults.length > 0) {
+            finalResults = Array.from(
+              new Map(relevantResults.map(item => [`${item.source}-${item.id}`, item])).values()
+            );
+          } else {
+            // 没有相关结果，返回空数组
+            finalResults = [];
+          }
+        }
           
         console.log(`智能搜索完成，最终返回 ${finalResults.length} 个结果`);
         setAvailableSources(finalResults);
