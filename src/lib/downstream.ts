@@ -343,7 +343,7 @@ function generateChinesePunctuationVariants(query: string): string[] {
   }
 
   // 完全去除所有标点符号
-  const noPunctuation = query.replace(/[：；，。！？、""''（）【】《》:;,.!?"'()[\]<>]/g, '');
+  const noPunctuation = query.replace(/[：；，。！？、""''（）【】《》:;,.!?"'()\[\]<>]/g, '');
   if (noPunctuation !== query && noPunctuation.trim()) {
     variants.push(noPunctuation);
   }
