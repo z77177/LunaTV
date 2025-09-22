@@ -1752,18 +1752,34 @@ function PlayPageClient() {
           let relevantMatches;
 
           if (isEnglishQuery) {
-            // 英文查询：严格匹配，避免不相关结果
-            console.log('使用英文严格匹配策略');
+            // 英文查询：使用词汇匹配策略，避免不相关结果
+            console.log('使用英文词汇匹配策略');
+
+            // 提取有效英文词汇（过滤停用词）
+            const queryWords = queryTitle.toLowerCase()
+              .replace(/[^\w\s]/g, ' ')
+              .split(/\s+/)
+              .filter(word => word.length > 2 && !['the', 'a', 'an', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by'].includes(word));
+
+            console.log('英文关键词:', queryWords);
+
             relevantMatches = allCandidates.filter(result => {
               const title = result.title.toLowerCase();
-              const normalizedQuery = queryTitle.replace(/[^\w]/g, '');
-              const normalizedTitle = title.replace(/[^\w]/g, '');
+              const titleWords = title.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(word => word.length > 1);
 
-              // 要求高相似度匹配（至少80%字符匹配）
-              const commonChars = Array.from(normalizedQuery).filter(char => normalizedTitle.includes(char)).length;
-              const similarity = commonChars / normalizedQuery.length;
-              if (similarity >= 0.8) {
-                console.log(`英文匹配 (${(similarity*100).toFixed(1)}%): "${result.title}"`);
+              // 计算词汇匹配度：标题必须包含至少50%的查询关键词
+              const matchedWords = queryWords.filter(queryWord =>
+                titleWords.some(titleWord =>
+                  titleWord.includes(queryWord) || queryWord.includes(titleWord) ||
+                  // 允许部分相似（如gumball vs gum）
+                  (queryWord.length > 4 && titleWord.length > 4 &&
+                   queryWord.substring(0, 4) === titleWord.substring(0, 4))
+                )
+              );
+
+              const wordMatchRatio = matchedWords.length / queryWords.length;
+              if (wordMatchRatio >= 0.5) {
+                console.log(`英文词汇匹配 (${matchedWords.length}/${queryWords.length}): "${result.title}" - 匹配词: [${matchedWords.join(', ')}]`);
                 return true;
               }
               return false;
