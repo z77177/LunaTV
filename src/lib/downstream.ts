@@ -293,25 +293,25 @@ function generateChinesePunctuationVariants(query: string): string[] {
 
   // 中文冒号变体 (针对"死神来了：血脉诅咒"这种情况)
   if (query.includes('：')) {
-    // 优先级1: 完全去除冒号 (最可能匹配，如"死神来了血脉诅咒")
-    const noColon = query.replace(/：/g, '');
-    variants.push(noColon);
-
-    // 优先级2: 替换为英文冒号
+    // 替换为英文冒号
     const englishColon = query.replace(/：/g, ':');
     variants.push(englishColon);
 
-    // 优先级3: 替换为空格
+    // 替换为空格
     const withSpace = query.replace(/：/g, ' ');
     variants.push(withSpace);
 
-    // 优先级4: 提取冒号前的主标题 (降低优先级，避免匹配到错误的系列)
+    // 完全去除冒号
+    const noColon = query.replace(/：/g, '');
+    variants.push(noColon);
+
+    // 提取冒号前的主标题
     const beforeColon = query.split('：')[0].trim();
     if (beforeColon && beforeColon !== query) {
       variants.push(beforeColon);
     }
 
-    // 优先级5: 提取冒号后的副标题
+    // 提取冒号后的副标题
     const afterColon = query.split('：')[1]?.trim();
     if (afterColon) {
       variants.push(afterColon);
