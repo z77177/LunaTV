@@ -1738,11 +1738,21 @@ function PlayPageClient() {
           if (data.results && data.results.length > 0) {
             allResults.push(...data.results);
             
-            // 处理搜索结果，根据规则过滤
+            // 处理搜索结果，使用智能模糊匹配
             const filteredResults = data.results.filter(
               (result: SearchResult) => {
-                const titleMatch = result.title.replaceAll(' ', '').toLowerCase() ===
-                  videoTitleRef.current.replaceAll(' ', '').toLowerCase();
+                const queryTitle = videoTitleRef.current.replaceAll(' ', '').toLowerCase();
+                const resultTitle = result.title.replaceAll(' ', '').toLowerCase();
+
+                // 智能标题匹配：支持数字变体和标点符号变化
+                const titleMatch = resultTitle.includes(queryTitle) ||
+                  queryTitle.includes(resultTitle) ||
+                  // 移除数字和标点后匹配（针对"死神来了：血脉诅咒" vs "死神来了6：血脉诅咒"）
+                  resultTitle.replace(/\d+|[：:]/g, '') === queryTitle.replace(/\d+|[：:]/g, '') ||
+                  // 核心关键词匹配
+                  (queryTitle.includes('死神来了') && resultTitle.includes('死神来了') &&
+                   queryTitle.includes('血脉诅咒') && resultTitle.includes('血脉诅咒'));
+
                 const yearMatch = videoYearRef.current
                   ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
                   : true;
@@ -1750,7 +1760,7 @@ function PlayPageClient() {
                   ? (searchType === 'tv' && result.episodes.length > 1) ||
                     (searchType === 'movie' && result.episodes.length === 1)
                   : true;
-                
+
                 return titleMatch && yearMatch && typeMatch;
               }
             );
