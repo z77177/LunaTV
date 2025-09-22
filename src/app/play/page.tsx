@@ -506,13 +506,7 @@ function PlayPageClient() {
       }
     });
 
-    // 3. 数字变体处理（针对"死神来了 血脉诅咒" vs "死神来了6：血脉诅咒"这种情况）
-    const numberVariants = generateNumberVariants(trimmed);
-    numberVariants.forEach(variant => {
-      if (!variants.includes(variant)) {
-        variants.push(variant);
-      }
-    });
+    // 3. 移除数字变体处理（优化性能，依赖downstream相关性评分处理数字差异）
 
     // 如果包含空格，生成额外变体
     if (trimmed.includes(' ')) {
@@ -566,52 +560,7 @@ function PlayPageClient() {
     return Array.from(new Set(variants));
   };
 
-  /**
-   * 生成数字相关的搜索变体
-   * @param query 原始查询
-   * @returns 数字变体数组
-   */
-  const generateNumberVariants = (query: string): string[] => {
-    const variants: string[] = [];
-
-    // 如果查询不包含数字，尝试添加常见的数字变体
-    if (!/\d/.test(query)) {
-      // 针对系列电影/剧集，尝试添加常见的数字
-      const seriesNumbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-
-      seriesNumbers.forEach(num => {
-        // 在空格位置插入数字
-        if (query.includes(' ')) {
-          const withNumber = query.replace(/\s+/, num);
-          variants.push(withNumber);
-
-          // 也尝试数字+冒号的组合
-          const withNumberColon = query.replace(/\s+/, num + '：');
-          variants.push(withNumberColon);
-
-          const withNumberEnglishColon = query.replace(/\s+/, num + ':');
-          variants.push(withNumberEnglishColon);
-        } else {
-          // 在末尾添加数字
-          variants.push(query + num);
-        }
-      });
-    } else {
-      // 如果包含数字，尝试移除数字的变体
-      const withoutNumbers = query.replace(/\d+/g, '');
-      if (withoutNumbers !== query && withoutNumbers.trim()) {
-        variants.push(withoutNumbers.trim());
-
-        // 清理多余的标点符号
-        const cleaned = withoutNumbers.replace(/[：:]\\s*/, ' ').trim();
-        if (cleaned !== withoutNumbers && !variants.includes(cleaned)) {
-          variants.push(cleaned);
-        }
-      }
-    }
-
-    return variants;
-  };
+  // 移除数字变体生成函数（优化性能，依赖相关性评分处理）
 
   /**
    * 生成中文标点符号的搜索变体
