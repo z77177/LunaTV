@@ -622,7 +622,7 @@ function PlayPageClient() {
     const variants: string[] = [];
 
     // 检查是否包含中文标点符号
-    const chinesePunctuation = /[：；，。！？、\"\"''（）【】《》]/;
+    const chinesePunctuation = /[：；，。！？、""''（）【】《》]/;
     if (!chinesePunctuation.test(query)) {
       return variants;
     }
