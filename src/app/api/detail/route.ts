@@ -33,15 +33,34 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await getDetailFromApi(apiSite, id);
-    const cacheTime = await getCacheTime();
 
-    return NextResponse.json(result, {
-      headers: {
+    // 检查请求头是否要求绕过缓存
+    const requestCacheControl = request.headers.get('cache-control');
+    const shouldBypassCache = requestCacheControl?.includes('no-cache') || requestCacheControl?.includes('no-store');
+
+    let responseHeaders: Record<string, string> = {};
+
+    if (shouldBypassCache) {
+      // 如果请求要求绕过缓存，则不设置缓存头
+      console.log('watching-updates请求绕过缓存，不设置缓存响应头');
+      responseHeaders = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      };
+    } else {
+      // 正常请求设置缓存
+      const cacheTime = await getCacheTime();
+      responseHeaders = {
         'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
         'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
         'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
         'Netlify-Vary': 'query',
-      },
+      };
+    }
+
+    return NextResponse.json(result, {
+      headers: responseHeaders,
     });
   } catch (error) {
     return NextResponse.json(
