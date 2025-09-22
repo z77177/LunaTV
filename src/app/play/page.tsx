@@ -1760,7 +1760,7 @@ function PlayPageClient() {
               const normalizedTitle = title.replace(/[^\w]/g, '');
 
               // 要求高相似度匹配（至少80%字符匹配）
-              const commonChars = [...normalizedQuery].filter(char => normalizedTitle.includes(char)).length;
+              const commonChars = Array.from(normalizedQuery).filter(char => normalizedTitle.includes(char)).length;
               const similarity = commonChars / normalizedQuery.length;
               if (similarity >= 0.8) {
                 console.log(`英文匹配 (${(similarity*100).toFixed(1)}%): "${result.title}"`);
@@ -1782,7 +1782,7 @@ function PlayPageClient() {
                 return true;
               }
 
-              const commonChars = [...normalizedQuery].filter(char => normalizedTitle.includes(char)).length;
+              const commonChars = Array.from(normalizedQuery).filter(char => normalizedTitle.includes(char)).length;
               const similarity = commonChars / normalizedQuery.length;
               if (similarity >= 0.5) {
                 console.log(`中文相似匹配 (${(similarity*100).toFixed(1)}%): "${result.title}"`);
