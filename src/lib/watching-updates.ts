@@ -232,15 +232,10 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Pro
       console.warn('数据源映射失败，使用原始名称:', mappingError);
     }
 
-    // 使用映射后的key调用API，通过请求头绕过缓存
+    // 使用映射后的key调用API（API已默认不缓存，确保集数信息实时更新）
     const apiUrl = `/api/detail?source=${sourceKey}&id=${videoId}`;
-    console.log(`${record.title} 绕过缓存调用API:`, apiUrl);
-    const response = await fetch(apiUrl, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
-      }
-    });
+    console.log(`${record.title} 调用API获取最新详情:`, apiUrl);
+    const response = await fetch(apiUrl);
     if (!response.ok) {
       console.warn(`获取${record.title}详情失败:`, response.status);
       return { hasUpdate: false, hasContinueWatching: false, newEpisodes: 0, remainingEpisodes: 0, latestEpisodes: record.total_episodes };

@@ -34,30 +34,15 @@ export async function GET(request: NextRequest) {
 
     const result = await getDetailFromApi(apiSite, id);
 
-    // 检查请求头是否要求绕过缓存
-    const requestCacheControl = request.headers.get('cache-control');
-    const shouldBypassCache = requestCacheControl?.includes('no-cache') || requestCacheControl?.includes('no-store');
+    // 视频源详情默认不缓存，确保集数信息实时更新
+    // 缓存原本是为了豆瓣/Bangumi详情设计的，视频源应该实时获取
+    console.log(`获取视频详情: ${apiSite.name} - ${id}，不设置缓存确保集数实时更新`);
 
-    let responseHeaders: Record<string, string> = {};
-
-    if (shouldBypassCache) {
-      // 如果请求要求绕过缓存，则不设置缓存头
-      console.log('watching-updates请求绕过缓存，不设置缓存响应头');
-      responseHeaders = {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      };
-    } else {
-      // 正常请求设置缓存
-      const cacheTime = await getCacheTime();
-      responseHeaders = {
-        'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
-        'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-        'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-        'Netlify-Vary': 'query',
-      };
-    }
+    const responseHeaders: Record<string, string> = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    };
 
     return NextResponse.json(result, {
       headers: responseHeaders,
