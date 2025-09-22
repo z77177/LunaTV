@@ -6,7 +6,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronUp } from 'lucide-react';
 
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
-import { subscribeToDataUpdates } from '@/lib/db.client';
 import { PlayRecord } from '@/lib/types';
 import {
   getCachedWatchingUpdates,
@@ -263,20 +262,25 @@ const PlayStatsPage: React.FC = () => {
       checkUpdates();
 
       // 监听播放记录更新事件（修复删除记录后页面不立即更新的问题）
-      const unsubscribe = subscribeToDataUpdates(
-        'playRecordsUpdated',
-        (newRecords: Record<string, PlayRecord>) => {
-          console.log('播放记录更新，重新检查 watchingUpdates', newRecords);
-          // 重新检查追番更新状态
-          checkWatchingUpdates().then(() => {
-            const details = getDetailedWatchingUpdates();
-            setWatchingUpdates(details);
-            console.log('watchingUpdates 已更新:', details);
-          });
-        }
-      );
+      const handlePlayRecordsUpdate = () => {
+        console.log('播放记录更新，重新检查 watchingUpdates');
+        // 强制清除缓存，确保立即更新
+        localStorage.removeItem('moontv_watching_updates');
+        localStorage.removeItem('moontv_last_update_check');
+        // 重新检查追番更新状态
+        checkWatchingUpdates().then(() => {
+          const details = getDetailedWatchingUpdates();
+          setWatchingUpdates(details);
+          console.log('watchingUpdates 已更新:', details);
+        });
+      };
 
-      return unsubscribe;
+      // 监听播放记录更新事件
+      window.addEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
+
+      return () => {
+        window.removeEventListener('playRecordsUpdated', handlePlayRecordsUpdate);
+      };
     }
   }, [authInfo]);
 
