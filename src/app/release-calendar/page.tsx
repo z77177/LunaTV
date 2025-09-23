@@ -34,6 +34,22 @@ export default function ReleaseCalendarPage() {
   // 日历视图的当前月份
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
 
+  // 日历视图展开的日期
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+
+  // 切换日期的展开状态
+  const toggleDateExpanded = (dateStr: string) => {
+    setExpandedDates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(dateStr)) {
+        newSet.delete(dateStr);
+      } else {
+        newSet.add(dateStr);
+      }
+      return newSet;
+    });
+  };
+
   // 清理过期缓存
   const cleanExpiredCache = () => {
     const CACHE_DURATION = 2 * 60 * 60 * 1000; // 2小时
@@ -684,7 +700,7 @@ export default function ReleaseCalendarPage() {
                           days.push(
                             <div
                               key={dateStr}
-                              className={`min-h-[100px] p-2 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                              className={`${expandedDates.has(dateStr) ? 'min-h-[150px]' : 'min-h-[100px]'} p-2 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
                                 !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-400' : 'bg-white dark:bg-gray-800'
                               } ${
                                 isToday ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
@@ -700,7 +716,7 @@ export default function ReleaseCalendarPage() {
 
                               {/* 该日的影片 */}
                               <div className="space-y-1">
-                                {uniqueDayItems.slice(0, 2).map((item, index) => (
+                                {(expandedDates.has(dateStr) ? uniqueDayItems : uniqueDayItems.slice(0, 2)).map((item, index) => (
                                   <div
                                     key={`${item.id}-${index}`}
                                     className={`text-xs p-1 rounded truncate cursor-pointer transition-colors ${
@@ -714,9 +730,18 @@ export default function ReleaseCalendarPage() {
                                   </div>
                                 ))}
                                 {uniqueDayItems.length > 2 && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                                    +{uniqueDayItems.length - 2} 更多
-                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleDateExpanded(dateStr);
+                                    }}
+                                    className="w-full text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  >
+                                    {expandedDates.has(dateStr)
+                                      ? '收起'
+                                      : `+${uniqueDayItems.length - 2} 更多`
+                                    }
+                                  </button>
                                 )}
                               </div>
                             </div>
@@ -775,49 +800,181 @@ export default function ReleaseCalendarPage() {
 
             {/* 时间线视图 */}
             {viewMode === 'timeline' && (
-              <div className="space-y-4">
-                {Object.entries(
-                  currentItems.reduce((acc, item) => {
-                    const date = item.releaseDate;
-                    if (!acc[date]) acc[date] = [];
-                    acc[date].push(item);
-                    return acc;
-                  }, {} as Record<string, ReleaseCalendarItem[]>)
-                ).sort(([a], [b]) => a.localeCompare(b)).map(([date, items]) => (
-                  <div key={date} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 border-b border-gray-200 dark:border-gray-600">
-                      <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        {formatDate(date)}
-                        <span className="text-sm text-gray-500 dark:text-gray-400">({items.length} 部)</span>
-                      </h3>
-                    </div>
-                    <div className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {items.map((item) => (
-                          <div key={item.id} className="border border-gray-100 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
-                            <div className="flex items-start justify-between mb-2">
-                              <h4 className="font-medium text-gray-900 dark:text-white">{item.title}</h4>
-                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                {getTypeIcon(item.type)}
-                                <span>{getTypeLabel(item.type)}</span>
+              <div className="relative">
+                {/* 时间线主线 */}
+                <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-purple-500 to-pink-500"></div>
+
+                <div className="space-y-8">
+                  {Object.entries(
+                    currentItems.reduce((acc, item) => {
+                      const date = item.releaseDate;
+                      if (!acc[date]) acc[date] = [];
+                      acc[date].push(item);
+                      return acc;
+                    }, {} as Record<string, ReleaseCalendarItem[]>)
+                  ).sort(([a], [b]) => a.localeCompare(b)).map(([date, items], index) => {
+                    const today = new Date();
+                    const currentDate = new Date(date);
+                    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                    const isToday = date === todayStr;
+                    const isPast = currentDate < today && !isToday;
+                    const isUpcoming = currentDate > today;
+
+                    // 去重：按title和director去重
+                    const uniqueItems = items.filter((item, index, self) =>
+                      index === self.findIndex(t => t.title === item.title && t.director === item.director)
+                    );
+
+                    return (
+                      <div key={date} className="relative pl-20">
+                        {/* 时间线节点 */}
+                        <div className={`absolute left-6 w-6 h-6 rounded-full border-4 border-white dark:border-gray-900 flex items-center justify-center ${
+                          isToday
+                            ? 'bg-red-500 animate-pulse shadow-lg shadow-red-500/50'
+                            : isPast
+                              ? 'bg-gray-400'
+                              : 'bg-blue-500 shadow-lg shadow-blue-500/30'
+                        }`}>
+                          {isToday && <span className="text-white text-xs font-bold">!</span>}
+                        </div>
+
+                        {/* 内容卡片 */}
+                        <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+                          isToday
+                            ? 'border-red-500 ring-2 ring-red-500/20'
+                            : isPast
+                              ? 'border-gray-300 dark:border-gray-600 opacity-75'
+                              : 'border-blue-200 dark:border-blue-800'
+                        }`}>
+
+                          {/* 日期头部 */}
+                          <div className={`px-6 py-4 border-b ${
+                            isToday
+                              ? 'bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-800'
+                              : isPast
+                                ? 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                                : 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800'
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-lg ${
+                                  isToday
+                                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                    : isPast
+                                      ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                      : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                }`}>
+                                  <Calendar className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <h3 className={`text-lg font-bold ${
+                                    isToday
+                                      ? 'text-red-800 dark:text-red-300'
+                                      : isPast
+                                        ? 'text-gray-700 dark:text-gray-300'
+                                        : 'text-blue-800 dark:text-blue-300'
+                                  }`}>
+                                    {formatDate(date)}
+                                  </h3>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {uniqueItems.length} 部作品上映
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                            <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                              <div>导演: {item.director}</div>
-                              <div>主演: {item.actors}</div>
-                              <div className="flex items-center gap-4">
-                                <span>{item.region}</span>
-                                <span>{item.genre}</span>
+
+                              {/* 状态标签 */}
+                              <div className="flex items-center gap-2">
+                                {isToday && (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 animate-pulse">
+                                    🔥 今日上映
+                                  </span>
+                                )}
+                                {isUpcoming && !isToday && (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                    ⏰ 即将上映
+                                  </span>
+                                )}
+                                {isPast && (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                    ✅ 已上映
+                                  </span>
+                                )}
                               </div>
-                              {item.episodes && <div>{item.episodes}集</div>}
                             </div>
                           </div>
-                        ))}
+
+                          {/* 影片列表 */}
+                          <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {uniqueItems.map((item, itemIndex) => (
+                                <div key={`${item.id}-${itemIndex}`} className={`group relative bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 transition-all duration-200 hover:shadow-md cursor-pointer ${
+                                  isToday ? 'hover:bg-red-50 dark:hover:bg-red-900/10' : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
+                                }`}>
+
+                                  {/* 类型图标 */}
+                                  <div className="flex items-start justify-between mb-3">
+                                    <div className={`p-2 rounded-lg ${
+                                      item.type === 'movie'
+                                        ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                                        : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+                                    }`}>
+                                      {getTypeIcon(item.type)}
+                                    </div>
+                                    <span className={`text-xs px-2 py-1 rounded-full ${
+                                      item.type === 'movie'
+                                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                        : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                                    }`}>
+                                      {getTypeLabel(item.type)}
+                                    </span>
+                                  </div>
+
+                                  {/* 标题 */}
+                                  <h4 className="font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                    {item.title}
+                                  </h4>
+
+                                  {/* 详细信息 */}
+                                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <div className="flex items-start gap-2">
+                                      <span className="font-medium min-w-0 flex-shrink-0">导演:</span>
+                                      <span className="line-clamp-1">{item.director}</span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                      <span className="font-medium min-w-0 flex-shrink-0">主演:</span>
+                                      <span className="line-clamp-2">{item.actors}</span>
+                                    </div>
+
+                                    {/* 标签 */}
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs">
+                                        <MapPin className="w-3 h-3" />
+                                        {item.region}
+                                      </span>
+                                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs">
+                                        <Tag className="w-3 h-3" />
+                                        {item.genre}
+                                      </span>
+                                      {item.episodes && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs">
+                                          <Tv className="w-3 h-3" />
+                                          {item.episodes}集
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* 悬停效果 */}
+                                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg pointer-events-none"></div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
             )}
 

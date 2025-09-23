@@ -85,39 +85,11 @@ const TMDBCard: React.FC<{
         )}
       </div>
 
-      <div className="p-3 flex-1 flex flex-col">
-        <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 flex-shrink-0">
+      {/* 简化：只显示标题 */}
+      <div className="p-3">
+        <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2 text-center">
           {item.title}
         </h3>
-
-        <div className="flex-1 flex flex-col justify-between">
-          <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
-            {/* 角色信息 */}
-            {item.character && (
-              <div className="line-clamp-1">饰演: {item.character}</div>
-            )}
-
-            {/* 集数信息（电视剧） */}
-            {contentType === 'tv' && item.episode_count && (
-              <div>{item.episode_count} 集</div>
-            )}
-
-            {/* 语言 */}
-            {item.original_language && (
-              <div>语言: {item.original_language.toUpperCase()}</div>
-            )}
-          </div>
-
-          {/* 底部信息 */}
-          <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400">
-            {item.popularity && (
-              <span>人气: {item.popularity.toFixed(1)}</span>
-            )}
-            {item.vote_count && (
-              <span>{item.vote_count} 票</span>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );
