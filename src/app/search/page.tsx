@@ -1149,10 +1149,6 @@ function SearchPageClient() {
                       isLoading={tmdbActorLoading}
                       searchQuery={searchQuery}
                       contentType={tmdbActorType}
-                      onItemClick={(item) => {
-                        // 可以在这里添加点击处理逻辑，比如跳转到详情页
-                        console.log('TMDB项目点击:', item);
-                      }}
                     />
                   )}
                 </>
