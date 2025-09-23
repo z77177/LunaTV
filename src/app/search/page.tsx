@@ -22,7 +22,6 @@ import VirtualSearchGrid from '@/components/VirtualSearchGrid';
 import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import YouTubeVideoCard from '@/components/YouTubeVideoCard';
 import DirectYouTubePlayer from '@/components/DirectYouTubePlayer';
-import VirtualTMDBGrid from '@/components/VirtualTMDBGrid';
 import TMDBFilterPanel, { TMDBFilterState } from '@/components/TMDBFilterPanel';
 
 function SearchPageClient() {
@@ -1144,12 +1143,20 @@ function SearchPageClient() {
                       </button>
                     </div>
                   ) : (
-                    <VirtualTMDBGrid
-                      results={tmdbActorResults || []}
-                      isLoading={tmdbActorLoading}
-                      searchQuery={searchQuery}
-                      contentType={tmdbActorType}
-                    />
+                    <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4'>
+                      {(tmdbActorResults || []).map((item, index) => (
+                        <VideoCard
+                          key={`${item.id}-${index}`}
+                          id={item.id}
+                          title={item.title}
+                          poster={item.poster}
+                          year={item.year}
+                          rate={item.rate}
+                          from='search'
+                          type={tmdbActorType}
+                        />
+                      ))}
+                    </div>
                   )}
                 </>
               ) : searchType === 'youtube' ? (
