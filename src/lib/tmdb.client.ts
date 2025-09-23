@@ -339,22 +339,24 @@ export async function searchTMDBActorWorks(
         case 'rating':
           compareValue = ((b.vote_average || 0) - (a.vote_average || 0)) * orderMultiplier;
           break;
-        case 'date':
+        case 'date': {
           const dateA = new Date(a.release_date || a.first_air_date || '1900-01-01');
           const dateB = new Date(b.release_date || b.first_air_date || '1900-01-01');
           compareValue = (dateB.getTime() - dateA.getTime()) * orderMultiplier;
           break;
+        }
         case 'popularity':
           compareValue = ((b.popularity || 0) - (a.popularity || 0)) * orderMultiplier;
           break;
         case 'vote_count':
           compareValue = ((b.vote_count || 0) - (a.vote_count || 0)) * orderMultiplier;
           break;
-        case 'title':
+        case 'title': {
           const titleA = (a.title || a.name || '').toLowerCase();
           const titleB = (b.title || b.name || '').toLowerCase();
           compareValue = titleA.localeCompare(titleB) * orderMultiplier;
           break;
+        }
         case 'episode_count':
           if (type === 'tv') {
             compareValue = ((b.episode_count || 0) - (a.episode_count || 0)) * orderMultiplier;
