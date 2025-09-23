@@ -12,6 +12,7 @@ const Grid = dynamic(
 );
 
 import { useResponsiveGrid } from '@/hooks/useResponsiveGrid';
+import VideoCard from '@/components/VideoCard';
 
 // TMDB结果项接口
 interface TMDBResultItem {
@@ -41,59 +42,6 @@ const INITIAL_BATCH_SIZE = 20;
 const LOAD_MORE_BATCH_SIZE = 10;
 const LOAD_MORE_THRESHOLD = 5;
 
-// TMDB卡片组件
-const TMDBCard: React.FC<{
-  item: TMDBResultItem;
-  contentType: 'movie' | 'tv';
-  onClick?: () => void;
-}> = ({ item, contentType, onClick }) => {
-  return (
-    <div
-      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer h-full flex flex-col"
-      onClick={onClick}
-    >
-      <div className="aspect-[3/4] relative flex-shrink-0">
-        {item.poster ? (
-          <img
-            src={item.poster}
-            alt={item.title}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = '/placeholder-movie.png';
-            }}
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-            <span className="text-gray-400 text-sm">暂无海报</span>
-          </div>
-        )}
-
-        {/* 评分标签 */}
-        {item.rate && item.rate !== '0.0' && (
-          <div className="absolute top-2 right-2 bg-black/80 text-white px-2 py-1 rounded text-xs font-medium">
-            ⭐ {item.rate}
-          </div>
-        )}
-
-        {/* 年份标签 */}
-        {item.year && (
-          <div className="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
-            {item.year}
-          </div>
-        )}
-      </div>
-
-      {/* 简化：只显示标题 */}
-      <div className="p-3">
-        <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2 text-center">
-          {item.title}
-        </h3>
-      </div>
-    </div>
-  );
-};
 
 export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
   results,
@@ -174,10 +122,14 @@ export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
     return (
       <div style={style} {...ariaAttributes} className="p-2">
         <div className="w-full h-full">
-          <TMDBCard
-            item={item}
-            contentType={cellContentType}
-            onClick={() => cellOnItemClick?.(item)}
+          <VideoCard
+            id={item.id}
+            title={item.title}
+            poster={item.poster}
+            year={item.year}
+            rate={item.rate}
+            from='tmdb'
+            type={cellContentType}
           />
         </div>
       </div>
