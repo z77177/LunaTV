@@ -138,7 +138,7 @@ export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
             poster={item.poster}
             year={item.year}
             rate={item.rate}
-            from='tmdb'
+            from='search'
             type={cellContentType}
           />
         </div>
