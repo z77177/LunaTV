@@ -3,6 +3,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 
+import VideoCard from '@/components/VideoCard';
+import { useResponsiveGrid } from '@/hooks/useResponsiveGrid';
+
 const Grid = dynamic(
   () => import('react-window').then(mod => ({ default: mod.Grid })),
   {
@@ -10,9 +13,6 @@ const Grid = dynamic(
     loading: () => <div className="animate-pulse h-96 bg-gray-200 dark:bg-gray-800 rounded-lg" />
   }
 );
-
-import { useResponsiveGrid } from '@/hooks/useResponsiveGrid';
-import VideoCard from '@/components/VideoCard';
 
 // TMDB结果项接口
 interface TMDBResultItem {
@@ -34,7 +34,6 @@ interface VirtualTMDBGridProps {
   isLoading: boolean;
   searchQuery: string;
   contentType: 'movie' | 'tv';
-  onItemClick?: (item: TMDBResultItem) => void;
 }
 
 // 渐进式加载配置
@@ -48,7 +47,6 @@ export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
   isLoading,
   searchQuery,
   contentType,
-  onItemClick,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { columnCount, itemWidth, itemHeight, containerWidth } = useResponsiveGrid(containerRef);
@@ -100,8 +98,20 @@ export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
     isLoadingMore: cellIsLoadingMore,
     loadMoreItems: cellLoadMoreItems,
     contentType: cellContentType,
-    onItemClick: cellOnItemClick,
-  }: any) => {
+  }: {
+    ariaAttributes: React.AriaAttributes;
+    columnIndex: number;
+    rowIndex: number;
+    style: React.CSSProperties;
+    displayData: TMDBResultItem[];
+    displayItemCount: number;
+    columnCount: number;
+    rowCount: number;
+    hasNextPage: boolean;
+    isLoadingMore: boolean;
+    loadMoreItems: () => void;
+    contentType: 'movie' | 'tv';
+  }) => {
     const index = rowIndex * cellColumnCount + columnIndex;
 
     if (index >= cellDisplayItemCount) {
@@ -182,7 +192,6 @@ export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
             isLoadingMore,
             loadMoreItems,
             contentType,
-            onItemClick,
           }}
           columnCount={columnCount}
           columnWidth={itemWidth + 16}
