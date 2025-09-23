@@ -1116,15 +1116,16 @@ function SearchPageClient() {
                     </div>
 
                     {/* TMDB筛选面板 */}
-                    {showTmdbFilters && (
-                      <div className='mt-4'>
-                        <TMDBFilterPanel
-                          contentType={tmdbActorType}
-                          filters={tmdbFilters}
-                          onFiltersChange={handleTmdbFiltersChange}
-                        />
-                      </div>
-                    )}
+                    <div className='mt-4'>
+                      <TMDBFilterPanel
+                        contentType={tmdbActorType}
+                        filters={tmdbFilters}
+                        onFiltersChange={handleTmdbFiltersChange}
+                        isVisible={showTmdbFilters}
+                        onToggleVisible={() => setShowTmdbFilters(!showTmdbFilters)}
+                        resultCount={tmdbActorResults?.length}
+                      />
+                    </div>
                   </div>
 
                   {tmdbActorError ? (
