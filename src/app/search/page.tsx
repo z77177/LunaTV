@@ -77,13 +77,19 @@ function SearchPageClient() {
 
   // TMDB筛选状态
   const [tmdbFilterState, setTmdbFilterState] = useState<TMDBFilterState>({
-    year: { min: '', max: '' },
-    rating: { min: '', max: '' },
-    popularity: { min: '', max: '' },
-    voteCount: { min: '', max: '' },
-    genres: [],
-    originalLanguage: '',
-    sortBy: 'popularity.desc',
+    startYear: undefined,
+    endYear: undefined,
+    minRating: undefined,
+    maxRating: undefined,
+    minPopularity: undefined,
+    maxPopularity: undefined,
+    minVoteCount: undefined,
+    minEpisodeCount: undefined,
+    genreIds: [],
+    languages: [],
+    onlyRated: false,
+    sortBy: 'popularity',
+    sortOrder: 'desc',
     limit: 50
   });
   // 聚合卡片 refs 与聚合统计缓存
@@ -765,21 +771,23 @@ function SearchPageClient() {
       const params = new URLSearchParams({
         actor: query.trim(),
         type: type,
-        limit: filterState.limit.toString()
+        limit: (filterState.limit || 50).toString()
       });
 
       // 添加筛选参数
-      if (filterState.year.min) params.append('yearMin', filterState.year.min);
-      if (filterState.year.max) params.append('yearMax', filterState.year.max);
-      if (filterState.rating.min) params.append('ratingMin', filterState.rating.min);
-      if (filterState.rating.max) params.append('ratingMax', filterState.rating.max);
-      if (filterState.popularity.min) params.append('popularityMin', filterState.popularity.min);
-      if (filterState.popularity.max) params.append('popularityMax', filterState.popularity.max);
-      if (filterState.voteCount.min) params.append('voteCountMin', filterState.voteCount.min);
-      if (filterState.voteCount.max) params.append('voteCountMax', filterState.voteCount.max);
-      if (filterState.genres.length > 0) params.append('genres', filterState.genres.join(','));
-      if (filterState.originalLanguage) params.append('originalLanguage', filterState.originalLanguage);
+      if (filterState.startYear) params.append('startYear', filterState.startYear.toString());
+      if (filterState.endYear) params.append('endYear', filterState.endYear.toString());
+      if (filterState.minRating) params.append('minRating', filterState.minRating.toString());
+      if (filterState.maxRating) params.append('maxRating', filterState.maxRating.toString());
+      if (filterState.minPopularity) params.append('minPopularity', filterState.minPopularity.toString());
+      if (filterState.maxPopularity) params.append('maxPopularity', filterState.maxPopularity.toString());
+      if (filterState.minVoteCount) params.append('minVoteCount', filterState.minVoteCount.toString());
+      if (filterState.minEpisodeCount) params.append('minEpisodeCount', filterState.minEpisodeCount.toString());
+      if (filterState.genreIds && filterState.genreIds.length > 0) params.append('genreIds', filterState.genreIds.join(','));
+      if (filterState.languages && filterState.languages.length > 0) params.append('languages', filterState.languages.join(','));
+      if (filterState.onlyRated) params.append('onlyRated', 'true');
       if (filterState.sortBy) params.append('sortBy', filterState.sortBy);
+      if (filterState.sortOrder) params.append('sortOrder', filterState.sortOrder);
 
       // 调用TMDB API端点
       const response = await fetch(`/api/tmdb/actor?${params.toString()}`);
