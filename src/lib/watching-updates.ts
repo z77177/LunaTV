@@ -306,6 +306,7 @@ function saveOriginalEpisodes(recordKey: string, totalEpisodes: number): void {
     const data = cached ? JSON.parse(cached) : {};
     data[recordKey] = totalEpisodes;
     localStorage.setItem(ORIGINAL_EPISODES_CACHE_KEY, JSON.stringify(data));
+    console.log(`✓ 保存原始集数: ${recordKey} = ${totalEpisodes}集`);
   } catch (error) {
     console.error('保存原始集数失败:', error);
   }
@@ -319,15 +320,19 @@ function getOriginalEpisodes(recordKey: string, currentTotalEpisodes: number): n
     const cached = localStorage.getItem(ORIGINAL_EPISODES_CACHE_KEY);
     if (!cached) {
       // 第一次访问，保存当前集数作为原始集数
+      console.log(`📥 首次记录原始集数: ${recordKey}`);
       saveOriginalEpisodes(recordKey, currentTotalEpisodes);
       return currentTotalEpisodes;
     }
 
     const data = JSON.parse(cached);
     if (data[recordKey] !== undefined) {
-      return data[recordKey];
+      const originalEpisodes = data[recordKey];
+      console.log(`📚 读取已保存的原始集数: ${recordKey} = ${originalEpisodes}集 (当前播放记录: ${currentTotalEpisodes}集)`);
+      return originalEpisodes;
     } else {
       // 这个剧集第一次检查，保存当前集数
+      console.log(`📥 新剧集首次记录: ${recordKey}`);
       saveOriginalEpisodes(recordKey, currentTotalEpisodes);
       return currentTotalEpisodes;
     }
