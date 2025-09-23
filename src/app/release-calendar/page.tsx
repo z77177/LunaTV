@@ -684,6 +684,9 @@ export default function ReleaseCalendarPage() {
                       const days = [];
                       const current = new Date(startDate);
 
+                      // 使用全部数据而不是分页数据
+                      const allItems = data?.items || [];
+
                       // 生成6周的日期
                       for (let week = 0; week < 6; week++) {
                         for (let day = 0; day < 7; day++) {
@@ -691,7 +694,7 @@ export default function ReleaseCalendarPage() {
                           const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
                           const isCurrentMonth = current.getMonth() === currentMonth;
                           const isToday = current.toDateString() === today.toDateString();
-                          const dayItems = currentItems.filter(item => item.releaseDate === dateStr);
+                          const dayItems = allItems.filter(item => item.releaseDate === dateStr);
                           // 去重：按title和director去重
                           const uniqueDayItems = dayItems.filter((item, index, self) =>
                             index === self.findIndex(t => t.title === item.title && t.director === item.director)
@@ -726,7 +729,7 @@ export default function ReleaseCalendarPage() {
                                     }`}
                                     title={`${item.title} - ${item.director}`}
                                   >
-                                    {item.title}
+                                    {item.title} ({item.region})
                                   </div>
                                 ))}
                                 {uniqueDayItems.length > 2 && (
@@ -760,7 +763,8 @@ export default function ReleaseCalendarPage() {
                 {(() => {
                   const today = new Date();
                   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                  const todayItems = currentItems.filter(item => item.releaseDate === todayStr);
+                  const allItems = data?.items || [];
+                  const todayItems = allItems.filter(item => item.releaseDate === todayStr);
 
                   // 去重：按title和director去重
                   const uniqueTodayItems = todayItems.filter((item, index, self) =>
@@ -806,7 +810,7 @@ export default function ReleaseCalendarPage() {
 
                 <div className="space-y-8">
                   {Object.entries(
-                    currentItems.reduce((acc, item) => {
+                    (data?.items || []).reduce((acc, item) => {
                       const date = item.releaseDate;
                       if (!acc[date]) acc[date] = [];
                       acc[date].push(item);
