@@ -507,51 +507,97 @@ export default function ReleaseCalendarPage() {
 
             {/* 网格视图 */}
             {viewMode === 'grid' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {currentItems.map((item) => (
-                  <div key={item.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          {getTypeIcon(item.type)}
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{getTypeLabel(item.type)}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                          <Clock className="w-3 h-3" />
-                          {formatDate(item.releaseDate)}
-                        </div>
-                      </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {currentItems.map((item) => {
+                  const isToday = item.releaseDate === new Date().toISOString().split('T')[0];
+                  const isUpcoming = new Date(item.releaseDate) > new Date();
+                  const isPast = new Date(item.releaseDate) < new Date();
 
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
-                        {item.title}
-                      </h3>
-
-                      <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                        <div>
-                          <span className="font-medium">导演:</span> {item.director}
-                        </div>
-                        <div>
-                          <span className="font-medium">主演:</span> {item.actors}
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            <span>{item.region}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Tag className="w-3 h-3" />
-                            <span>{item.genre}</span>
-                          </div>
-                        </div>
-                        {item.episodes && (
-                          <div>
-                            <span className="font-medium">集数:</span> {item.episodes}集
-                          </div>
+                  return (
+                    <div key={item.id} className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                      {/* 状态指示器 */}
+                      <div className="absolute top-3 right-3 z-10">
+                        {isToday && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 animate-pulse">
+                            🔥 今日上映
+                          </span>
+                        )}
+                        {isUpcoming && !isToday && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            ⏰ 即将上映
+                          </span>
+                        )}
+                        {isPast && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                            ✅ 已上映
+                          </span>
                         )}
                       </div>
+
+                      {/* 内容区域 */}
+                      <div className="p-6">
+                        {/* 头部信息 */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <div className={`p-2 rounded-lg ${item.type === 'movie' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'}`}>
+                              {getTypeIcon(item.type)}
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                {getTypeLabel(item.type)}
+                              </span>
+                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                <Clock className="w-3 h-3" />
+                                {formatDate(item.releaseDate)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 标题 */}
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-3 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          {item.title}
+                        </h3>
+
+                        {/* 详细信息 */}
+                        <div className="space-y-3 text-sm">
+                          <div className="flex items-start gap-2">
+                            <span className="font-medium text-gray-700 dark:text-gray-300 min-w-0 flex-shrink-0">导演:</span>
+                            <span className="text-gray-600 dark:text-gray-400 line-clamp-1">{item.director}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="font-medium text-gray-700 dark:text-gray-300 min-w-0 flex-shrink-0">主演:</span>
+                            <span className="text-gray-600 dark:text-gray-400 line-clamp-2">{item.actors}</span>
+                          </div>
+
+                          {/* 标签区域 */}
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-xs">
+                              <MapPin className="w-3 h-3" />
+                              <span className="text-gray-600 dark:text-gray-400">{item.region}</span>
+                            </div>
+                            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-xs">
+                              <Tag className="w-3 h-3" />
+                              <span className="text-gray-600 dark:text-gray-400">{item.genre}</span>
+                            </div>
+                            {item.episodes && (
+                              <div className="flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 rounded-md text-xs">
+                                <Tv className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                <span className="text-green-600 dark:text-green-400 font-medium">{item.episodes}集</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 底部渐变效果 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      </div>
+
+                      {/* 悬停效果遮罩 */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
