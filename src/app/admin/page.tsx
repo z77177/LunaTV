@@ -887,7 +887,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                           });
 
                           if (response.ok) {
-                            await fetchConfig();
+                            await refreshConfig();
                             showAlert({
                               type: 'success',
                               title: '设置已更新',
@@ -947,7 +947,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                         });
 
                         if (response.ok) {
-                          await fetchConfig();
+                          await refreshConfig();
                         } else {
                           throw new Error('更新失败');
                         }
