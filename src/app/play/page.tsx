@@ -2823,7 +2823,7 @@ function PlayPageClient() {
                 try {
                   // 清理缓冲区后重新开始，利用v1.6.13的时间戳包装修复
                   const currentTime = video.currentTime;
-                  hls.trigger(Hls.Events.BUFFER_RESET);
+                  hls.trigger(Hls.Events.BUFFER_RESET, undefined);
                   hls.startLoad(currentTime);
                 } catch (e) {
                   console.warn('缓冲区重置失败:', e);

@@ -1100,7 +1100,7 @@ function LivePageClient() {
         console.log('直播时间戳错误，利用v1.6.13修复重新加载...');
         try {
           // 对于直播，直接重新开始加载最新片段
-          hls.trigger(Hls.Events.BUFFER_RESET);
+          hls.trigger(Hls.Events.BUFFER_RESET, undefined);
           hls.startLoad();
         } catch (e) {
           console.warn('直播缓冲区重置失败:', e);
