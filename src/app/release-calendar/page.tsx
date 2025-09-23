@@ -31,6 +31,9 @@ export default function ReleaseCalendarPage() {
   // 返回顶部按钮状态
   const [showBackToTop, setShowBackToTop] = useState(false);
 
+  // 日历视图的当前月份
+  const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+
   // 清理过期缓存
   const cleanExpiredCache = () => {
     const CACHE_DURATION = 2 * 60 * 60 * 1000; // 2小时
@@ -619,22 +622,22 @@ export default function ReleaseCalendarPage() {
                   <div className="flex items-center justify-between mb-4">
                     <button
                       onClick={() => {
-                        const prevMonth = new Date();
+                        const prevMonth = new Date(currentCalendarDate);
                         prevMonth.setMonth(prevMonth.getMonth() - 1);
-                        // 这里可以添加月份切换逻辑
+                        setCurrentCalendarDate(prevMonth);
                       }}
                       className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     >
                       ← 上个月
                     </button>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })}
+                      {currentCalendarDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' })}
                     </h3>
                     <button
                       onClick={() => {
-                        const nextMonth = new Date();
+                        const nextMonth = new Date(currentCalendarDate);
                         nextMonth.setMonth(nextMonth.getMonth() + 1);
-                        // 这里可以添加月份切换逻辑
+                        setCurrentCalendarDate(nextMonth);
                       }}
                       className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     >
@@ -655,8 +658,8 @@ export default function ReleaseCalendarPage() {
                   <div className="grid grid-cols-7 gap-2">
                     {(() => {
                       const today = new Date();
-                      const currentMonth = today.getMonth();
-                      const currentYear = today.getFullYear();
+                      const currentMonth = currentCalendarDate.getMonth();
+                      const currentYear = currentCalendarDate.getFullYear();
                       const firstDay = new Date(currentYear, currentMonth, 1);
                       const lastDay = new Date(currentYear, currentMonth + 1, 0);
                       const startDate = new Date(firstDay);
@@ -668,10 +671,15 @@ export default function ReleaseCalendarPage() {
                       // 生成6周的日期
                       for (let week = 0; week < 6; week++) {
                         for (let day = 0; day < 7; day++) {
-                          const dateStr = current.toISOString().split('T')[0];
+                          // 避免时区问题，使用本地日期格式
+                          const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
                           const isCurrentMonth = current.getMonth() === currentMonth;
                           const isToday = current.toDateString() === today.toDateString();
                           const dayItems = currentItems.filter(item => item.releaseDate === dateStr);
+                          // 去重：按title和director去重
+                          const uniqueDayItems = dayItems.filter((item, index, self) =>
+                            index === self.findIndex(t => t.title === item.title && t.director === item.director)
+                          );
 
                           days.push(
                             <div
@@ -692,7 +700,7 @@ export default function ReleaseCalendarPage() {
 
                               {/* 该日的影片 */}
                               <div className="space-y-1">
-                                {dayItems.slice(0, 2).map((item, index) => (
+                                {uniqueDayItems.slice(0, 2).map((item, index) => (
                                   <div
                                     key={`${item.id}-${index}`}
                                     className={`text-xs p-1 rounded truncate cursor-pointer transition-colors ${
@@ -705,9 +713,9 @@ export default function ReleaseCalendarPage() {
                                     {item.title}
                                   </div>
                                 ))}
-                                {dayItems.length > 2 && (
+                                {uniqueDayItems.length > 2 && (
                                   <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                                    +{dayItems.length - 2} 更多
+                                    +{uniqueDayItems.length - 2} 更多
                                   </div>
                                 )}
                               </div>
@@ -725,20 +733,26 @@ export default function ReleaseCalendarPage() {
 
                 {/* 今日上映详情 */}
                 {(() => {
-                  const todayStr = new Date().toISOString().split('T')[0];
+                  const today = new Date();
+                  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                   const todayItems = currentItems.filter(item => item.releaseDate === todayStr);
 
-                  if (todayItems.length > 0) {
+                  // 去重：按title和director去重
+                  const uniqueTodayItems = todayItems.filter((item, index, self) =>
+                    index === self.findIndex(t => t.title === item.title && t.director === item.director)
+                  );
+
+                  if (uniqueTodayItems.length > 0) {
                     return (
                       <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg p-6 border border-red-200 dark:border-red-800">
                         <div className="flex items-center gap-2 mb-4">
                           <span className="text-2xl">🔥</span>
                           <h3 className="text-lg font-bold text-red-800 dark:text-red-300">
-                            今日上映 ({todayItems.length} 部)
+                            今日上映 ({uniqueTodayItems.length} 部)
                           </h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {todayItems.map((item) => (
+                          {uniqueTodayItems.map((item) => (
                             <div key={item.id} className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-red-100 dark:border-red-800/50">
                               <div className="flex items-center gap-2 mb-2">
                                 {item.type === 'movie' ? <Film className="w-4 h-4 text-amber-600" /> : <Tv className="w-4 h-4 text-purple-600" />}

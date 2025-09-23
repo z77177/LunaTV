@@ -49,10 +49,10 @@ const TMDBCard: React.FC<{
 }> = ({ item, contentType, onClick }) => {
   return (
     <div
-      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer"
+      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer h-full flex flex-col"
       onClick={onClick}
     >
-      <div className="aspect-[3/4] relative">
+      <div className="aspect-[3/4] relative flex-shrink-0">
         {item.poster ? (
           <img
             src={item.poster}
@@ -85,24 +85,31 @@ const TMDBCard: React.FC<{
         )}
       </div>
 
-      <div className="p-3">
-        <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2 mb-2">
+      <div className="p-3 flex-1 flex flex-col">
+        <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 flex-shrink-0">
           {item.title}
         </h3>
 
-        <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
-          {/* 角色信息 */}
-          {item.character && (
-            <div>饰演: {item.character}</div>
-          )}
+        <div className="flex-1 flex flex-col justify-between">
+          <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+            {/* 角色信息 */}
+            {item.character && (
+              <div className="line-clamp-1">饰演: {item.character}</div>
+            )}
 
-          {/* 集数信息（电视剧） */}
-          {contentType === 'tv' && item.episode_count && (
-            <div>{item.episode_count} 集</div>
-          )}
+            {/* 集数信息（电视剧） */}
+            {contentType === 'tv' && item.episode_count && (
+              <div>{item.episode_count} 集</div>
+            )}
 
-          {/* 人气和投票数 */}
-          <div className="flex justify-between">
+            {/* 语言 */}
+            {item.original_language && (
+              <div>语言: {item.original_language.toUpperCase()}</div>
+            )}
+          </div>
+
+          {/* 底部信息 */}
+          <div className="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400">
             {item.popularity && (
               <span>人气: {item.popularity.toFixed(1)}</span>
             )}
@@ -110,11 +117,6 @@ const TMDBCard: React.FC<{
               <span>{item.vote_count} 票</span>
             )}
           </div>
-
-          {/* 语言 */}
-          {item.original_language && (
-            <div>语言: {item.original_language.toUpperCase()}</div>
-          )}
         </div>
       </div>
     </div>
@@ -199,11 +201,13 @@ export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
 
     return (
       <div style={style} {...ariaAttributes} className="p-2">
-        <TMDBCard
-          item={item}
-          contentType={cellContentType}
-          onClick={() => cellOnItemClick?.(item)}
-        />
+        <div className="w-full h-full">
+          <TMDBCard
+            item={item}
+            contentType={cellContentType}
+            onClick={() => cellOnItemClick?.(item)}
+          />
+        </div>
       </div>
     );
   }, []);
