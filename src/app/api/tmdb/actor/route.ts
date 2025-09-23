@@ -100,13 +100,16 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`[TMDB演员搜索API] 搜索演员: ${actorName}, 类型: ${type}`);
+    console.log(`[TMDB演员搜索API] 筛选参数:`, filterOptions);
 
     // 调用TMDB演员搜索函数
+    console.log(`[TMDB演员搜索API] 开始调用 searchTMDBActorWorks...`);
     const result = await searchTMDBActorWorks(
       actorName.trim(),
       type as 'movie' | 'tv',
       filterOptions
     );
+    console.log(`[TMDB演员搜索API] searchTMDBActorWorks 调用完成`);
 
     console.log(`[TMDB演员搜索API] 搜索结果: ${result.list?.length || 0} 项`);
 
