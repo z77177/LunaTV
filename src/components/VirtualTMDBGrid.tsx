@@ -166,37 +166,47 @@ export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
 
   // 渲染单个网格项
   const CellComponent = useCallback(({
+    ariaAttributes,
     columnIndex,
     rowIndex,
     style,
+    displayData: cellDisplayData,
+    displayItemCount: cellDisplayItemCount,
+    columnCount: cellColumnCount,
+    rowCount: cellRowCount,
+    hasNextPage: cellHasNextPage,
+    isLoadingMore: cellIsLoadingMore,
+    loadMoreItems: cellLoadMoreItems,
+    contentType: cellContentType,
+    onItemClick: cellOnItemClick,
   }: any) => {
-    const index = rowIndex * columnCount + columnIndex;
+    const index = rowIndex * cellColumnCount + columnIndex;
 
-    if (index >= displayItemCount) {
-      return <div style={style} />;
+    if (index >= cellDisplayItemCount) {
+      return <div style={style} {...ariaAttributes} />;
     }
 
-    const item = displayData[index];
+    const item = cellDisplayData[index];
     if (!item) {
-      return <div style={style} />;
+      return <div style={style} {...ariaAttributes} />;
     }
 
     // 检查是否需要加载更多
-    const remainingRows = rowCount - rowIndex;
-    if (remainingRows <= LOAD_MORE_THRESHOLD && hasNextPage && !isLoadingMore) {
-      loadMoreItems();
+    const remainingRows = cellRowCount - rowIndex;
+    if (remainingRows <= LOAD_MORE_THRESHOLD && cellHasNextPage && !cellIsLoadingMore) {
+      cellLoadMoreItems();
     }
 
     return (
-      <div style={style} className="p-2">
+      <div style={style} {...ariaAttributes} className="p-2">
         <TMDBCard
           item={item}
-          contentType={contentType}
-          onClick={() => onItemClick?.(item)}
+          contentType={cellContentType}
+          onClick={() => cellOnItemClick?.(item)}
         />
       </div>
     );
-  }, [displayData, displayItemCount, columnCount, rowCount, hasNextPage, isLoadingMore, loadMoreItems, contentType, onItemClick]);
+  }, []);
 
   // 空状态
   if (!isLoading && results.length === 0) {
@@ -233,19 +243,26 @@ export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
     <div ref={containerRef} className="w-full">
       {containerWidth > 0 && (
         <Grid
-          className="virtual-tmdb-grid"
-          columnCount={columnCount}
-          columnWidth={itemWidth}
-          height={Math.min(rowCount * itemHeight, 800)} // 最大高度限制
-          rowCount={rowCount}
-          rowHeight={itemHeight}
-          width={containerWidth}
-          style={{
-            overflowY: isSingleRow ? 'hidden' : 'auto',
+          cellComponent={CellComponent}
+          cellProps={{
+            displayData,
+            displayItemCount,
+            columnCount,
+            rowCount,
+            hasNextPage,
+            isLoadingMore,
+            loadMoreItems,
+            contentType,
+            onItemClick,
           }}
-        >
-          {CellComponent}
-        </Grid>
+          columnCount={columnCount}
+          columnWidth={itemWidth + 16}
+          defaultHeight={Math.min(rowCount * itemHeight, 800)}
+          defaultWidth={containerWidth}
+          rowCount={rowCount}
+          rowHeight={itemHeight + 16}
+          overscanCount={1}
+        />
       )}
 
       {/* 加载更多指示器 */}
