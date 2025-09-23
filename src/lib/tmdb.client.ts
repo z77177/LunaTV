@@ -238,7 +238,7 @@ export async function searchTMDBActorWorks(
         message: 'TMDB演员搜索功能未启用或API Key未配置',
         list: [],
         source: 'tmdb'
-      };
+      } as TMDBResult;
     }
 
     // 检查缓存 - 为整个搜索结果缓存
@@ -255,7 +255,7 @@ export async function searchTMDBActorWorks(
     const personSearch = await searchTMDBPerson(actorName);
 
     if (personSearch.results.length === 0) {
-      const result = {
+      const result: TMDBResult = {
         code: 200,
         message: '未找到相关演员',
         list: [],
@@ -406,7 +406,7 @@ export async function searchTMDBActorWorks(
 
     console.log(`[TMDB演员搜索] 筛选后找到 ${list.length} 个${type === 'movie' ? '电影' : '电视剧'}作品（原始: ${works.length}）`);
 
-    const result = {
+    const result: TMDBResult = {
       code: 200,
       message: '获取成功',
       list: list,
@@ -427,6 +427,6 @@ export async function searchTMDBActorWorks(
       message: `搜索失败: ${(error as Error).message}`,
       list: [],
       source: 'tmdb'
-    };
+    } as TMDBResult;
   }
 }
