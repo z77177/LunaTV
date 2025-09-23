@@ -244,7 +244,7 @@ export const VirtualTMDBGrid: React.FC<VirtualTMDBGridProps> = ({
             overflowY: isSingleRow ? 'hidden' : 'auto',
           }}
         >
-          {CellComponent}
+          {({ columnIndex, rowIndex, style }: any) => CellComponent({ columnIndex, rowIndex, style })}
         </Grid>
       )}
 
