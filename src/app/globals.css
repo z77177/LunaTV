@@ -175,21 +175,21 @@ div[data-media-provider] video {
   }
 }
 
-/* 修复音量控制hover区域 - 针对音量滑块的特殊优化 */
+/* 修复音量控制hover区域 - 精确控制触发范围 */
 @media (hover: hover) {
   .art-control-volume {
     position: relative !important;
-    padding: 5px; /* 音量按钮需要更大的hover区域 */
+    padding: 3px; /* 和弹幕按钮一样的hover区域 */
   }
 
-  /* 扩大音量按钮的hover检测区域到音量面板 */
+  /* 缩小hover检测区域，只稍微扩展到面板方向 */
   .art-control-volume::before {
     content: '';
     position: absolute;
-    top: -50px; /* 扩展到音量面板区域 */
-    left: -10px;
-    right: -10px;
-    bottom: -5px;
+    top: -20px; /* 只扩展20px，避免过早触发 */
+    left: -5px;
+    right: -5px;
+    bottom: -3px;
     z-index: -1;
     pointer-events: auto;
   }
@@ -200,12 +200,12 @@ div[data-media-provider] video {
     opacity: 1 !important;
     transform: translateY(0) !important;
     pointer-events: auto !important;
-    transition: opacity 0.15s ease 0.05s, transform 0.15s ease 0.05s !important; /* 更快显示 */
+    transition: opacity 0.15s ease 0.1s, transform 0.15s ease 0.1s !important; /* 0.1s显示延迟 */
   }
 
-  /* 音量面板默认隐藏状态，更长的隐藏延迟 */
+  /* 音量面板默认隐藏状态，和弹幕一样的延迟 */
   .art-volume-panel {
-    transition: opacity 0.15s ease 0.5s, transform 0.15s ease 0.5s !important; /* 0.5s隐藏延迟 */
+    transition: opacity 0.15s ease 0.3s, transform 0.15s ease 0.3s !important; /* 0.3s隐藏延迟 */
   }
 }
 
