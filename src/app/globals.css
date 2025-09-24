@@ -250,3 +250,10 @@ div[data-media-provider] video {
 .smooth-transition {
   transition: all 0.3s ease-in-out;
 }
+
+/* 移动端隐藏弹幕配置按钮 */
+@media (max-width: 1080px), (hover: none) {
+  .artplayer-plugin-danmuku .apd-config {
+    display: none !important;
+  }
+}

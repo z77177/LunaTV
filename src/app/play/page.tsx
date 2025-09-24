@@ -122,13 +122,22 @@ function PlayPageClient() {
     blockAdEnabledRef.current = blockAdEnabled;
   }, [blockAdEnabled]);
 
-  // 外部弹幕开关（从 localStorage 继承，默认 true）
+  // 外部弹幕开关（从 localStorage 继承，移动端默认关闭，桌面端默认开启）
   const [externalDanmuEnabled, setExternalDanmuEnabled] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const v = localStorage.getItem('enable_external_danmu');
       if (v !== null) return v === 'true';
+
+      // 检测移动设备
+      const userAgent = navigator.userAgent;
+      const isIOSDevice = /iPad|iPhone|iPod/i.test(userAgent) && !(window as any).MSStream;
+      const isIOS13Device = isIOSDevice || (userAgent.includes('Macintosh') && navigator.maxTouchPoints >= 1);
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) || isIOS13Device;
+
+      // 移动端默认关闭弹幕，桌面端默认开启
+      return !isMobileDevice;
     }
-    return true; // 默认开启外部弹幕
+    return false; // 服务端渲染时默认关闭
   });
   const externalDanmuEnabledRef = useRef(externalDanmuEnabled);
   useEffect(() => {
@@ -3216,18 +3225,19 @@ function PlayPageClient() {
         // 添加弹幕插件按钮选择性隐藏CSS
         const optimizeDanmukuControlsCSS = () => {
           if (document.getElementById('danmuku-controls-optimize')) return;
-          
+
           const style = document.createElement('style');
           style.id = 'danmuku-controls-optimize';
           style.textContent = `
-            /* 只显示弹幕配置按钮，隐藏开关按钮和发射器 */
+            /* 隐藏弹幕开关按钮和发射器 */
             .artplayer-plugin-danmuku .apd-toggle {
               display: none !important;
             }
-            
+
             .artplayer-plugin-danmuku .apd-emitter {
               display: none !important;
             }
+
             
             /* 弹幕配置面板优化 - 修复全屏模式下点击问题 */
             .artplayer-plugin-danmuku .apd-config {
