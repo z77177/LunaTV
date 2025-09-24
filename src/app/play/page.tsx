@@ -122,22 +122,13 @@ function PlayPageClient() {
     blockAdEnabledRef.current = blockAdEnabled;
   }, [blockAdEnabled]);
 
-  // 外部弹幕开关（从 localStorage 继承，移动端默认关闭，桌面端默认开启）
+  // 外部弹幕开关（从 localStorage 继承，默认全部关闭）
   const [externalDanmuEnabled, setExternalDanmuEnabled] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const v = localStorage.getItem('enable_external_danmu');
       if (v !== null) return v === 'true';
-
-      // 检测移动设备
-      const userAgent = navigator.userAgent;
-      const isIOSDevice = /iPad|iPhone|iPod/i.test(userAgent) && !(window as any).MSStream;
-      const isIOS13Device = isIOSDevice || (userAgent.includes('Macintosh') && navigator.maxTouchPoints >= 1);
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) || isIOS13Device;
-
-      // 移动端默认关闭弹幕，桌面端默认开启
-      return !isMobileDevice;
     }
-    return false; // 服务端渲染时默认关闭
+    return false; // 默认关闭外部弹幕
   });
   const externalDanmuEnabledRef = useRef(externalDanmuEnabled);
   useEffect(() => {
@@ -3303,21 +3294,7 @@ function PlayPageClient() {
                   pointer-events: auto !important;
                 }
 
-                /* 恢复ArtPlayer原生的hover显示机制 */
-                .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-                .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
-                  opacity: 1 !important;
-                  pointer-events: auto !important;
-                  visibility: visible !important;
-                }
-
-                /* 仅在实际拖拽进度条时才禁用弹幕hover */
-                .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-                .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
-                  opacity: 0 !important;
-                  pointer-events: none !important;
-                  visibility: hidden !important;
-                }
+                /* 简化：依赖全局CSS中的hover处理 */
 
                 /* 确保进度条层级足够高，避免被弹幕面板遮挡 */
                 .art-progress {
@@ -3446,17 +3423,23 @@ function PlayPageClient() {
         // 移动端弹幕配置按钮点击切换支持 - 基于ArtPlayer设置按钮原理
         const addMobileDanmakuToggle = () => {
           const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-          
+
           setTimeout(() => {
             const configButton = document.querySelector('.artplayer-plugin-danmuku .apd-config');
             const configPanel = document.querySelector('.artplayer-plugin-danmuku .apd-config-panel');
-            
+
             if (!configButton || !configPanel) {
               console.warn('弹幕配置按钮或面板未找到');
               return;
             }
-            
+
             console.log('设备类型:', isMobile ? '移动端' : '桌面端');
+
+            // 桌面端：简化处理，依赖CSS hover，移除复杂的JavaScript事件
+            if (!isMobile) {
+              console.log('桌面端：使用CSS原生hover，避免JavaScript事件冲突');
+              return;
+            }
             
             if (isMobile) {
               // 移动端：添加点击切换支持 + 持久位置修正
@@ -3541,77 +3524,6 @@ function PlayPageClient() {
               });
 
               console.log('移动端弹幕配置切换功能已激活');
-            } else {
-              // 桌面端：使用hover延迟交互，与移动端保持一致
-              console.log('为桌面端添加弹幕配置按钮hover延迟交互功能');
-
-              let isConfigVisible = false;
-              let showTimer: NodeJS.Timeout | null = null;
-              let hideTimer: NodeJS.Timeout | null = null;
-
-              const showPanel = () => {
-                if (hideTimer) {
-                  clearTimeout(hideTimer);
-                  hideTimer = null;
-                }
-
-                if (!isConfigVisible) {
-                  isConfigVisible = true;
-                  (configPanel as HTMLElement).style.setProperty('display', 'block', 'important');
-                  // 添加show类来触发动画
-                  setTimeout(() => {
-                    (configPanel as HTMLElement).classList.add('show');
-                  }, 10);
-                  console.log('桌面端弹幕配置面板：显示');
-                }
-              };
-
-              const hidePanel = () => {
-                if (showTimer) {
-                  clearTimeout(showTimer);
-                  showTimer = null;
-                }
-
-                if (isConfigVisible) {
-                  isConfigVisible = false;
-                  (configPanel as HTMLElement).classList.remove('show');
-                  // 等待动画完成后隐藏
-                  setTimeout(() => {
-                    (configPanel as HTMLElement).style.setProperty('display', 'none', 'important');
-                  }, 200);
-                  console.log('桌面端弹幕配置面板：隐藏');
-                }
-              };
-
-              // 鼠标进入按钮或面板区域
-              const handleMouseEnter = () => {
-                if (hideTimer) {
-                  clearTimeout(hideTimer);
-                  hideTimer = null;
-                }
-
-                showTimer = setTimeout(showPanel, 300); // 300ms延迟显示
-              };
-
-              // 鼠标离开按钮或面板区域
-              const handleMouseLeave = () => {
-                if (showTimer) {
-                  clearTimeout(showTimer);
-                  showTimer = null;
-                }
-
-                hideTimer = setTimeout(hidePanel, 500); // 500ms延迟隐藏
-              };
-
-              // 为按钮添加hover事件
-              configButton.addEventListener('mouseenter', handleMouseEnter);
-              configButton.addEventListener('mouseleave', handleMouseLeave);
-
-              // 为面板添加hover事件
-              configPanel.addEventListener('mouseenter', handleMouseEnter);
-              configPanel.addEventListener('mouseleave', handleMouseLeave);
-
-              console.log('桌面端弹幕配置hover延迟交互功能已激活');
             }
           }, 2000); // 延迟2秒确保弹幕插件完全初始化
         };
