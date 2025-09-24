@@ -260,34 +260,27 @@ div[data-media-provider] video {
 
 /* 修复桌面端弹幕配置弹窗hover不稳定问题 */
 @media (min-width: 1081px) and (hover: hover) {
-  /* 严格限制hover触发区域 - 只有鼠标在按钮图标上才触发 */
+  /* 扩大按钮的实际hover区域，但不影响视觉 */
   .artplayer-plugin-danmuku .apd-config {
     position: relative;
-    /* 确保hover区域只限于按钮本身 */
-    overflow: visible;
+    padding: 3px; /* 增加一点内边距扩大hover区域 */
   }
 
-  /* 只有直接hover按钮时才显示面板 */
-  .artplayer-plugin-danmuku .apd-config:hover > .apd-config-panel {
+  /* 按钮或面板hover时都显示面板 */
+  .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+  .artplayer-plugin-danmuku .apd-config .apd-config-panel:hover {
     opacity: 1 !important;
     pointer-events: auto !important;
     visibility: visible !important;
-    transition: opacity 0.1s ease !important;
+    transition: opacity 0.15s ease 0.1s !important; /* 添加0.1s显示延迟 */
   }
 
-  /* 关键：面板自身被hover时也保持显示 */
-  .artplayer-plugin-danmuku .apd-config-panel:hover {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    visibility: visible !important;
-  }
-
-  /* 确保面板默认状态是隐藏的 */
+  /* 确保面板默认状态是隐藏的，隐藏时有延迟 */
   .artplayer-plugin-danmuku .apd-config-panel {
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
-    transition: opacity 0.1s ease;
+    transition: opacity 0.15s ease 0.3s, visibility 0s ease 0.45s; /* 0.3s隐藏延迟 */
   }
 
   /* 面板内部元素在显示时可交互 */
@@ -300,5 +293,6 @@ div[data-media-provider] video {
     opacity: 0 !important;
     pointer-events: none !important;
     visibility: hidden !important;
+    transition: none !important;
   }
 }
