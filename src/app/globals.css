@@ -175,11 +175,23 @@ div[data-media-provider] video {
   }
 }
 
-/* 修复音量控制hover区域 - 使用与弹幕配置相同的延迟机制 */
+/* 修复音量控制hover区域 - 针对音量滑块的特殊优化 */
 @media (hover: hover) {
   .art-control-volume {
     position: relative !important;
-    padding: 3px; /* 扩大hover区域，和弹幕按钮一样 */
+    padding: 5px; /* 音量按钮需要更大的hover区域 */
+  }
+
+  /* 扩大音量按钮的hover检测区域到音量面板 */
+  .art-control-volume::before {
+    content: '';
+    position: absolute;
+    top: -50px; /* 扩展到音量面板区域 */
+    left: -10px;
+    right: -10px;
+    bottom: -5px;
+    z-index: -1;
+    pointer-events: auto;
   }
 
   /* 按钮或面板hover时都显示音量面板 */
@@ -188,12 +200,12 @@ div[data-media-provider] video {
     opacity: 1 !important;
     transform: translateY(0) !important;
     pointer-events: auto !important;
-    transition: opacity 0.15s ease 0.1s, transform 0.15s ease 0.1s !important; /* 0.1s显示延迟 */
+    transition: opacity 0.15s ease 0.05s, transform 0.15s ease 0.05s !important; /* 更快显示 */
   }
 
-  /* 音量面板默认隐藏状态，带隐藏延迟 */
+  /* 音量面板默认隐藏状态，更长的隐藏延迟 */
   .art-volume-panel {
-    transition: opacity 0.15s ease 0.3s, transform 0.15s ease 0.3s !important; /* 0.3s隐藏延迟 */
+    transition: opacity 0.15s ease 0.5s, transform 0.15s ease 0.5s !important; /* 0.5s隐藏延迟 */
   }
 }
 
