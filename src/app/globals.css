@@ -260,8 +260,15 @@ div[data-media-provider] video {
 
 /* 修复桌面端弹幕配置弹窗hover不稳定问题 */
 @media (min-width: 1081px) and (hover: hover) {
-  /* 确保面板在hover时稳定显示，但不扩大触发区域 */
-  .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel {
+  /* 严格限制hover触发区域 - 只有鼠标在按钮图标上才触发 */
+  .artplayer-plugin-danmuku .apd-config {
+    position: relative;
+    /* 确保hover区域只限于按钮本身 */
+    overflow: visible;
+  }
+
+  /* 只有直接hover按钮时才显示面板 */
+  .artplayer-plugin-danmuku .apd-config:hover > .apd-config-panel {
     opacity: 1 !important;
     pointer-events: auto !important;
     visibility: visible !important;
@@ -275,14 +282,23 @@ div[data-media-provider] video {
     visibility: visible !important;
   }
 
-  /* 面板内部元素始终可交互 */
+  /* 确保面板默认状态是隐藏的 */
+  .artplayer-plugin-danmuku .apd-config-panel {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.1s ease;
+  }
+
+  /* 面板内部元素在显示时可交互 */
   .artplayer-plugin-danmuku .apd-config-panel * {
-    pointer-events: auto !important;
+    pointer-events: auto;
   }
 
   /* 防止进度条拖拽时弹窗干扰 */
   .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-config-panel {
     opacity: 0 !important;
     pointer-events: none !important;
+    visibility: hidden !important;
   }
 }
