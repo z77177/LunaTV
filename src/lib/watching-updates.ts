@@ -262,10 +262,10 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Pro
     });
 
     // 检查两种情况：
-    // 1. 新集数更新：API返回的集数比观看时的原始集数多，且必须大于当前播放记录中的集数
-    // 这样可以防止因为播放记录集数被更新而导致的误报
-    const hasUpdate = latestEpisodes > originalTotalEpisodes && latestEpisodes > record.total_episodes;
-    const newEpisodes = hasUpdate ? latestEpisodes - Math.max(originalTotalEpisodes, record.total_episodes) : 0;
+    // 1. 新集数更新：API返回的集数比观看时的原始集数多
+    // 只需要比较原始集数，因为播放记录会被自动更新，不能作为判断依据
+    const hasUpdate = latestEpisodes > originalTotalEpisodes;
+    const newEpisodes = hasUpdate ? latestEpisodes - originalTotalEpisodes : 0;
 
     // 计算保护后的集数（防止API缓存问题导致集数回退）
     const protectedTotalEpisodes = Math.max(latestEpisodes, originalTotalEpisodes, record.total_episodes);
