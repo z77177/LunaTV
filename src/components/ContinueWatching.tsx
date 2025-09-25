@@ -12,6 +12,7 @@ import {
 import {
   getDetailedWatchingUpdates,
   subscribeToWatchingUpdatesEvent,
+  checkWatchingUpdates,
   type WatchingUpdate,
 } from '@/lib/watching-updates';
 
@@ -74,11 +75,37 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     return unsubscribe;
   }, []);
 
-  // 获取watching updates数据
+  // 获取watching updates数据（仅当有播放记录时）
   useEffect(() => {
-    const updateWatchingUpdates = () => {
-      const updates = getDetailedWatchingUpdates();
-      setWatchingUpdates(updates);
+    // 只有在有播放记录时才检查更新
+    if (loading || playRecords.length === 0) {
+      return;
+    }
+
+    const updateWatchingUpdates = async () => {
+      console.log('ContinueWatching: 开始获取更新数据...');
+
+      // 先尝试从缓存加载（快速显示）
+      let updates = getDetailedWatchingUpdates();
+      console.log('ContinueWatching: 缓存数据:', updates);
+
+      if (updates) {
+        setWatchingUpdates(updates);
+        console.log('ContinueWatching: 使用缓存数据');
+      }
+
+      // 如果缓存为空，主动检查一次
+      if (!updates) {
+        console.log('ContinueWatching: 缓存为空，主动检查更新...');
+        try {
+          await checkWatchingUpdates();
+          updates = getDetailedWatchingUpdates();
+          setWatchingUpdates(updates);
+          console.log('ContinueWatching: 主动检查完成，获得数据:', updates);
+        } catch (error) {
+          console.error('ContinueWatching: 主动检查更新失败:', error);
+        }
+      }
     };
 
     // 初始加载
@@ -86,11 +113,13 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
 
     // 订阅更新事件
     const unsubscribe = subscribeToWatchingUpdatesEvent(() => {
-      updateWatchingUpdates();
+      console.log('ContinueWatching: 收到更新事件');
+      const updates = getDetailedWatchingUpdates();
+      setWatchingUpdates(updates);
     });
 
     return unsubscribe;
-  }, []);
+  }, [loading, playRecords.length]); // 依赖播放记录加载状态
 
   // 如果没有播放记录，则不渲染组件
   if (!loading && playRecords.length === 0) {
