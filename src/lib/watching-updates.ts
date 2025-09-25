@@ -114,7 +114,7 @@ export async function checkWatchingUpdates(): Promise<void> {
       try {
         // 从存储key中解析出videoId
         const [sourceName, videoId] = record.id.split('+');
-        const updateInfo = await checkSingleRecordUpdate(record, videoId);
+        const updateInfo = await checkSingleRecordUpdate(record, videoId, sourceName);
 
         // 使用从 checkSingleRecordUpdate 返回的 protectedTotalEpisodes（已经包含了保护机制）
         const protectedTotalEpisodes = updateInfo.latestEpisodes;
@@ -209,7 +209,7 @@ export async function checkWatchingUpdates(): Promise<void> {
 /**
  * 检查单个剧集的更新状态（调用真实API）
  */
-async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Promise<{ hasUpdate: boolean; hasContinueWatching: boolean; newEpisodes: number; remainingEpisodes: number; latestEpisodes: number }> {
+async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, storageSourceName?: string): Promise<{ hasUpdate: boolean; hasContinueWatching: boolean; newEpisodes: number; remainingEpisodes: number; latestEpisodes: number }> {
   try {
     let sourceKey = record.source_name;
 
@@ -294,8 +294,8 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Pro
             total_episodes: latestEpisodes
           };
 
-          // 保存更新后的播放记录
-          await savePlayRecord(record.source_name, videoId, updatedRecord);
+          // 保存更新后的播放记录，使用解析出的sourceName确保key一致
+          await savePlayRecord(storageSourceName || record.source_name, videoId, updatedRecord);
           console.log(`✅ 播放记录集数更新成功: ${record.title}`);
         } catch (error) {
           console.error(`❌ 更新播放记录集数失败: ${record.title}`, error);
