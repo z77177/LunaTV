@@ -1,6 +1,6 @@
 'use client';
 
-import { getAllPlayRecords, PlayRecord, generateStorageKey, forceRefreshPlayRecordsCache } from './db.client';
+import { getAllPlayRecords, PlayRecord, generateStorageKey, forceRefreshPlayRecordsCache, savePlayRecord } from './db.client';
 
 // 缓存键
 const WATCHING_UPDATES_CACHE_KEY = 'moontv_watching_updates';
@@ -284,6 +284,23 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string): Pro
 
     if (hasUpdate) {
       console.log(`${record.title} 发现新集数: ${originalTotalEpisodes} -> ${latestEpisodes} 集，新增${newEpisodes}集`);
+
+      // 如果检测到新集数，同时更新播放记录的total_episodes
+      if (latestEpisodes > record.total_episodes) {
+        console.log(`🔄 更新播放记录集数: ${record.title} ${record.total_episodes} -> ${latestEpisodes}`);
+        try {
+          const updatedRecord: PlayRecord = {
+            ...record,
+            total_episodes: latestEpisodes
+          };
+
+          // 保存更新后的播放记录
+          await savePlayRecord(record.source_name, videoId, updatedRecord);
+          console.log(`✅ 播放记录集数更新成功: ${record.title}`);
+        } catch (error) {
+          console.error(`❌ 更新播放记录集数失败: ${record.title}`, error);
+        }
+      }
     }
 
     if (hasContinueWatching) {
