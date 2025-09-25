@@ -9,6 +9,11 @@ import {
   getAllPlayRecords,
   subscribeToDataUpdates,
 } from '@/lib/db.client';
+import {
+  getDetailedWatchingUpdates,
+  subscribeToWatchingUpdatesEvent,
+  type WatchingUpdate,
+} from '@/lib/watching-updates';
 
 import ScrollableRow from '@/components/ScrollableRow';
 import VideoCard from '@/components/VideoCard';
@@ -22,6 +27,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     (PlayRecord & { key: string })[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [watchingUpdates, setWatchingUpdates] = useState<WatchingUpdate | null>(null);
 
   // 处理播放记录数据更新的函数
   const updatePlayRecords = (allRecords: Record<string, PlayRecord>) => {
@@ -68,6 +74,24 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     return unsubscribe;
   }, []);
 
+  // 获取watching updates数据
+  useEffect(() => {
+    const updateWatchingUpdates = () => {
+      const updates = getDetailedWatchingUpdates();
+      setWatchingUpdates(updates);
+    };
+
+    // 初始加载
+    updateWatchingUpdates();
+
+    // 订阅更新事件
+    const unsubscribe = subscribeToWatchingUpdatesEvent(() => {
+      updateWatchingUpdates();
+    });
+
+    return unsubscribe;
+  }, []);
+
   // 如果没有播放记录，则不渲染组件
   if (!loading && playRecords.length === 0) {
     return null;
@@ -83,6 +107,22 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
   const parseKey = (key: string) => {
     const [source, id] = key.split('+');
     return { source, id };
+  };
+
+  // 检查播放记录是否有新集数更新
+  const getNewEpisodesCount = (record: PlayRecord & { key: string }): number => {
+    if (!watchingUpdates || !watchingUpdates.updatedSeries) return 0;
+
+    const { source, id } = parseKey(record.key);
+
+    // 在watchingUpdates中查找匹配的剧集
+    const matchedSeries = watchingUpdates.updatedSeries.find(series =>
+      series.sourceKey === source &&
+      series.videoId === id &&
+      series.hasNewEpisode
+    );
+
+    return matchedSeries ? (matchedSeries.newEpisodes || 0) : 0;
   };
 
   return (
@@ -121,10 +161,11 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
           : // 显示真实数据
             playRecords.map((record) => {
               const { source, id } = parseKey(record.key);
+              const newEpisodesCount = getNewEpisodesCount(record);
               return (
                 <div
                   key={record.key}
-                  className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
+                  className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44 relative'
                 >
                   <VideoCard
                     id={id}
@@ -145,6 +186,12 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                     }
                     type={record.total_episodes > 1 ? 'tv' : ''}
                   />
+                  {/* 新集数徽章 */}
+                  {newEpisodesCount > 0 && (
+                    <div className='absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg z-50'>
+                      +{newEpisodesCount}集
+                    </div>
+                  )}
                 </div>
               );
             })}
