@@ -332,8 +332,8 @@ export const UserMenu: React.FC = () => {
           // 筛选真正需要继续观看的记录
           const validPlayRecords = recordsArray.filter(record => {
             const progress = getProgress(record);
-            // 进度在5%-95%之间，且播放时间超过2分钟才算有效记录
-            return progress >= 5 && progress <= 95 && record.play_time >= 120;
+            // 进度大于5%，且播放时间超过2分钟才算有效记录
+            return progress >= 5 && record.play_time >= 120;
           });
 
           // 按最后播放时间降序排列
@@ -1673,7 +1673,7 @@ export const UserMenu: React.FC = () => {
               <PlayCircle className='w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4' />
               <p className='text-gray-500 dark:text-gray-400 mb-2'>暂无需要继续观看的内容</p>
               <p className='text-xs text-gray-400 dark:text-gray-500'>
-                观看进度在5%-95%之间的内容会显示在这里
+                观看进度超过5%且播放时间超过2分钟的内容会显示在这里
               </p>
             </div>
           )}
