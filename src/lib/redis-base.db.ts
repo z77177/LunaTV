@@ -745,7 +745,7 @@ export abstract class BaseRedisStorage implements IStorage {
 
         try {
           const loginStatsKey = `user_login_stats:${userName}`;
-          const storedLoginStats = await this.redisClient.get(loginStatsKey);
+          const storedLoginStats = await this.client.get(loginStatsKey);
           if (storedLoginStats) {
             const parsed = JSON.parse(storedLoginStats);
             loginStats = {
@@ -820,7 +820,7 @@ export abstract class BaseRedisStorage implements IStorage {
 
       try {
         const loginStatsKey = `user_login_stats:${userName}`;
-        const storedLoginStats = await this.redisClient.get(loginStatsKey);
+        const storedLoginStats = await this.client.get(loginStatsKey);
         if (storedLoginStats) {
           const parsed = JSON.parse(storedLoginStats);
           loginStats = {
@@ -967,7 +967,7 @@ export abstract class BaseRedisStorage implements IStorage {
       const loginStatsKey = `user_login_stats:${userName}`;
 
       // 获取当前登入统计数据
-      const currentStats = await this.redisClient.get(loginStatsKey);
+      const currentStats = await this.client.get(loginStatsKey);
       const loginStats = currentStats ? JSON.parse(currentStats) : {
         loginCount: 0,
         firstLoginTime: null,
@@ -986,7 +986,7 @@ export abstract class BaseRedisStorage implements IStorage {
       }
 
       // 保存更新后的统计数据
-      await this.redisClient.set(loginStatsKey, JSON.stringify(loginStats));
+      await this.client.set(loginStatsKey, JSON.stringify(loginStats));
 
       console.log(`用户 ${userName} 登入统计已更新:`, loginStats);
     } catch (error) {
