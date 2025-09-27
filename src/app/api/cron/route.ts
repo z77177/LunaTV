@@ -545,8 +545,8 @@ async function optimizeActiveUserLevels() {
             lastLevelUpdate: new Date().toISOString()
           };
 
-          // 保存优化后的统计信息
-          await db.saveUserPlayStat?.(user, optimizedStats);
+          // 注意：这里我们只计算等级信息用于日志显示，不保存到数据库
+          // 等级信息会在前端动态计算，确保数据一致性
           optimizedCount++;
 
           console.log(`🎯 优化用户等级: ${user} -> ${userLevel.icon} ${userLevel.name} (登录${userStats.loginCount}次)`);
