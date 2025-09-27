@@ -40,12 +40,11 @@ function calculateUserLevel(loginCount: number) {
 }
 
 function formatLoginDisplay(loginCount: number) {
-  if (loginCount < 100) {
-    return `${loginCount} 次`;
-  }
-
   const userLevel = calculateUserLevel(loginCount);
+
+  // 所有用户都显示等级，不设最低门槛
   return {
+    isSimple: false,
     level: userLevel,
     displayCount: loginCount > 10000 ? '10000+' :
                   loginCount > 1000 ? `${Math.floor(loginCount / 1000)}k+` :
@@ -958,23 +957,19 @@ const PlayStatsPage: React.FC = () => {
                                   const loginCount = userStat.loginCount || 0;
                                   const loginDisplay = formatLoginDisplay(loginCount);
 
-                                  if (typeof loginDisplay === 'string') {
-                                    return `活跃度: ${loginDisplay}`;
-                                  } else {
-                                    return (
-                                      <div className="space-y-1">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="text-base">{loginDisplay.level.icon}</span>
-                                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                                            {loginDisplay.level.name}
-                                          </span>
-                                        </div>
-                                        <div className="text-xs opacity-60">
-                                          {loginDisplay.displayCount}次登录
-                                        </div>
+                                  return (
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-base">{loginDisplay.level.icon}</span>
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                                          {loginDisplay.level.name}
+                                        </span>
                                       </div>
-                                    );
-                                  }
+                                      <div className="text-xs opacity-60">
+                                        {loginDisplay.displayCount}次登录
+                                      </div>
+                                    </div>
+                                  );
                                 })()}
                               </div>
                               {userStat.mostWatchedSource && (
@@ -1209,37 +1204,24 @@ const PlayStatsPage: React.FC = () => {
                     const loginCount = userStats.loginCount || 0;
                     const loginDisplay = formatLoginDisplay(loginCount);
 
-                    if (typeof loginDisplay === 'string') {
-                      return (
-                        <>
-                          <div className='text-2xl font-bold text-red-800 dark:text-red-300'>
-                            {loginCount}
-                          </div>
-                          <div className='text-sm text-red-600 dark:text-red-400'>
-                            活跃天数
-                          </div>
-                        </>
-                      );
-                    } else {
-                      return (
-                        <div className="space-y-2">
-                          <div className='flex items-center gap-2'>
-                            <span className="text-2xl">{loginDisplay.level.icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-lg font-bold text-red-800 dark:text-red-300 truncate">
-                                {loginDisplay.level.name}
-                              </div>
+                    return (
+                      <div className="space-y-2">
+                        <div className='flex items-center gap-2'>
+                          <span className="text-2xl">{loginDisplay.level.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-lg font-bold text-red-800 dark:text-red-300 truncate">
+                              {loginDisplay.level.name}
                             </div>
                           </div>
-                          <div className='text-sm text-red-600 dark:text-red-400 leading-relaxed'>
-                            {loginDisplay.level.description}
-                          </div>
-                          <div className='text-xs text-red-500/70 dark:text-red-400/70'>
-                            已登录 {loginDisplay.displayCount} 次
-                          </div>
                         </div>
-                      );
-                    }
+                        <div className='text-sm text-red-600 dark:text-red-400 leading-relaxed'>
+                          {loginDisplay.level.description}
+                        </div>
+                        <div className='text-xs text-red-500/70 dark:text-red-400/70'>
+                          已登录 {loginDisplay.displayCount} 次
+                        </div>
+                      </div>
+                    );
                   })()}
                 </div>
                 <div className='p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800'>
@@ -1761,37 +1743,24 @@ const PlayStatsPage: React.FC = () => {
                 const loginCount = userStats.loginCount || 0;
                 const loginDisplay = formatLoginDisplay(loginCount);
 
-                if (typeof loginDisplay === 'string') {
-                  return (
-                    <>
-                      <div className='text-2xl font-bold text-red-800 dark:text-red-300'>
-                        {loginCount}
-                      </div>
-                      <div className='text-sm text-red-600 dark:text-red-400'>
-                        活跃天数
-                      </div>
-                    </>
-                  );
-                } else {
-                  return (
-                    <div className="space-y-2">
-                      <div className='flex items-center gap-2'>
-                        <span className="text-2xl">{loginDisplay.level.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-lg font-bold text-red-800 dark:text-red-300 truncate">
-                            {loginDisplay.level.name}
-                          </div>
+                return (
+                  <div className="space-y-2">
+                    <div className='flex items-center gap-2'>
+                      <span className="text-2xl">{loginDisplay.level.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-lg font-bold text-red-800 dark:text-red-300 truncate">
+                          {loginDisplay.level.name}
                         </div>
                       </div>
-                      <div className='text-sm text-red-600 dark:text-red-400 leading-relaxed'>
-                        {loginDisplay.level.description}
-                      </div>
-                      <div className='text-xs text-red-500/70 dark:text-red-400/70'>
-                        已登录 {loginDisplay.displayCount} 次
-                      </div>
                     </div>
-                  );
-                }
+                    <div className='text-sm text-red-600 dark:text-red-400 leading-relaxed'>
+                      {loginDisplay.level.description}
+                    </div>
+                    <div className='text-xs text-red-500/70 dark:text-red-400/70'>
+                      已登录 {loginDisplay.displayCount} 次
+                    </div>
+                  </div>
+                );
               })()}
             </div>
             <div className='p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800'>

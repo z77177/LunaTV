@@ -525,11 +525,11 @@ async function optimizeActiveUserLevels() {
         const userStats = await db.getUserPlayStat(user);
         if (!userStats || !userStats.loginCount) continue;
 
-        // 计算用户等级
+        // 计算用户等级（所有用户都有等级）
         const userLevel = calculateUserLevel(userStats.loginCount);
 
-        // 如果登录次数很大，添加等级信息优化显示
-        if (userStats.loginCount > 100) {
+        // 为所有用户记录等级信息
+        if (userStats.loginCount > 0) {
           const optimizedStats = {
             ...userStats,
             userLevel: {
@@ -549,7 +549,7 @@ async function optimizeActiveUserLevels() {
           // 等级信息会在前端动态计算，确保数据一致性
           optimizedCount++;
 
-          console.log(`🎯 优化用户等级: ${user} -> ${userLevel.icon} ${userLevel.name} (登录${userStats.loginCount}次)`);
+          console.log(`🎯 用户等级: ${user} -> ${userLevel.icon} ${userLevel.name} (登录${userStats.loginCount}次)`);
         }
       } catch (err) {
         console.error(`❌ 优化用户等级失败 (${user}):`, err);
