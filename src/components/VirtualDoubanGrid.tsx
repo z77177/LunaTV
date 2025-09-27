@@ -207,8 +207,6 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
           }}
           columnCount={columnCount}
           columnWidth={itemWidth + 16}
-          defaultHeight={gridHeight}
-          defaultWidth={containerWidth}
           rowCount={rowCount}
           rowHeight={itemHeight + 16}
           overscanCount={1}
@@ -218,6 +216,9 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
           style={{
+            // react-window 2.1.2优化：明确设置尺寸以避免ResizeObserver
+            height: gridHeight,
+            width: containerWidth,
             overflowX: 'hidden',
             overflowY: 'auto',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
@@ -229,12 +230,12 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
             }),
           }}
           onCellsRendered={(visibleCells, allCells) => {
-            // 使用react-window v2.1.0的新API - 优化性能：
+            // 使用react-window v2.1.0+的新API - 优化性能：
             // 1. visibleCells: 真实可见的单元格范围
             // 2. allCells: 包含overscan的所有渲染单元格范围
             const { rowStopIndex: visibleRowStopIndex } = visibleCells;
             const { rowStopIndex: allRowStopIndex } = allCells;
-            
+
             // 性能优化：只基于真实可见区域判断加载，避免overscan区域误触发
             if (visibleRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD) {
               if (hasNextVirtualPage && !isVirtualLoadingMore) {
