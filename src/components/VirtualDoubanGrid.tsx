@@ -211,9 +211,6 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
           style={{
-            // react-window 2.1.2优化：明确设置尺寸以避免ResizeObserver
-            height: typeof window !== 'undefined' ? Math.min(window.innerHeight - 200, 800) : 600,
-            width: containerWidth,
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
             // 平滑滚动优化
