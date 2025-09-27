@@ -248,6 +248,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
           aria-label={`搜索结果列表 "${searchQuery}"，共${displayItemCount}个结果，当前视图：${viewMode === 'agg' ? '聚合视图' : '全部结果'}`}
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
+          className="bg-white dark:bg-gray-900"
           style={{
             // react-window 2.1.2优化：明确设置尺寸以避免ResizeObserver
             height: gridHeight,
