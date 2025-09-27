@@ -449,6 +449,7 @@ export class UpstashRedisStorage implements IStorage {
         mostWatchedSource: string;
         registrationDays: number;
         lastLoginTime: number;
+        loginCount: number;
         createdAt: number;
       }> = [];
       let totalWatchTime = 0;
@@ -498,6 +499,7 @@ export class UpstashRedisStorage implements IStorage {
           mostWatchedSource: userStat.mostWatchedSource,
           registrationDays,
           lastLoginTime,
+          loginCount: userStat.loginCount || 0, // 添加登入次数字段
           createdAt: userCreatedAt,
         };
 
