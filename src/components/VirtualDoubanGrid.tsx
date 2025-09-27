@@ -176,6 +176,10 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
     <div
       ref={containerRef}
       className='w-full h-[calc(100vh-150px)] overflow-hidden'
+      style={{
+        // 确保最后一行完整显示
+        paddingBottom: '8px'
+      }}
     >
       {loading ? (
         // 加载状态显示骨架屏
@@ -214,8 +218,7 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
           style={{
-            // react-window 2.1.2优化：明确设置尺寸以避免ResizeObserver
-            width: containerWidth,
+            // react-window 2.1.2优化：让ResizeObserver自动获取尺寸
             // 根据源码：必须设置overflow auto才能正确滚动
             overflow: 'auto',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
