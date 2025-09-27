@@ -41,7 +41,7 @@ interface VirtualSearchGridProps {
 // 渐进式加载配置
 const INITIAL_BATCH_SIZE = 12;
 const LOAD_MORE_BATCH_SIZE = 8;
-const LOAD_MORE_THRESHOLD = 2; // react-window 2.1.2优化：减少触发阈值
+const LOAD_MORE_THRESHOLD = 5; // 恢复原来的阈值，避免过度触发
 
 export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
   allResults,
@@ -135,15 +135,15 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
   }: any) => {
     const index = rowIndex * cellColumnCount + columnIndex;
     
-    // 如果超出显示范围，返回null避免渲染
+    // 如果超出显示范围，返回隐藏的占位符
     if (index >= cellDisplayItemCount) {
-      return null;
+      return <div style={{ ...style, visibility: 'hidden' }} />;
     }
 
     const item = cellDisplayData[index];
 
     if (!item) {
-      return null;
+      return <div style={{ ...style, visibility: 'hidden' }} />;
     }
 
     // 根据视图模式渲染不同内容
@@ -252,13 +252,10 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
             // react-window 2.1.2优化：明确设置尺寸以避免ResizeObserver
             height: gridHeight,
             width: containerWidth,
-            overflowX: 'hidden',
-            overflowY: 'auto',
+            // 根据源码：必须设置overflow auto才能正确滚动
+            overflow: 'auto',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
-            // 彻底解决黑色背景：设置为inherit继承父容器背景
-            background: 'inherit',
-            backgroundColor: 'inherit',
             // 平滑滚动优化
             scrollBehavior: 'smooth',
             // 单行网格优化：防止高度异常
@@ -268,16 +265,13 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
             }),
           }}
           onCellsRendered={(visibleCells, allCells) => {
-            // 使用react-window v2.1.2的新API - 更精确的滚动检测：
+            // 使用react-window v2.1.2的API：
             // 1. visibleCells: 真实可见的单元格范围
             // 2. allCells: 包含overscan的所有渲染单元格范围
             const { rowStopIndex: visibleRowStopIndex } = visibleCells;
-            const { rowStopIndex: allRowStopIndex } = allCells;
 
-            // 2.1.2优化：使用更精确的边界检测避免重复触发
-            const isNearBottom = visibleRowStopIndex >= Math.max(0, rowCount - LOAD_MORE_THRESHOLD);
-
-            if (isNearBottom && hasNextPage && !isLoadingMore) {
+            // 简化逻辑：基于可见行检测
+            if (visibleRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD && hasNextPage && !isLoadingMore) {
               loadMoreItems();
             }
           }}
