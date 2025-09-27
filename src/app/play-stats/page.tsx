@@ -31,6 +31,19 @@ const USER_LEVELS = [
 ];
 
 function calculateUserLevel(loginCount: number) {
+  // 0次登录的特殊处理
+  if (loginCount === 0) {
+    return {
+      level: 0,
+      name: "待激活",
+      icon: "💤",
+      minLogins: 0,
+      maxLogins: 0,
+      description: "尚未开始观影之旅",
+      gradient: "from-gray-400 to-gray-500"
+    };
+  }
+
   for (const level of USER_LEVELS) {
     if (loginCount >= level.minLogins && loginCount <= level.maxLogins) {
       return level;
@@ -42,11 +55,11 @@ function calculateUserLevel(loginCount: number) {
 function formatLoginDisplay(loginCount: number) {
   const userLevel = calculateUserLevel(loginCount);
 
-  // 所有用户都显示等级，不设最低门槛
   return {
     isSimple: false,
     level: userLevel,
-    displayCount: loginCount > 10000 ? '10000+' :
+    displayCount: loginCount === 0 ? '0' :
+                  loginCount > 10000 ? '10000+' :
                   loginCount > 1000 ? `${Math.floor(loginCount / 1000)}k+` :
                   loginCount.toString()
   };
@@ -960,13 +973,13 @@ const PlayStatsPage: React.FC = () => {
                                   return (
                                     <div className="space-y-1">
                                       <div className="flex items-center gap-1.5">
-                                        <span className="text-base">{loginDisplay.level.icon}</span>
-                                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                                        <span className="text-base flex-shrink-0">{loginDisplay.level.icon}</span>
+                                        <span className="font-medium text-gray-700 dark:text-gray-300 text-xs leading-tight">
                                           {loginDisplay.level.name}
                                         </span>
                                       </div>
                                       <div className="text-xs opacity-60">
-                                        {loginDisplay.displayCount}次登录
+                                        {loginCount === 0 ? '尚未登录' : `${loginDisplay.displayCount}次登录`}
                                       </div>
                                     </div>
                                   );
@@ -1207,9 +1220,9 @@ const PlayStatsPage: React.FC = () => {
                     return (
                       <div className="space-y-2">
                         <div className='flex items-center gap-2'>
-                          <span className="text-2xl">{loginDisplay.level.icon}</span>
+                          <span className="text-2xl flex-shrink-0">{loginDisplay.level.icon}</span>
                           <div className="flex-1 min-w-0">
-                            <div className="text-lg font-bold text-red-800 dark:text-red-300 truncate">
+                            <div className="text-base font-bold text-red-800 dark:text-red-300 leading-tight">
                               {loginDisplay.level.name}
                             </div>
                           </div>
@@ -1218,7 +1231,7 @@ const PlayStatsPage: React.FC = () => {
                           {loginDisplay.level.description}
                         </div>
                         <div className='text-xs text-red-500/70 dark:text-red-400/70'>
-                          已登录 {loginDisplay.displayCount} 次
+                          {loginCount === 0 ? '尚未登录' : `已登录 ${loginDisplay.displayCount} 次`}
                         </div>
                       </div>
                     );
@@ -1746,9 +1759,9 @@ const PlayStatsPage: React.FC = () => {
                 return (
                   <div className="space-y-2">
                     <div className='flex items-center gap-2'>
-                      <span className="text-2xl">{loginDisplay.level.icon}</span>
+                      <span className="text-2xl flex-shrink-0">{loginDisplay.level.icon}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-lg font-bold text-red-800 dark:text-red-300 truncate">
+                        <div className="text-base font-bold text-red-800 dark:text-red-300 leading-tight">
                           {loginDisplay.level.name}
                         </div>
                       </div>
@@ -1757,7 +1770,7 @@ const PlayStatsPage: React.FC = () => {
                       {loginDisplay.level.description}
                     </div>
                     <div className='text-xs text-red-500/70 dark:text-red-400/70'>
-                      已登录 {loginDisplay.displayCount} 次
+                      {loginCount === 0 ? '尚未登录' : `已登录 ${loginDisplay.displayCount} 次`}
                     </div>
                   </div>
                 );
