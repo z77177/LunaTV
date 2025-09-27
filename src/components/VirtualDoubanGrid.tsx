@@ -38,7 +38,7 @@ interface VirtualDoubanGridProps {
 // 渐进式加载配置
 const INITIAL_BATCH_SIZE = 25;
 const LOAD_MORE_BATCH_SIZE = 25;
-const LOAD_MORE_THRESHOLD = 3; // 距离底部还有3行时开始加载
+const LOAD_MORE_THRESHOLD = 2; // react-window 2.1.2优化：减少触发阈值
 
 export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
   doubanData,
@@ -141,15 +141,15 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
   }: any) => {
     const index = rowIndex * cellColumnCount + columnIndex;
     
-    // 如果超出显示范围，返回透明占位
+    // 如果超出显示范围，返回null避免渲染
     if (index >= cellDisplayItemCount) {
-      return <div style={{ ...style, background: 'transparent' }} />;
+      return null;
     }
 
     const item = cellDisplayData[index];
 
     if (!item) {
-      return <div style={{ ...style, background: 'transparent' }} />;
+      return null;
     }
 
     return (
@@ -209,7 +209,7 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
           columnWidth={itemWidth + 16}
           rowCount={rowCount}
           rowHeight={itemHeight + 16}
-          overscanCount={2}
+          overscanCount={1}
           // 添加ARIA支持提升无障碍体验
           role="grid"
           aria-label={`豆瓣${type}列表，共${displayItemCount}个结果`}
@@ -223,8 +223,11 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
             overflowY: 'auto',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
-            // 背景色优化：防止滚动时出现黑色区域
-            backgroundColor: 'transparent',
+            // 彻底解决黑色背景：设置为inherit继承父容器背景
+            background: 'inherit',
+            backgroundColor: 'inherit',
+            // 平滑滚动优化
+            scrollBehavior: 'smooth',
             // 单行网格优化：防止高度异常
             ...(isSingleRow && {
               minHeight: itemHeight + 16,
@@ -232,20 +235,22 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
             }),
           }}
           onCellsRendered={(visibleCells, allCells) => {
-            // 使用react-window v2.1.0+的新API - 优化性能：
+            // 使用react-window v2.1.2的新API - 更精确的滚动检测：
             // 1. visibleCells: 真实可见的单元格范围
             // 2. allCells: 包含overscan的所有渲染单元格范围
             const { rowStopIndex: visibleRowStopIndex } = visibleCells;
             const { rowStopIndex: allRowStopIndex } = allCells;
 
-            // 性能优化：只基于真实可见区域判断加载，避免overscan区域误触发
-            if (visibleRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD) {
+            // 2.1.2优化：使用更精确的边界检测避免重复触发
+            const isNearBottom = visibleRowStopIndex >= Math.max(0, rowCount - LOAD_MORE_THRESHOLD);
+
+            if (isNearBottom) {
               if (hasNextVirtualPage && !isVirtualLoadingMore) {
                 loadMoreVirtualItems();
               } else if (needsServerData) {
                 // 防止重复调用onLoadMore - 使用时间戳限制
                 const now = Date.now();
-                if (now - lastLoadMoreCallRef.current > 1000) { // 1秒内只调用一次
+                if (now - lastLoadMoreCallRef.current > 1500) { // 增加到1.5秒避免频繁触发
                   lastLoadMoreCallRef.current = now;
                   onLoadMore();
                 }
