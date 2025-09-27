@@ -247,9 +247,10 @@ className='w-full h-[calc(100vh-150px)] overflow-auto'
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
           style={{
-            // react-window 2.1.2优化：让ResizeObserver自动获取尺寸
-            // 防止双重滚动条：让父容器处理滚动
-            overflow: 'visible',
+            // react-window 2.1.2优化：明确设置高度以避免ResizeObserver
+            height: '100%',
+            // 根据源码：必须设置overflow auto才能正确滚动
+            overflow: 'auto',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
             // 平滑滚动优化
