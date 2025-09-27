@@ -135,15 +135,15 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
   }: any) => {
     const index = rowIndex * cellColumnCount + columnIndex;
     
-    // 如果超出显示范围，返回空
+    // 如果超出显示范围，返回透明占位
     if (index >= cellDisplayItemCount) {
-      return <div style={style} />;
+      return <div style={{ ...style, background: 'transparent' }} />;
     }
 
     const item = cellDisplayData[index];
-    
+
     if (!item) {
-      return <div style={style} />;
+      return <div style={{ ...style, background: 'transparent' }} />;
     }
 
     // 根据视图模式渲染不同内容
@@ -242,7 +242,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
           columnWidth={itemWidth + 16}
           rowCount={rowCount}
           rowHeight={itemHeight + 16}
-          overscanCount={1}
+          overscanCount={2}
           // 添加ARIA支持提升无障碍体验
           role="grid"
           aria-label={`搜索结果列表 "${searchQuery}"，共${displayItemCount}个结果，当前视图：${viewMode === 'agg' ? '聚合视图' : '全部结果'}`}
@@ -256,6 +256,8 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
             overflowY: 'auto',
             // 确保不创建新的stacking context，让菜单能正确显示在最顶层
             isolation: 'auto',
+            // 背景色优化：防止滚动时出现黑色区域
+            backgroundColor: 'transparent',
             // 单行网格优化：防止高度异常
             ...(isSingleRow && {
               minHeight: itemHeight + 16,
