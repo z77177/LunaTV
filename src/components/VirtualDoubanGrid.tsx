@@ -168,17 +168,21 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
     );
   }, []);
 
-  // 计算网格高度
-  const gridHeight = Math.min(
-    typeof window !== 'undefined' ? window.innerHeight - 200 : 600,
-    800
-  );
 
   // 生成骨架屏数据
   const skeletonData = Array.from({ length: 25 }, (_, index) => index);
 
   return (
-    <div ref={containerRef} className='w-full'>
+    <div
+      ref={containerRef}
+      className='w-full'
+      style={{
+        height: Math.min(
+          typeof window !== 'undefined' ? window.innerHeight - 200 : 600,
+          800
+        )
+      }}
+    >
       {loading ? (
         // 加载状态显示骨架屏
         <div className='justify-start grid grid-cols-3 gap-x-2 gap-y-12 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:gap-x-8 sm:gap-y-20'>
@@ -217,7 +221,6 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
           aria-colcount={columnCount}
           style={{
             // react-window 2.1.2优化：明确设置尺寸以避免ResizeObserver
-            height: gridHeight,
             width: containerWidth,
             // 根据源码：必须设置overflow auto才能正确滚动
             overflow: 'auto',
