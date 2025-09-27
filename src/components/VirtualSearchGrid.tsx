@@ -203,13 +203,7 @@ export const VirtualSearchGrid: React.FC<VirtualSearchGridProps> = ({
   return (
     <div
       ref={containerRef}
-      className='w-full'
-      style={{
-        height: Math.min(
-          typeof window !== 'undefined' ? window.innerHeight - 200 : 600,
-          800
-        )
-      }}
+      className='w-full h-[calc(100vh-150px)] overflow-hidden'
     >
       {totalItemCount === 0 ? (
         <div className='flex justify-center items-center h-40'>

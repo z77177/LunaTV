@@ -175,13 +175,7 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
   return (
     <div
       ref={containerRef}
-      className='w-full'
-      style={{
-        height: Math.min(
-          typeof window !== 'undefined' ? window.innerHeight - 200 : 600,
-          800
-        )
-      }}
+      className='w-full h-[calc(100vh-150px)] overflow-hidden'
     >
       {loading ? (
         // 加载状态显示骨架屏
