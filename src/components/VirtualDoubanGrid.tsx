@@ -209,13 +209,12 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
           columnWidth={itemWidth + 16}
           rowCount={rowCount}
           rowHeight={itemHeight + 16}
-          overscanCount={1}
+          overscanCount={3}
           // 添加ARIA支持提升无障碍体验
           role="grid"
           aria-label={`豆瓣${type}列表，共${displayItemCount}个结果`}
           aria-rowcount={rowCount}
           aria-colcount={columnCount}
-          className="bg-white dark:bg-gray-900"
           style={{
             // react-window 2.1.2优化：明确设置尺寸以避免ResizeObserver
             height: gridHeight,
