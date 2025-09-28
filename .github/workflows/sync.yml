@@ -16,7 +16,6 @@ jobs:
   sync_latest_from_upstream:
     name: Sync latest commits from upstream repo
     runs-on: ubuntu-latest
-    if: ${{ github.event.repository.fork }}
 
     steps:
       # Step 1: run a standard checkout action
@@ -25,23 +24,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Step 2: run the sync action
-      - name: Sync upstream changes
-        id: sync
-        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
-        with:
-          upstream_sync_repo: SzeMeng76/LunaTV
-          upstream_sync_branch: main
-          target_sync_branch: main
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Sync check
-        if: failure()
+      # Step 2: 添加上游仓库并拉取 main 分支
+      - name: Add upstream and fetch
         run: |
-          echo "[Error] Due to a change in the workflow file of the upstream repository, GitHub has automatically suspended the scheduled automatic update. You need to manually sync your fork."
-          exit 1
+          git remote add upstream https://github.com/SzeMeng76/LunaTV.git
+          git fetch upstream
 
-      # Step 3: 检查 VERSION.txt 和 CHANGELOG 是否更新
+      # Step 3: 合并上游 main 分支到当前 main
+      - name: Merge upstream/main into main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git merge upstream/main --allow-unrelated-histories --no-edit || true
+
+      # Step 4: 推送合并后的 main 分支到自己的仓库
+      - name: Push changes
+        run: |
+          git push origin main
+
+      # Step 5: 检查 VERSION.txt 和 CHANGELOG 是否更新
       - name: Check if VERSION.txt or CHANGELOG changed
         id: check_files
         run: |
@@ -55,7 +56,7 @@ jobs:
             echo "files_changed=false" >> $GITHUB_OUTPUT
           fi
 
-      # Step 4: 读取 VERSION.txt 版本号
+      # Step 6: 读取 VERSION.txt 版本号
       - name: Read VERSION.txt
         id: read_version
         if: steps.check_files.outputs.files_changed == 'true'
@@ -64,7 +65,7 @@ jobs:
           echo "VERSION=$VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      # Step 5: 检查 tag 是否存在
+      # Step 7: 检查 tag 是否存在
       - name: Check if tag exists
         id: check_tag
         if: steps.read_version.outputs.version != ''
@@ -75,9 +76,9 @@ jobs:
             echo "tag_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      # Step 6: 仅在满足条件时触发 release.yml
+      # Step 8: 仅在满足条件时触发 release.yml
       - name: Trigger Release workflow
-        if: steps.sync.outputs.has_new_commits == 'true' && steps.check_files.outputs.files_changed == 'true' && steps.check_tag.outputs.tag_exists == 'false'
+        if: steps.check_files.outputs.files_changed == 'true' && steps.check_tag.outputs.tag_exists == 'false'
         run: |
           echo "New version detected: ${{ steps.read_version.outputs.version }}. Triggering release.yml..."
           curl -X POST \
