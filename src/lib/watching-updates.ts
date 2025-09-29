@@ -296,8 +296,9 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, stor
             original_episodes: record.original_episodes || originalTotalEpisodes
           };
 
-          // 保存更新后的播放记录，使用解析出的sourceName确保key一致
-          await savePlayRecord(storageSourceName || record.source_name, videoId, updatedRecord);
+          // 🔑 关键修复：确保使用从record.id解析出的原始sourceName，避免创建重复记录
+          const [originalSourceName] = record.id.split('+');
+          await savePlayRecord(originalSourceName, videoId, updatedRecord);
           console.log(`✅ 播放记录集数更新成功: ${record.title}，原始集数保持为 ${updatedRecord.original_episodes}`);
         } catch (error) {
           console.error(`❌ 更新播放记录集数失败: ${record.title}`, error);
