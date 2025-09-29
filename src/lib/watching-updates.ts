@@ -298,7 +298,7 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, stor
 
           // 🔧 直接更新现有记录，避免重新生成键导致的重复记录问题
           // 获取当前所有播放记录
-          const { getAllPlayRecords } = await import('./db.client');
+          forceRefreshPlayRecordsCache(); // 强制刷新缓存
           const currentRecords = await getAllPlayRecords();
 
           // 直接用原始键更新记录
