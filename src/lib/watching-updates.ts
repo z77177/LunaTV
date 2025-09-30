@@ -259,7 +259,8 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, stor
     });
 
     // 获取观看时的原始总集数（不会被自动更新影响）
-    const originalTotalEpisodes = getOriginalEpisodes(record, videoId);
+    const recordKey = generateStorageKey(storageSourceName || record.source_name, videoId);
+    const originalTotalEpisodes = getOriginalEpisodes(record, videoId, recordKey);
 
     console.log(`${record.title} 集数对比:`, {
       '原始集数': originalTotalEpisodes,
@@ -340,7 +341,7 @@ async function checkSingleRecordUpdate(record: PlayRecord, videoId: string, stor
 /**
  * 获取观看时的原始总集数，如果没有记录则使用当前播放记录中的集数
  */
-function getOriginalEpisodes(record: PlayRecord, videoId: string): number {
+function getOriginalEpisodes(record: PlayRecord, videoId: string, recordKey: string): number {
   // 添加详细调试信息
   console.log(`🔍 getOriginalEpisodes 调试信息 - ${record.title}:`, {
     'record.original_episodes': record.original_episodes,
@@ -360,18 +361,18 @@ function getOriginalEpisodes(record: PlayRecord, videoId: string): number {
     console.log(`🔧 检测到历史记录缺少原始集数，自动修复: ${record.title} = ${record.total_episodes}集`);
 
     // 🔒 防重复修复：检查是否已经在修复中
-    if (!fixingRecords.has(record.id)) {
-      fixingRecords.add(record.id);
+    if (!fixingRecords.has(recordKey)) {
+      fixingRecords.add(recordKey);
 
       // 异步更新记录，补充original_episodes（不阻塞当前流程）
-      // 🔑 关键修复：直接使用 record.id 作为key，而不是重新生成key
+      // 🔑 关键修复：使用传入的recordKey作为key
       setTimeout(async () => {
         try {
           await fetch('/api/playrecords', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              key: record.id, // 🔑 使用正确的key
+              key: recordKey, // 🔑 使用正确的key
               record: {
                 ...record,
                 original_episodes: record.total_episodes,
@@ -384,7 +385,7 @@ function getOriginalEpisodes(record: PlayRecord, videoId: string): number {
           console.warn(`修复 ${record.title} 原始集数失败:`, error);
         } finally {
           // 🔒 修复完成后移除标记
-          fixingRecords.delete(record.id);
+          fixingRecords.delete(recordKey);
         }
       }, 100);
     } else {
