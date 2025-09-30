@@ -1,9 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-// 🚀 关键：设置页面缓存，2小时内浏览器直接缓存页面，无需重新加载
-export const revalidate = 7200; // 2小时 = 7200秒
 import { Calendar, Filter, Search, Clock, Film, Tv, MapPin, Tag, ChevronUp } from 'lucide-react';
 
 import { ReleaseCalendarItem, ReleaseCalendarResult } from '@/lib/types';
@@ -102,7 +99,27 @@ export default function ReleaseCalendarPage() {
       // 清理过期的localStorage缓存（兼容性清理）
       cleanExpiredCache();
 
-      // 🚀 页面缓存已处理大部分访问，直接调用API（API有数据库缓存）
+      // 🔍 优先检查数据库缓存（除非强制刷新）
+      if (!reset) {
+        console.log('🔍 检查数据库缓存...');
+        try {
+          const cacheResponse = await fetch('/api/release-calendar/cache');
+          if (cacheResponse.ok) {
+            const cacheResult = await cacheResponse.json();
+            if (cacheResult.success && cacheResult.cached && cacheResult.data) {
+              console.log('✅ 使用数据库缓存，无需API调用');
+              const filteredData = applyClientSideFilters(cacheResult.data);
+              setData(filteredData);
+              setCurrentPage(1);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (cacheError) {
+          console.warn('读取数据库缓存失败，继续调用API:', cacheError);
+        }
+        console.log('📭 数据库缓存无效，调用API');
+      }
 
       // 🌐 从API获取数据（API会处理数据库缓存更新）
       console.log('🌐 正在从API获取发布日历数据...');
