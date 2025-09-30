@@ -90,7 +90,7 @@ export default function ReleaseCalendarPage() {
     });
   };
 
-  // 获取数据（优化版，前端直接读数据库缓存，避免重复API调用）
+  // 获取数据（简化版，移除localStorage缓存，依赖API数据库缓存）
   const fetchData = async (reset = false) => {
     try {
       setLoading(true);
@@ -99,29 +99,7 @@ export default function ReleaseCalendarPage() {
       // 清理过期的localStorage缓存（兼容性清理）
       cleanExpiredCache();
 
-      // 🔍 优先检查数据库缓存（除非强制刷新）
-      if (!reset) {
-        console.log('🔍 检查数据库缓存...');
-        try {
-          const cacheResponse = await fetch('/api/release-calendar/cache');
-          if (cacheResponse.ok) {
-            const cacheResult = await cacheResponse.json();
-            if (cacheResult.success && cacheResult.cached && cacheResult.data) {
-              console.log('✅ 使用数据库缓存，无需API调用');
-              const filteredData = applyClientSideFilters(cacheResult.data);
-              setData(filteredData);
-              setCurrentPage(1);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch (cacheError) {
-          console.warn('读取数据库缓存失败，继续调用API:', cacheError);
-        }
-        console.log('📭 数据库缓存无效，调用API');
-      }
-
-      // 🌐 从API获取数据（API会处理数据库缓存更新）
+      // 🌐 直接从API获取数据（API有数据库缓存，全局共享，24小时有效）
       console.log('🌐 正在从API获取发布日历数据...');
       const apiUrl = reset ? '/api/release-calendar?refresh=true' : '/api/release-calendar';
       const response = await fetch(apiUrl);
@@ -133,7 +111,7 @@ export default function ReleaseCalendarPage() {
       const result: ReleaseCalendarResult = await response.json();
       console.log(`📊 获取到 ${result.items.length} 条上映数据`);
 
-      // 前端过滤
+      // 前端过滤（无需缓存，API数据库缓存已处理）
       const filteredData = applyClientSideFilters(result);
       setData(filteredData);
       setCurrentPage(1);
