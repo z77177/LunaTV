@@ -246,32 +246,18 @@ function LoginPageClient() {
 
           {/* 注册链接 - 仅在非 localStorage 模式下显示 */}
           {shouldAskUsername && (
-            <div className='relative mt-6 pt-6'>
-              {/* 装饰性分割线 */}
-              <div className='absolute inset-0 flex items-center' aria-hidden='true'>
-                <div className='w-full border-t border-gray-200 dark:border-gray-700' />
-              </div>
-              <div className='relative flex justify-center text-sm'>
-                <span className='px-4 bg-white/90 dark:bg-zinc-900/90 backdrop-blur text-gray-500 dark:text-gray-400 font-medium select-none'>
-                  还没有账户？
-                </span>
-              </div>
-
-              {/* 美化的注册按钮 */}
-              <div className='mt-4 text-center'>
-                <button
-                  type='button'
-                  onClick={(e) => {
-                    e.preventDefault();
-                    router.push('/register');
-                  }}
-                  className='group inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400 text-sm font-semibold hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 hover:border-green-300 dark:hover:border-green-700 transition-all duration-300 hover:shadow-md hover:scale-105 active:scale-100 cursor-pointer'
-                >
-                  <UserPlus className='w-4 h-4' />
-                  <span>立即注册</span>
-                  <span className='inline-block transition-transform group-hover:translate-x-1'>→</span>
-                </button>
-              </div>
+            <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+              <p className='text-center text-gray-600 dark:text-gray-400 text-sm mb-3'>
+                还没有账户？
+              </p>
+              <a
+                href='/register'
+                className='group flex items-center justify-center gap-2 w-full px-6 py-2.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400 text-sm font-semibold hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 hover:border-green-300 dark:hover:border-green-700 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
+              >
+                <UserPlus className='w-4 h-4' />
+                <span>立即注册</span>
+                <span className='inline-block transition-transform group-hover:translate-x-1'>→</span>
+              </a>
             </div>
           )}
         </form>

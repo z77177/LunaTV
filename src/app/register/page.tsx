@@ -365,32 +365,18 @@ function RegisterPageClient() {
             {loading ? '注册中...' : success ? '注册成功，正在跳转...' : '立即注册'}
           </button>
 
-          <div className='relative mt-6 pt-6'>
-            {/* 装饰性分割线 */}
-            <div className='absolute inset-0 flex items-center' aria-hidden='true'>
-              <div className='w-full border-t border-gray-200 dark:border-gray-700' />
-            </div>
-            <div className='relative flex justify-center text-sm'>
-              <span className='px-4 bg-white/90 dark:bg-zinc-900/90 backdrop-blur text-gray-500 dark:text-gray-400 font-medium select-none'>
-                已有账户？
-              </span>
-            </div>
-
-            {/* 美化的登录按钮 */}
-            <div className='mt-4 text-center'>
-              <button
-                type='button'
-                onClick={(e) => {
-                  e.preventDefault();
-                  router.push('/login');
-                }}
-                className='group inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-sm font-semibold hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 hover:shadow-md hover:scale-105 active:scale-100 cursor-pointer'
-              >
-                <Lock className='w-4 h-4' />
-                <span>立即登录</span>
-                <span className='inline-block transition-transform group-hover:translate-x-1'>→</span>
-              </button>
-            </div>
+          <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+            <p className='text-center text-gray-600 dark:text-gray-400 text-sm mb-3'>
+              已有账户？
+            </p>
+            <a
+              href='/login'
+              className='group flex items-center justify-center gap-2 w-full px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-sm font-semibold hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
+            >
+              <Lock className='w-4 h-4' />
+              <span>立即登录</span>
+              <span className='inline-block transition-transform group-hover:translate-x-1'>→</span>
+            </a>
           </div>
         </form>
       </div>
