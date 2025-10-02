@@ -146,23 +146,13 @@ export async function POST(req: NextRequest) {
       config.UserConfig.Users.push(newUser);
 
       // 保存更新后的配置
-      console.log(`[注册] 准备保存配置，当前用户列表:`, config.UserConfig.Users.map(u => u.username));
       await db.saveAdminConfig(config);
-      console.log(`[注册] 配置保存完成`);
 
       // 清除缓存，确保下次获取配置时是最新的
       clearConfigCache();
 
-      // 验证保存是否成功
-      console.log(`[注册] 验证配置是否保存成功...`);
-      const verifyConfig = await getConfig();
-      const userExists = verifyConfig.UserConfig.Users.find(u => u.username === username);
-      if (!userExists) {
-        console.error(`[注册] ❌ 配置保存失败！用户 ${username} 不在列表中`);
-        console.error(`[注册] 当前配置用户列表:`, verifyConfig.UserConfig.Users.map(u => u.username));
-        throw new Error('配置保存失败');
-      }
-      console.log(`[注册] ✅ 配置保存验证成功，用户 ${username} 已在列表中`);
+      // 等待 Upstash 数据同步完成
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // 注册成功后自动登录
       const response = NextResponse.json({
