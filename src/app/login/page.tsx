@@ -246,17 +246,29 @@ function LoginPageClient() {
 
           {/* 注册链接 - 仅在非 localStorage 模式下显示 */}
           {shouldAskUsername && (
-            <div className='text-center pt-4 border-t border-gray-200 dark:border-gray-700'>
-              <span className='text-gray-600 dark:text-gray-400 text-sm'>
-                还没有账户？
-              </span>
-              <button
-                type='button'
-                onClick={() => router.push('/register')}
-                className='ml-2 text-green-600 dark:text-green-400 text-sm font-semibold hover:text-green-700 dark:hover:text-green-300 underline-offset-4 hover:underline transition-all'
-              >
-                立即注册 →
-              </button>
+            <div className='relative mt-6 pt-6'>
+              {/* 装饰性分割线 */}
+              <div className='absolute inset-0 flex items-center' aria-hidden='true'>
+                <div className='w-full border-t border-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent' />
+              </div>
+              <div className='relative flex justify-center text-sm'>
+                <span className='px-4 bg-white/80 dark:bg-zinc-900/80 backdrop-blur text-gray-600 dark:text-gray-400 font-medium'>
+                  还没有账户？
+                </span>
+              </div>
+
+              {/* 美化的注册按钮 */}
+              <div className='mt-4 text-center'>
+                <button
+                  type='button'
+                  onClick={() => router.push('/register')}
+                  className='group inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400 text-sm font-semibold hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 hover:border-green-300 dark:hover:border-green-700 transition-all duration-300 hover:shadow-md hover:scale-105'
+                >
+                  <UserPlus className='w-4 h-4' />
+                  <span>立即注册</span>
+                  <span className='inline-block transition-transform group-hover:translate-x-1'>→</span>
+                </button>
+              </div>
             </div>
           )}
         </form>
