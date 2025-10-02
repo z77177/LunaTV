@@ -151,24 +151,10 @@ export async function POST(req: NextRequest) {
       // 清除缓存，确保下次获取配置时是最新的
       clearConfigCache();
 
-      // 等待并验证 Upstash 数据同步完成（最多等待5秒）
-      // 主动检查用户是否已存在于配置中，确保数据真正同步完成
-      const maxRetries = 10;
-      let synced = false;
-      for (let i = 0; i < maxRetries; i++) {
-        await new Promise(resolve => setTimeout(resolve, 500)); // 每次等待500ms
-        const freshConfig = await getConfig();
-        const userInConfig = freshConfig.UserConfig.Users.find(u => u.username === username);
-        if (userInConfig) {
-          synced = true;
-          console.log(`用户 ${username} 已同步到配置，耗时 ${(i + 1) * 500}ms`);
-          break;
-        }
-      }
-
-      if (!synced) {
-        console.warn(`用户 ${username} 同步超时，但继续注册流程`);
-      }
+      // 等待云数据库同步完成（Upstash 等云服务需要时间同步数据）
+      // 避免立即跳转后其他 API（如 /api/playrecords）读取配置时找不到新注册的用户
+      // Kvrocks 本地部署无此问题
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // 注册成功后自动登录，设置与登录API一致的cookie
       const response = NextResponse.json({
