@@ -68,11 +68,9 @@ async function generateAuthCookie(
 }
 
 export async function POST(req: NextRequest) {
-  console.log('[注册] ========== 开始处理注册请求 ==========');
   try {
     // localStorage 模式不支持注册
     if (STORAGE_TYPE === 'localstorage') {
-      console.log('[注册] localStorage 模式，拒绝注册');
       return NextResponse.json(
         { error: 'localStorage 模式不支持用户注册' },
         { status: 400 }
@@ -80,7 +78,6 @@ export async function POST(req: NextRequest) {
     }
 
     const { username, password, confirmPassword } = await req.json();
-    console.log(`[注册] 收到注册请求，用户名: ${username}`);
 
     // 先检查配置中是否允许注册（在验证输入之前）
     try {
@@ -100,60 +97,46 @@ export async function POST(req: NextRequest) {
 
     // 验证输入
     if (!username || typeof username !== 'string' || username.trim() === '') {
-      console.log('[注册] 验证失败: 用户名为空');
       return NextResponse.json({ error: '用户名不能为空' }, { status: 400 });
     }
-
+    
     if (!password || typeof password !== 'string') {
-      console.log('[注册] 验证失败: 密码为空');
       return NextResponse.json({ error: '密码不能为空' }, { status: 400 });
     }
 
     if (password !== confirmPassword) {
-      console.log('[注册] 验证失败: 两次密码不一致');
       return NextResponse.json({ error: '两次输入的密码不一致' }, { status: 400 });
     }
 
     if (password.length < 6) {
-      console.log(`[注册] 验证失败: 密码长度不足 (${password.length} < 6)`);
       return NextResponse.json({ error: '密码长度至少6位' }, { status: 400 });
     }
 
     // 检查是否与管理员用户名冲突
     if (username === process.env.USERNAME) {
-      console.log(`[注册] 验证失败: 用户名与管理员冲突 (${username})`);
       return NextResponse.json({ error: '该用户名已被使用' }, { status: 400 });
     }
 
     // 检查用户名格式（只允许字母数字和下划线）
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      console.log(`[注册] 验证失败: 用户名格式不符合要求 (${username})`);
       return NextResponse.json(
         { error: '用户名只能包含字母、数字和下划线，长度3-20位' },
         { status: 400 }
       );
     }
 
-    console.log(`[注册] ✅ 所有验证通过，准备注册用户: ${username}`);
-
     try {
       // 检查用户是否已存在
-      console.log(`[注册] 检查用户是否已存在: ${username}`);
       const userExists = await db.checkUserExist(username);
       if (userExists) {
-        console.log(`[注册] 用户已存在，拒绝注册: ${username}`);
         return NextResponse.json({ error: '该用户名已被注册' }, { status: 400 });
       }
 
       // 注册用户
-      console.log(`[注册] 保存用户密码到数据库: ${username}`);
       await db.registerUser(username, password);
-      console.log(`[注册] ✅ 用户密码保存成功: ${username}`);
 
       // 重新获取配置来添加用户
-      console.log(`[注册] 获取配置以添加用户到列表`);
       const config = await getConfig();
-      console.log(`[注册] 当前配置中的用户数量: ${config.UserConfig.Users.length}`);
       const newUser = {
         username: username,
         role: 'user' as const,
@@ -165,24 +148,20 @@ export async function POST(req: NextRequest) {
       // 保存更新后的配置
       await db.saveAdminConfig(config);
 
-      // 等待 Upstash 主从同步完成（Read Your Writes 一致性问题）
-      // Upstash 使用主从复制，写入主节点后需要时间同步到读副本
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // 清除缓存，确保下次获取配置时从数据库读取
+      // 清除缓存，确保下次获取配置时是最新的
       clearConfigCache();
 
       // 注册成功后自动登录
-      const response = NextResponse.json({
-        ok: true,
-        message: '注册成功，已自动登录'
+      const response = NextResponse.json({ 
+        ok: true, 
+        message: '注册成功，已自动登录' 
       });
-
+      
       const cookieValue = await generateAuthCookie(
         username,
         password,
         'user',
-        false  // 数据库模式不在cookie中存储密码，只存储签名
+        false
       );
       const expires = new Date();
       expires.setDate(expires.getDate() + 7); // 7天过期
