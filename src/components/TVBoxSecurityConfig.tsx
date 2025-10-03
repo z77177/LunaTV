@@ -484,6 +484,18 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
                 <div className='text-gray-600 dark:text-gray-400'>状态码:</div>
                 <div className='text-gray-900 dark:text-gray-100'>{diagnoseResult.status}</div>
 
+                <div className='text-gray-600 dark:text-gray-400'>Content-Type:</div>
+                <div className='text-gray-900 dark:text-gray-100 text-xs'>{diagnoseResult.contentType || 'N/A'}</div>
+
+                <div className='text-gray-600 dark:text-gray-400'>JSON解析:</div>
+                <div className='text-gray-900 dark:text-gray-100'>
+                  {diagnoseResult.hasJson ? (
+                    <span className='text-green-600 dark:text-green-400'>✓ 成功</span>
+                  ) : (
+                    <span className='text-red-600 dark:text-red-400'>✗ 失败</span>
+                  )}
+                </div>
+
                 <div className='text-gray-600 dark:text-gray-400'>接收到的Token:</div>
                 <div className='text-gray-900 dark:text-gray-100'>{diagnoseResult.receivedToken || 'none'}</div>
 
@@ -498,7 +510,30 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
 
                 <div className='text-gray-600 dark:text-gray-400'>解析源数量:</div>
                 <div className='text-gray-900 dark:text-gray-100'>{diagnoseResult.parsesCount}</div>
+
+                {diagnoseResult.privateApis !== undefined && (
+                  <>
+                    <div className='text-gray-600 dark:text-gray-400'>私网API数量:</div>
+                    <div className='text-gray-900 dark:text-gray-100'>
+                      {diagnoseResult.privateApis > 0 ? (
+                        <span className='text-yellow-600 dark:text-yellow-400'>{diagnoseResult.privateApis}</span>
+                      ) : (
+                        <span className='text-green-600 dark:text-green-400'>0</span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
+
+              {/* 配置URL */}
+              {diagnoseResult.configUrl && (
+                <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
+                  <div className='text-gray-600 dark:text-gray-400 mb-1'>配置URL:</div>
+                  <div className='text-xs text-gray-900 dark:text-gray-100 break-all bg-white dark:bg-gray-800 p-2 rounded font-mono'>
+                    {diagnoseResult.configUrl}
+                  </div>
+                </div>
+              )}
 
               {/* Spider 信息 */}
               {diagnoseResult.spider && (
@@ -507,15 +542,32 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
                   <div className='text-xs text-gray-900 dark:text-gray-100 break-all bg-white dark:bg-gray-800 p-2 rounded'>
                     {diagnoseResult.spider}
                   </div>
-                  {diagnoseResult.spiderReachable !== undefined && (
-                    <div className='mt-1 text-xs'>
-                      {diagnoseResult.spiderReachable ? (
-                        <span className='text-green-600 dark:text-green-400'>✓ Spider 可访问</span>
-                      ) : (
-                        <span className='text-red-600 dark:text-red-400'>✗ Spider 不可访问</span>
-                      )}
-                    </div>
-                  )}
+                  <div className='mt-2 space-y-1'>
+                    {diagnoseResult.spiderPrivate !== undefined && (
+                      <div className='text-xs'>
+                        {diagnoseResult.spiderPrivate ? (
+                          <span className='text-yellow-600 dark:text-yellow-400'>⚠ Spider 是私网地址</span>
+                        ) : (
+                          <span className='text-green-600 dark:text-green-400'>✓ Spider 是公网地址</span>
+                        )}
+                      </div>
+                    )}
+                    {diagnoseResult.spiderReachable !== undefined && (
+                      <div className='text-xs'>
+                        {diagnoseResult.spiderReachable ? (
+                          <span className='text-green-600 dark:text-green-400'>
+                            ✓ Spider 可访问
+                            {diagnoseResult.spiderStatus && ` (状态码: ${diagnoseResult.spiderStatus})`}
+                          </span>
+                        ) : (
+                          <span className='text-red-600 dark:text-red-400'>
+                            ✗ Spider 不可访问
+                            {diagnoseResult.spiderStatus && ` (状态码: ${diagnoseResult.spiderStatus})`}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
