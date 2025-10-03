@@ -624,27 +624,24 @@ export function generateStorageKey(source: string, id: string): string {
  * - 用户看第7集 → original_episodes 更新为 8（用户已消费这次更新）
  * - 下次更新到第10集 → 提醒"2集新增"（10-8），而不是"4集新增"（10-6）
  */
-async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, newRecord: PlayRecord): Promise<{ shouldUpdate: boolean; latestTotalEpisodes: number }> {
+async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, newRecord: PlayRecord, recordKey: string): Promise<{ shouldUpdate: boolean; latestTotalEpisodes: number }> {
   // 🔑 关键修复：从数据库读取最新的 original_episodes，不信任缓存中的值
   let originalEpisodes = existingRecord.original_episodes || existingRecord.total_episodes;
   let freshRecord = existingRecord;
 
   try {
-    console.log(`🔍 从数据库读取最新的 original_episodes...`);
+    console.log(`🔍 从数据库读取最新的 original_episodes (${recordKey})...`);
     const freshRecordsResponse = await fetch('/api/playrecords');
     if (freshRecordsResponse.ok) {
       const freshRecords = await freshRecordsResponse.json();
-      const recordKey = Object.keys(freshRecords).find(key => {
-        const record = freshRecords[key];
-        return record.title === existingRecord.title &&
-               record.source_name === existingRecord.source_name &&
-               record.year === existingRecord.year;
-      });
 
-      if (recordKey && freshRecords[recordKey]) {
+      // 🔑 关键修复：直接用 recordKey 匹配，确保是同一个 source+id
+      if (freshRecords[recordKey]) {
         freshRecord = freshRecords[recordKey];
         originalEpisodes = freshRecord.original_episodes || freshRecord.total_episodes;
-        console.log(`📚 从数据库读取到最新 original_episodes: ${existingRecord.title} = ${originalEpisodes}集`);
+        console.log(`📚 从数据库读取到最新 original_episodes: ${existingRecord.title} (${recordKey}) = ${originalEpisodes}集`);
+      } else {
+        console.warn(`⚠️ 数据库中未找到记录: ${recordKey}`);
       }
     }
   } catch (error) {
@@ -770,7 +767,7 @@ export async function savePlayRecord(
   } else if (existingRecord?.original_episodes) {
     // 检查用户是否观看了超过原始集数的新集数
     // 如果是，说明用户已经"消费"了这次更新提醒，应该更新 original_episodes
-    const updateResult = await checkShouldUpdateOriginalEpisodes(existingRecord, record);
+    const updateResult = await checkShouldUpdateOriginalEpisodes(existingRecord, record, key);
     if (updateResult.shouldUpdate) {
       record.original_episodes = updateResult.latestTotalEpisodes;
       // 🔑 同时更新 total_episodes 为最新值
