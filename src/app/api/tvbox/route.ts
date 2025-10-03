@@ -234,7 +234,7 @@ export async function GET(request: NextRequest) {
 
         // 解析 detail 字段：支持 JSON 扩展配置（CSP源、自定义jar等）
         const detail = (source.detail || '').trim();
-        let siteExt = '';
+        const siteExt = ''; // 🔑 强制为空，忽略配置中的 ext
         let siteJar: string | undefined;
 
         if (detail) {
