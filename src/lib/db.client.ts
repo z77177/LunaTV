@@ -777,19 +777,8 @@ export async function savePlayRecord(
       record.total_episodes = updateResult.latestTotalEpisodes;
       console.log(`✓ 更新原始集数: ${key} = ${existingRecord.original_episodes}集 -> ${updateResult.latestTotalEpisodes}集（用户已观看新集数）`);
 
-      // 🔑 关键修复：清除相关缓存，强制下次重新检查
-      try {
-        // 清除 watching-updates 缓存
-        localStorage.removeItem('moontv_watching_updates');
-        localStorage.removeItem('moontv_last_update_check');
-
-        // 🔑 关键：强制刷新播放记录缓存，确保下次检查使用最新数据
-        cacheManager.forceRefreshPlayRecordsCache();
-
-        console.log('✅ 已清除 watching-updates 和播放记录缓存，下次将使用最新数据');
-      } catch (error) {
-        console.warn('清除缓存失败:', error);
-      }
+      // 🔑 标记需要清除缓存（在数据库更新成功后执行）
+      (record as any)._shouldClearCache = true;
     } else {
       // 保持现有的原始集数不变
       record.original_episodes = existingRecord.original_episodes;
@@ -819,6 +808,23 @@ export async function savePlayRecord(
         },
         body: JSON.stringify({ key, record }),
       });
+
+      // 🔑 关键修复：数据库更新成功后，如果更新了 original_episodes，清除相关缓存
+      if ((record as any)._shouldClearCache) {
+        try {
+          // 清除 watching-updates 缓存
+          localStorage.removeItem('moontv_watching_updates');
+          localStorage.removeItem('moontv_last_update_check');
+
+          // 🔑 关键：强制刷新播放记录缓存，确保下次检查使用最新数据
+          cacheManager.forceRefreshPlayRecordsCache();
+
+          console.log('✅ 数据库更新成功，已清除 watching-updates 和播放记录缓存');
+          delete (record as any)._shouldClearCache;
+        } catch (cacheError) {
+          console.warn('清除缓存失败:', cacheError);
+        }
+      }
 
       // 异步更新用户统计数据（不阻塞主流程）
       updateUserStats(record).catch(err => {
