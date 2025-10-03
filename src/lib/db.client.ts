@@ -639,6 +639,14 @@ async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, new
       if (freshRecords[recordKey]) {
         freshRecord = freshRecords[recordKey];
         originalEpisodes = freshRecord.original_episodes || freshRecord.total_episodes;
+
+        // 🔧 自动修复：如果 original_episodes 大于当前 total_episodes，说明之前存错了
+        if (originalEpisodes > freshRecord.total_episodes) {
+          console.warn(`⚠️ 检测到错误数据：original_episodes(${originalEpisodes}) > total_episodes(${freshRecord.total_episodes})，自动修正为 ${freshRecord.total_episodes}`);
+          originalEpisodes = freshRecord.total_episodes;
+          freshRecord.original_episodes = freshRecord.total_episodes;
+        }
+
         console.log(`📚 从数据库读取到最新 original_episodes: ${existingRecord.title} (${recordKey}) = ${originalEpisodes}集`);
       } else {
         console.warn(`⚠️ 数据库中未找到记录: ${recordKey}`);
