@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
 
     // 直接调用 tvbox API 函数，而不是通过 HTTP fetch
     // 构建模拟请求对象
-    let configUrl = `${baseUrl}/api/tvbox?format=json&mode=safe`;
+    let configUrl = `${baseUrl}/api/tvbox?format=json`;
     if (token) {
       configUrl += `&token=${encodeURIComponent(token)}`;
     }
