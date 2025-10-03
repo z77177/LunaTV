@@ -625,7 +625,31 @@ export function generateStorageKey(source: string, id: string): string {
  * - 下次更新到第10集 → 提醒"2集新增"（10-8），而不是"4集新增"（10-6）
  */
 async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, newRecord: PlayRecord): Promise<{ shouldUpdate: boolean; latestTotalEpisodes: number }> {
-  const originalEpisodes = existingRecord.original_episodes || existingRecord.total_episodes;
+  // 🔑 关键修复：从数据库读取最新的 original_episodes，不信任缓存中的值
+  let originalEpisodes = existingRecord.original_episodes || existingRecord.total_episodes;
+  let freshRecord = existingRecord;
+
+  try {
+    console.log(`🔍 从数据库读取最新的 original_episodes...`);
+    const freshRecordsResponse = await fetch('/api/playrecords');
+    if (freshRecordsResponse.ok) {
+      const freshRecords = await freshRecordsResponse.json();
+      const recordKey = Object.keys(freshRecords).find(key => {
+        const record = freshRecords[key];
+        return record.title === existingRecord.title &&
+               record.source_name === existingRecord.source_name &&
+               record.year === existingRecord.year;
+      });
+
+      if (recordKey && freshRecords[recordKey]) {
+        freshRecord = freshRecords[recordKey];
+        originalEpisodes = freshRecord.original_episodes || freshRecord.total_episodes;
+        console.log(`📚 从数据库读取到最新 original_episodes: ${existingRecord.title} = ${originalEpisodes}集`);
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ 从数据库读取 original_episodes 失败，使用缓存值', error);
+  }
 
   // 条件1：用户观看进度超过了原始集数（说明用户已经看了新更新的集数）
   const hasWatchedBeyondOriginal = newRecord.index > originalEpisodes;
@@ -638,33 +662,11 @@ async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, new
     return { shouldUpdate: false, latestTotalEpisodes: newRecord.total_episodes };
   }
 
-  // 🔑 关键修复：用户看了超过原始集数的集数，从数据库获取最新的 total_episodes
+  // 用户看了超过原始集数的集数，获取最新的 total_episodes
+  console.log(`🔍 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），从数据库获取最新集数...`);
+
   try {
-    console.log(`🔍 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），从数据库获取最新集数...`);
-
-    // 从数据库重新读取最新的播放记录
-    const freshRecordsResponse = await fetch('/api/playrecords');
-    if (!freshRecordsResponse.ok) {
-      console.warn('⚠️ 无法从数据库读取最新集数，使用传入的值');
-      return { shouldUpdate: true, latestTotalEpisodes: Math.max(newRecord.total_episodes, originalEpisodes) };
-    }
-
-    const freshRecords = await freshRecordsResponse.json();
-    const recordKey = Object.keys(freshRecords).find(key => {
-      const record = freshRecords[key];
-      return record.title === existingRecord.title &&
-             record.source_name === existingRecord.source_name &&
-             record.year === existingRecord.year;
-    });
-
-    if (!recordKey) {
-      console.warn('⚠️ 数据库中未找到对应记录，使用传入的值');
-      return { shouldUpdate: true, latestTotalEpisodes: Math.max(newRecord.total_episodes, originalEpisodes) };
-    }
-
-    const freshRecord = freshRecords[recordKey];
     const latestTotalEpisodes = Math.max(freshRecord.total_episodes, originalEpisodes);
-
     console.log(`✓ 应更新原始集数: ${existingRecord.title} - 用户看了第${newRecord.index}集（超过原始${originalEpisodes}集），数据库最新集数${freshRecord.total_episodes}集 → 更新原始集数为${latestTotalEpisodes}集`);
 
     return { shouldUpdate: true, latestTotalEpisodes };
