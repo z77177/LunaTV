@@ -291,7 +291,7 @@ export async function GET(request: NextRequest) {
           console.warn(`获取源站 ${source.name} 分类失败，使用默认分类:`, error);
         }
 
-        return {
+        const site: any = {
           key: source.key || source.name,
           name: source.name,
           type: type, // 使用智能判断的type
@@ -299,12 +299,14 @@ export async function GET(request: NextRequest) {
           searchable: 1, // 可搜索
           quickSearch: 1, // 支持快速搜索
           filterable: 1, // 支持分类筛选
-          ext: siteExt || '', // 确保始终是字符串（即使是空的）
-          ...(siteJar && { jar: siteJar }), // 站点级 jar 包
-          playerUrl: '', // 站点解析URL
-          hide: 0, // 是否隐藏源站 (1: 隐藏, 0: 显示)
           categories: categories // 使用动态获取的分类
         };
+
+        // 🔑 关键修复：只在有值时才添加可选字段，避免空字符串导致 Box-main 传递空 extend 参数
+        if (siteExt) site.ext = siteExt;
+        if (siteJar) site.jar = siteJar;
+
+        return site;
       })),
 
       // 解析源配置（添加一些常用的解析源）
