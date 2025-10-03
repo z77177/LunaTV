@@ -774,6 +774,15 @@ export async function savePlayRecord(
       // 🔑 同时更新 total_episodes 为最新值
       record.total_episodes = updateResult.latestTotalEpisodes;
       console.log(`✓ 更新原始集数: ${key} = ${existingRecord.original_episodes}集 -> ${updateResult.latestTotalEpisodes}集（用户已观看新集数）`);
+
+      // 🔑 关键修复：清除 watching-updates 缓存，强制下次重新检查
+      try {
+        localStorage.removeItem('moontv_watching_updates');
+        localStorage.removeItem('moontv_last_update_check');
+        console.log('✅ 已清除 watching-updates 缓存，下次将重新检查更新状态');
+      } catch (error) {
+        console.warn('清除 watching-updates 缓存失败:', error);
+      }
     } else {
       // 保持现有的原始集数不变
       record.original_episodes = existingRecord.original_episodes;
