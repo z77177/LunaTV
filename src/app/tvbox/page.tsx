@@ -34,6 +34,8 @@ interface DiagnosisResult {
   status?: number;
   contentType?: string;
   hasJson?: boolean;
+  receivedToken?: string;
+  size?: number;
   sitesCount?: number;
   livesCount?: number;
   parsesCount?: number;
