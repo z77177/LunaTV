@@ -326,6 +326,33 @@ export default function TVBoxConfigPage() {
                 </div>
               ) : (
                 <>
+                  {/* 基本信息 */}
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                    <h3 className="font-semibold text-green-900 dark:text-green-300 mb-3">✓ 基本信息</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="text-gray-600 dark:text-gray-400">状态码:</div>
+                      <div className="text-gray-900 dark:text-gray-100 font-medium">{diagnosisResult.status || 'N/A'}</div>
+
+                      <div className="text-gray-600 dark:text-gray-400">Content-Type:</div>
+                      <div className="text-gray-900 dark:text-gray-100 font-mono text-xs">{diagnosisResult.contentType || 'N/A'}</div>
+
+                      <div className="text-gray-600 dark:text-gray-400">JSON解析:</div>
+                      <div className={diagnosisResult.hasJson ? 'text-green-600 dark:text-green-400 font-medium' : 'text-red-600 dark:text-red-400 font-medium'}>
+                        {diagnosisResult.hasJson ? '✓ 成功' : '✗ 失败'}
+                      </div>
+
+                      {diagnosisResult.receivedToken && (
+                        <>
+                          <div className="text-gray-600 dark:text-gray-400">接收到的Token:</div>
+                          <div className="text-gray-900 dark:text-gray-100 font-mono text-xs">{diagnosisResult.receivedToken}</div>
+                        </>
+                      )}
+
+                      <div className="text-gray-600 dark:text-gray-400">配置大小:</div>
+                      <div className="text-gray-900 dark:text-gray-100 font-medium">{diagnosisResult.size ? `${diagnosisResult.size.toLocaleString()} 字节` : 'N/A'}</div>
+                    </div>
+                  </div>
+
                   {/* Spider JAR 状态 */}
                   <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Spider JAR:</h3>
