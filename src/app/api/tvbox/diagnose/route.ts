@@ -179,6 +179,17 @@ export async function GET(req: NextRequest) {
         ? parsed.parses.length
         : 0;
 
+      // 传递 Spider 状态透明化字段
+      if (parsed.spider_status) {
+        result.spider_status = parsed.spider_status;
+      }
+      if (parsed.spider_backup) {
+        result.spider_backup = parsed.spider_backup;
+      }
+      if (parsed.spider_candidates) {
+        result.spider_candidates = parsed.spider_candidates;
+      }
+
       // 检查私网地址
       const privateApis = sites.filter(
         (s: any) => typeof s?.api === 'string' && isPrivateHost(s.api)
