@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { getSpiderJar, getCandidates } from '@/lib/spiderJar';
 
 // Helper function to get base URL with SITE_BASE env support
 function getBaseUrl(request: NextRequest): string {
@@ -74,27 +75,6 @@ class ConcurrencyLimiter {
 
 const categoriesLimiter = new ConcurrencyLimiter(10); // 最多同时10个请求
 
-// ================= Spider 公共可达 & 探测缓存逻辑 =================
-// 远程候选列表（按稳定性排序）
-const REMOTE_SPIDER_CANDIDATES: { url: string; md5?: string }[] = [
-  {
-    url: 'https://cdn.jsdelivr.net/gh/FongMi/CatVodSpider@main/jar/custom_spider.jar',
-    md5: 'a8b9c1d2e3f4',
-  },
-  {
-    url: 'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
-    md5: 'a8b9c1d2e3f4',
-  },
-  {
-    url: 'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar',
-    md5: 'e53eb37c4dc3dce1c8ee0c996ca3a024',
-  },
-  {
-    url: 'https://ghproxy.com/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
-    md5: 'a8b9c1d2e3f4',
-  },
-];
-
 // 私网地址判断
 function isPrivateHost(host: string): boolean {
   if (!host) return true;
@@ -108,99 +88,6 @@ function isPrivateHost(host: string): boolean {
     lower.startsWith('192.168.') ||
     lower === '::1'
   );
-}
-
-type SpiderCacheEntry = { url: string; ts: number } | null;
-let spiderCache: SpiderCacheEntry = null;
-const SPIDER_CACHE_TTL_MS = 30 * 60 * 1000; // 30分钟
-
-// Spider 选择状态（用于诊断）
-let lastSpiderStatus: {
-  fromCache: boolean;
-  success: boolean;
-  selected: string;
-  tried: number;
-  forceRefresh: boolean;
-  timestamp: number;
-} | null = null;
-
-// 探测 Spider URL 可用性
-async function probeSpiderUrl(url: string, timeoutMs = 4000): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-
-    // 先尝试 HEAD
-    let resp = await fetch(url, { method: 'HEAD', signal: controller.signal });
-    if (!resp.ok || !resp.headers.get('content-length')) {
-      // 回退 GET
-      resp = await fetch(url, { method: 'GET', signal: controller.signal });
-    }
-
-    clearTimeout(id);
-    return resp.ok;
-  } catch {
-    return false;
-  }
-}
-
-// 选择可用的公网 Spider
-async function selectPublicSpider(forceRefresh = false): Promise<string> {
-  const now = Date.now();
-
-  // 缓存命中
-  if (
-    !forceRefresh &&
-    spiderCache &&
-    now - spiderCache.ts < SPIDER_CACHE_TTL_MS
-  ) {
-    lastSpiderStatus = {
-      fromCache: true,
-      success: !/;fail$/.test(spiderCache.url),
-      selected: spiderCache.url,
-      tried: 0,
-      forceRefresh,
-      timestamp: now,
-    };
-    return spiderCache.url;
-  }
-
-  let tried = 0;
-  for (const cand of REMOTE_SPIDER_CANDIDATES) {
-    tried += 1;
-    const ok = await probeSpiderUrl(cand.url);
-    if (ok) {
-      const full = cand.md5 ? `${cand.url};md5;${cand.md5}` : cand.url;
-      spiderCache = { url: full, ts: now };
-      lastSpiderStatus = {
-        fromCache: false,
-        success: true,
-        selected: full,
-        tried,
-        forceRefresh,
-        timestamp: now,
-      };
-      console.log(`[Spider] 探测成功: ${cand.url} (尝试 ${tried} 次)`);
-      return full;
-    }
-  }
-
-  // 全部失败：返回第一个候选并标记 fail
-  const first = REMOTE_SPIDER_CANDIDATES[0];
-  const fallback = first.md5
-    ? `${first.url};md5;${first.md5};fail`
-    : `${first.url};fail`;
-  spiderCache = { url: fallback, ts: now };
-  lastSpiderStatus = {
-    fromCache: false,
-    success: false,
-    selected: fallback,
-    tried,
-    forceRefresh,
-    timestamp: now,
-  };
-  console.warn(`[Spider] 所有源探测失败，使用 fallback: ${first.url}`);
-  return fallback;
 }
 
 // TVBox源格式接口 (基于官方标准)
@@ -260,14 +147,12 @@ interface TVBoxConfig {
   }>; // 播放规则（用于影视仓模式）
   maxHomeVideoContent?: string; // 首页最大视频数量
   spider_backup?: string; // 备用本地代理地址
-  spider_status?: {
-    fromCache: boolean;
-    success: boolean;
-    selected: string;
-    tried: number;
-    forceRefresh: boolean;
-    timestamp: number;
-  }; // Spider 选择状态
+  spider_url?: string; // 实际使用的 spider URL
+  spider_md5?: string; // spider jar 的 MD5
+  spider_cached?: boolean; // 是否来自缓存
+  spider_real_size?: number; // 实际 jar 大小（字节）
+  spider_tried?: number; // 尝试次数
+  spider_success?: boolean; // 是否成功获取远程 jar
   spider_candidates?: string[]; // 候选地址列表
 }
 
@@ -708,24 +593,37 @@ export async function GET(request: NextRequest) {
       ]
     };
 
-    // 使用新的 Spider 选择逻辑（主动探测+缓存）
-    let selectedSpider = await selectPublicSpider(forceSpiderRefresh);
+    // 使用新的 Spider Jar 管理逻辑（下载真实 jar + 缓存）
+    const jarInfo = await getSpiderJar(forceSpiderRefresh);
+
+    // 🔑 核心优化：永远使用本地代理路径，确保 100% 不会 404
+    // 本地代理内部会智能选择最佳 jar（已缓存或实时下载）
+    let finalSpiderUrl = `${baseUrl}/api/proxy/spider.jar;md5;${jarInfo.md5}`;
 
     // 如果用户源配置中有自定义jar，优先使用（但必须是公网地址）
     if (globalSpiderJar) {
       try {
         const jarUrl = new URL(globalSpiderJar.split(';')[0]);
         if (!isPrivateHost(jarUrl.hostname)) {
-          selectedSpider = globalSpiderJar;
+          // 用户自定义的公网 jar，直接使用
+          finalSpiderUrl = globalSpiderJar;
         } else {
-          console.warn(`[Spider] 用户配置的jar是私网地址，使用探测结果: ${selectedSpider}`);
+          console.warn(`[Spider] 用户配置的jar是私网地址，使用本地代理路径`);
         }
       } catch {
-        // URL解析失败，使用探测结果
+        // URL解析失败，使用本地代理路径
+        console.warn(`[Spider] 用户配置的jar解析失败，使用本地代理路径`);
       }
     }
 
-    tvboxConfig.spider = selectedSpider;
+    // 设置 spider 字段和状态透明化字段
+    tvboxConfig.spider = finalSpiderUrl;
+    tvboxConfig.spider_url = jarInfo.source; // 真实来源（用于诊断）
+    tvboxConfig.spider_md5 = jarInfo.md5;
+    tvboxConfig.spider_cached = jarInfo.cached;
+    tvboxConfig.spider_real_size = jarInfo.size;
+    tvboxConfig.spider_tried = jarInfo.tried;
+    tvboxConfig.spider_success = jarInfo.success;
 
     // 安全/最小模式：仅返回必要字段，提高兼容性
     if (mode === 'safe' || mode === 'min') {
@@ -777,11 +675,7 @@ export async function GET(request: NextRequest) {
 
     // 添加 Spider 状态透明化字段（帮助诊断）
     tvboxConfig.spider_backup = `${baseUrl}/api/proxy/spider.jar`;
-
-    if (lastSpiderStatus) {
-      tvboxConfig.spider_status = lastSpiderStatus;
-      tvboxConfig.spider_candidates = REMOTE_SPIDER_CANDIDATES.map(c => c.url);
-    }
+    tvboxConfig.spider_candidates = getCandidates();
 
     // 根据format参数返回不同格式
     if (format === 'base64' || format === 'txt') {

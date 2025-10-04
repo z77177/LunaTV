@@ -180,8 +180,23 @@ export async function GET(req: NextRequest) {
         : 0;
 
       // 传递 Spider 状态透明化字段
-      if (parsed.spider_status) {
-        result.spider_status = parsed.spider_status;
+      if (parsed.spider_url) {
+        result.spider_url = parsed.spider_url;
+      }
+      if (parsed.spider_md5) {
+        result.spider_md5 = parsed.spider_md5;
+      }
+      if (parsed.spider_cached !== undefined) {
+        result.spider_cached = parsed.spider_cached;
+      }
+      if (parsed.spider_real_size !== undefined) {
+        result.spider_real_size = parsed.spider_real_size;
+      }
+      if (parsed.spider_tried !== undefined) {
+        result.spider_tried = parsed.spider_tried;
+      }
+      if (parsed.spider_success !== undefined) {
+        result.spider_success = parsed.spider_success;
       }
       if (parsed.spider_backup) {
         result.spider_backup = parsed.spider_backup;

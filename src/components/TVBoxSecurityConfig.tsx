@@ -581,15 +581,29 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
                     )}
                   </div>
 
-                  {/* Spider 选择状态（新增）*/}
-                  {(diagnoseResult as any).spider_status && (
+                  {/* Spider Jar 状态（新增）*/}
+                  {((diagnoseResult as any).spider_url || (diagnoseResult as any).spider_md5) && (
                     <div className='mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs'>
-                      <div className='font-medium text-blue-800 dark:text-blue-200 mb-1'>Spider 选择状态:</div>
+                      <div className='font-medium text-blue-800 dark:text-blue-200 mb-1'>Spider Jar 状态:</div>
                       <div className='space-y-0.5 text-blue-700 dark:text-blue-300'>
-                        <div>• 来源: {(diagnoseResult as any).spider_status.fromCache ? '缓存' : '实时探测'}</div>
-                        <div>• 成功: {(diagnoseResult as any).spider_status.success ? '✓' : '✗ (使用fallback)'}</div>
-                        <div>• 尝试次数: {(diagnoseResult as any).spider_status.tried}</div>
-                        <div>• 时间: {new Date((diagnoseResult as any).spider_status.timestamp).toLocaleTimeString('zh-CN')}</div>
+                        {(diagnoseResult as any).spider_url && (
+                          <div>• 来源: {(diagnoseResult as any).spider_url}</div>
+                        )}
+                        {(diagnoseResult as any).spider_md5 && (
+                          <div>• MD5: {(diagnoseResult as any).spider_md5}</div>
+                        )}
+                        {(diagnoseResult as any).spider_cached !== undefined && (
+                          <div>• 缓存: {(diagnoseResult as any).spider_cached ? '✓ 是' : '✗ 否（实时下载）'}</div>
+                        )}
+                        {(diagnoseResult as any).spider_real_size !== undefined && (
+                          <div>• 真实大小: {Math.round((diagnoseResult as any).spider_real_size / 1024)}KB</div>
+                        )}
+                        {(diagnoseResult as any).spider_tried !== undefined && (
+                          <div>• 尝试次数: {(diagnoseResult as any).spider_tried}</div>
+                        )}
+                        {(diagnoseResult as any).spider_success !== undefined && (
+                          <div>• 状态: {(diagnoseResult as any).spider_success ? '✓ 成功' : '✗ 降级（使用fallback jar）'}</div>
+                        )}
                       </div>
                     </div>
                   )}
