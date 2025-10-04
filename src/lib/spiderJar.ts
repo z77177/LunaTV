@@ -8,9 +8,13 @@ import crypto from 'crypto';
 
 // Remote jar candidates (order by stability). Update list as needed.
 const CANDIDATES: string[] = [
-  'https://cdn.jsdelivr.net/gh/FongMi/CatVodSpider@main/jar/custom_spider.jar',
+  // GitHub raw - 最稳定，实测可用，优先使用
   'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
+  // jsdelivr - 目前被封禁(403)，保留作为备选以防将来恢复
+  'https://cdn.jsdelivr.net/gh/FongMi/CatVodSpider@main/jar/custom_spider.jar',
+  // ghproxy - 国内镜像代理
   'https://ghproxy.com/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
+  // gitcode - 稳定的备用 jar（不同仓库）
   'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar',
 ];
 
