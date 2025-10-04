@@ -270,28 +270,61 @@ export async function GET(request: NextRequest) {
 
         try {
           // 尝试获取源站的分类数据
-          const categoriesUrl = `${source.api}?ac=list`;
+          // 智能构建请求URL：
+          // 1. 如果API已经带参数，直接使用
+          // 2. 否则先尝试不带参数（大多数源支持）
+          // 3. 如果没有class字段，再尝试?ac=list
+          let categoriesData = null;
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
 
-          const response = await fetch(categoriesUrl, {
-            signal: controller.signal,
-            headers: {
-              'User-Agent': 'TVBox/1.0.0'
-            }
-          });
+          try {
+            // 第一次尝试：不带参数或使用原API
+            const firstUrl = source.api;
+            const response1 = await fetch(firstUrl, {
+              signal: controller.signal,
+              headers: { 'User-Agent': 'TVBox/1.0.0' }
+            });
 
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.class && Array.isArray(data.class)) {
-              // 只提取子分类（type_pid != 0），过滤掉空的父分类
-              categories = data.class
-                .filter((cat: any) => cat.type_pid && cat.type_pid != 0)
-                .map((cat: any) => cat.type_name || cat.name)
-                .filter((name: string) => name);
+            if (response1.ok) {
+              const data = await response1.json();
+              if (data.class && Array.isArray(data.class) && data.class.length > 0) {
+                categoriesData = data;
+              }
             }
+
+            // 第二次尝试：如果第一次没有class字段，尝试?ac=list
+            if (!categoriesData) {
+              const secondUrl = source.api.includes('?')
+                ? `${source.api}&ac=list`
+                : `${source.api}?ac=list`;
+
+              const response2 = await fetch(secondUrl, {
+                signal: controller.signal,
+                headers: { 'User-Agent': 'TVBox/1.0.0' }
+              });
+
+              if (response2.ok) {
+                const data = await response2.json();
+                if (data.class && Array.isArray(data.class) && data.class.length > 0) {
+                  categoriesData = data;
+                }
+              }
+            }
+          } finally {
+            clearTimeout(timeoutId);
+          }
+
+          if (categoriesData && categoriesData.class) {
+            // 智能过滤分类：
+            // 1. 如果存在子分类（type_pid != 0），优先使用子分类
+            // 2. 如果只有父分类或没有type_pid字段，则使用所有分类
+            const childCategories = categoriesData.class.filter((cat: any) => cat.type_pid && cat.type_pid != 0);
+            const categoriesToUse = childCategories.length > 0 ? childCategories : categoriesData.class;
+
+            categories = categoriesToUse
+              .map((cat: any) => cat.type_name || cat.name)
+              .filter((name: string) => name);
           }
         } catch (error) {
           // 获取分类失败时使用默认分类
