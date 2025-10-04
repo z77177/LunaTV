@@ -528,6 +528,55 @@ export default function TVBoxConfigPage() {
                     </div>
                   )}
 
+                  {/* 配置统计信息 */}
+                  {(diagnosisResult.sitesCount !== undefined || diagnosisResult.livesCount !== undefined) && (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">配置统计:</h3>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        {diagnosisResult.sitesCount !== undefined && (
+                          <>
+                            <div>影视源数量:</div>
+                            <div className="text-gray-900 dark:text-gray-100">{diagnosisResult.sitesCount}</div>
+                          </>
+                        )}
+                        {diagnosisResult.livesCount !== undefined && (
+                          <>
+                            <div>直播源数量:</div>
+                            <div className="text-gray-900 dark:text-gray-100">{diagnosisResult.livesCount}</div>
+                          </>
+                        )}
+                        {diagnosisResult.parsesCount !== undefined && (
+                          <>
+                            <div>解析源数量:</div>
+                            <div className="text-gray-900 dark:text-gray-100">{diagnosisResult.parsesCount}</div>
+                          </>
+                        )}
+                        {diagnosisResult.privateApis !== undefined && (
+                          <>
+                            <div>私网API数量:</div>
+                            <div className={diagnosisResult.privateApis > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}>
+                              {diagnosisResult.privateApis}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 候选列表 */}
+                  {diagnosisResult.spider_candidates && diagnosisResult.spider_candidates.length > 0 && (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Spider JAR 候选列表:</h3>
+                      <div className="space-y-1">
+                        {diagnosisResult.spider_candidates.map((candidate, idx) => (
+                          <div key={idx} className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">
+                            {idx + 1}. {candidate}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* 问题列表 */}
                   {diagnosisResult.issues && diagnosisResult.issues.length > 0 && (
                     <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg">
