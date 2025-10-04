@@ -769,7 +769,6 @@ export async function GET(request: NextRequest) {
     }
 
     // 添加 Spider 状态透明化字段（帮助诊断）
-    const baseUrl = getBaseUrl(request);
     tvboxConfig.spider_backup = `${baseUrl}/api/proxy/spider.jar`;
 
     if (lastSpiderStatus) {
