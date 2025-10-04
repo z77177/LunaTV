@@ -125,7 +125,9 @@ export async function getSpiderJar(
 }
 
 export function getSpiderStatus(): Omit<SpiderJarInfo, 'buffer'> | null {
-  return cache ? { ...cache, buffer: undefined as any } : null;
+  if (!cache) return null;
+  const { buffer, ...rest } = cache;
+  return rest;
 }
 
 export function getCandidates(): string[] {

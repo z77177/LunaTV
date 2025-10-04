@@ -596,9 +596,18 @@ export async function GET(request: NextRequest) {
     // 使用新的 Spider Jar 管理逻辑（下载真实 jar + 缓存）
     const jarInfo = await getSpiderJar(forceSpiderRefresh);
 
-    // 🔑 核心优化：永远使用本地代理路径，确保 100% 不会 404
-    // 本地代理内部会智能选择最佳 jar（已缓存或实时下载）
-    let finalSpiderUrl = `${baseUrl}/api/proxy/spider.jar;md5;${jarInfo.md5}`;
+    // 🔑 最终策略：优先使用远程公网 jar，失败时回退到稳定的公网备用地址
+    let finalSpiderUrl: string;
+
+    if (jarInfo.success && jarInfo.source !== 'fallback') {
+      // 成功获取远程 jar，直接使用远程 URL（公网地址，减轻服务器负载）
+      finalSpiderUrl = `${jarInfo.source};md5;${jarInfo.md5}`;
+      console.log(`[Spider] 使用远程公网 jar: ${jarInfo.source}`);
+    } else {
+      // 远程失败，使用已知稳定的公网 jar（不会 private/404）
+      finalSpiderUrl = 'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar;md5;e53eb37c4dc3dce1c8ee0c996ca3a024';
+      console.warn(`[Spider] 远程 jar 获取失败，使用稳定公网备用: ${finalSpiderUrl}`);
+    }
 
     // 如果用户源配置中有自定义jar，优先使用（但必须是公网地址）
     if (globalSpiderJar) {
@@ -607,12 +616,13 @@ export async function GET(request: NextRequest) {
         if (!isPrivateHost(jarUrl.hostname)) {
           // 用户自定义的公网 jar，直接使用
           finalSpiderUrl = globalSpiderJar;
+          console.log(`[Spider] 使用用户自定义 jar: ${globalSpiderJar}`);
         } else {
-          console.warn(`[Spider] 用户配置的jar是私网地址，使用本地代理路径`);
+          console.warn(`[Spider] 用户配置的jar是私网地址，使用自动选择结果`);
         }
       } catch {
-        // URL解析失败，使用本地代理路径
-        console.warn(`[Spider] 用户配置的jar解析失败，使用本地代理路径`);
+        // URL解析失败，使用自动选择结果
+        console.warn(`[Spider] 用户配置的jar解析失败，使用自动选择结果`);
       }
     }
 
@@ -674,7 +684,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 添加 Spider 状态透明化字段（帮助诊断）
-    tvboxConfig.spider_backup = `${baseUrl}/api/proxy/spider.jar`;
+    tvboxConfig.spider_backup = 'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar';
     tvboxConfig.spider_candidates = getCandidates();
 
     // 根据format参数返回不同格式
