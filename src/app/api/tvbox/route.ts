@@ -355,6 +355,34 @@ export async function GET(request: NextRequest) {
           type = 3;
         }
 
+        // 根据不同API类型设置优化配置（提升稳定性和切换体验）
+        let siteHeader: Record<string, string> = {};
+        let siteTimeout = 10000; // 默认10秒
+        let siteRetry = 2; // 默认重试2次
+
+        if (type === 0 || type === 1) {
+          // 苹果CMS接口优化配置
+          siteHeader = {
+            'User-Agent':
+              'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36',
+            Accept: 'application/json, text/plain, */*',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Cache-Control': 'no-cache',
+            Connection: 'close', // 避免连接复用问题
+          };
+          siteTimeout = 10000; // 10秒超时
+          siteRetry = 2; // 重试2次
+        } else if (type === 3) {
+          // CSP源优化配置
+          siteHeader = {
+            'User-Agent': 'okhttp/3.15',
+            Accept: '*/*',
+            Connection: 'close',
+          };
+          siteTimeout = 15000; // CSP源通常更稳定，设置更长超时
+          siteRetry = 1; // 重试1次
+        }
+
         // 动态获取源站分类
         let categories: string[] = ["电影", "电视剧", "综艺", "动漫", "纪录片", "短剧"]; // 默认分类
 
@@ -404,11 +432,15 @@ export async function GET(request: NextRequest) {
           searchable: 1, // 可搜索
           quickSearch: 1, // 支持快速搜索
           filterable: 1, // 支持分类筛选
+          changeable: 1, // 允许换源
           ext: siteExt || '', // 确保始终是字符串（即使是空的）
           ...(siteJar && { jar: siteJar }), // 站点级 jar 包
           playerUrl: '', // 站点解析URL
           hide: 0, // 是否隐藏源站 (1: 隐藏, 0: 显示)
-          categories: categories // 使用动态获取的分类
+          categories: categories, // 使用动态获取的分类
+          header: siteHeader, // 优化的请求头
+          timeout: siteTimeout, // 超时时间
+          retry: siteRetry, // 重试次数
         };
       })),
 
@@ -596,7 +628,7 @@ export async function GET(request: NextRequest) {
     // 使用新的 Spider Jar 管理逻辑（下载真实 jar + 缓存）
     const jarInfo = await getSpiderJar(forceSpiderRefresh);
 
-    // 🔑 最终策略：优先使用远程公网 jar，失败时回退到稳定的公网备用地址
+    // 🔑 最终策略：优先使用远程公网 jar，失败时使用多个备选方案
     let finalSpiderUrl: string;
 
     if (jarInfo.success && jarInfo.source !== 'fallback') {
@@ -604,9 +636,15 @@ export async function GET(request: NextRequest) {
       finalSpiderUrl = `${jarInfo.source};md5;${jarInfo.md5}`;
       console.log(`[Spider] 使用远程公网 jar: ${jarInfo.source}`);
     } else {
-      // 远程失败，使用已知稳定的公网 jar（不会 private/404）
-      finalSpiderUrl = 'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar;md5;e53eb37c4dc3dce1c8ee0c996ca3a024';
-      console.warn(`[Spider] 远程 jar 获取失败，使用稳定公网备用: ${finalSpiderUrl}`);
+      // 远程失败，使用多个备选方案，提升成功率
+      const fallbackJars = [
+        'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar;md5;e53eb37c4dc3dce1c8ee0c996ca3a024',
+        'https://gitee.com/q215613905/TVBoxOS/raw/main/JAR/XC.jar;md5;e53eb37c4dc3dce1c8ee0c996ca3a024',
+        `https://cdn.jsdelivr.net/gh/hjdhnx/dr_py@main/js/drpy.jar;md5;${jarInfo.md5}`,
+      ];
+      // 随机选择一个备选jar，避免单点失败
+      finalSpiderUrl = fallbackJars[Math.floor(Math.random() * fallbackJars.length)];
+      console.warn(`[Spider] 远程 jar 获取失败，随机选择备用: ${finalSpiderUrl.split(';')[0]}`);
     }
 
     // 如果用户源配置中有自定义jar，优先使用（但必须是公网地址）
@@ -642,6 +680,49 @@ export async function GET(request: NextRequest) {
         sites: tvboxConfig.sites,
         lives: tvboxConfig.lives,
         parses: [{ name: '默认解析', type: 0, url: `${baseUrl}/api/parse?url=` }],
+      } as TVBoxConfig;
+    } else if (mode === 'fast' || mode === 'optimize') {
+      // 快速切换优化模式：专门针对资源源切换体验优化
+      tvboxConfig = {
+        spider: tvboxConfig.spider,
+        sites: tvboxConfig.sites.map((site: any) => {
+          const fastSite = { ...site };
+          // 快速模式：移除可能导致卡顿的配置
+          delete fastSite.timeout;
+          delete fastSite.retry;
+
+          // 优化请求头，提升响应速度
+          if (fastSite.type === 3) {
+            fastSite.header = { 'User-Agent': 'okhttp/3.15' };
+          } else {
+            fastSite.header = {
+              'User-Agent':
+                'Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36',
+              Connection: 'close',
+            };
+          }
+
+          // 强制启用快速切换相关功能
+          fastSite.searchable = 1;
+          fastSite.quickSearch = 1;
+          fastSite.filterable = 1;
+          fastSite.changeable = 1;
+
+          return fastSite;
+        }),
+        lives: tvboxConfig.lives,
+        parses: [
+          {
+            name: '极速解析',
+            type: 0,
+            url: 'https://jx.xmflv.com/?url=',
+            ext: { flag: ['all'] },
+          },
+          { name: 'Json并发', type: 2, url: 'Parallel' },
+        ],
+        flags: ['youku', 'qq', 'iqiyi', 'qiyi', 'letv', 'sohu', 'mgtv'],
+        wallpaper: '', // 移除壁纸加快加载
+        maxHomeVideoContent: '15', // 减少首页内容，提升加载速度
       } as TVBoxConfig;
     } else if (mode === 'yingshicang') {
       // 影视仓专用模式：优化兼容性和播放规则

@@ -6,16 +6,23 @@
  */
 import crypto from 'crypto';
 
-// Remote jar candidates (order by stability). Update list as needed.
+// Remote jar candidates (order by stability and SSL compatibility)
+// 优先使用支持 HTTPS 且稳定的源，减少 SSL handshake 错误
 const CANDIDATES: string[] = [
-  // GitHub raw - 最稳定，实测可用，优先使用
-  'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
-  // jsdelivr - 目前被封禁(403)，保留作为备选以防将来恢复
-  'https://cdn.jsdelivr.net/gh/FongMi/CatVodSpider@main/jar/custom_spider.jar',
-  // ghproxy - 国内镜像代理
-  'https://ghproxy.com/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
-  // gitcode - 稳定的备用 jar（不同仓库）
+  // 优先：国内稳定源（避免 SSL 问题）
   'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar',
+  'https://gitee.com/q215613905/TVBoxOS/raw/main/JAR/XC.jar',
+
+  // jsDelivr CDN（全球加速，SSL 稳定）
+  'https://cdn.jsdelivr.net/gh/hjdhnx/dr_py@main/js/drpy.jar',
+  'https://cdn.jsdelivr.net/gh/FongMi/CatVodSpider@main/jar/spider.jar',
+
+  // GitHub 原始链接（备用）
+  'https://raw.githubusercontent.com/hjdhnx/dr_py/main/js/drpy.jar',
+  'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/spider.jar',
+
+  // 代理源（最后备用）
+  'https://ghproxy.com/https://raw.githubusercontent.com/hjdhnx/dr_py/main/js/drpy.jar',
 ];
 
 // Minimal valid JAR (ZIP) with MANIFEST.MF (base64)
@@ -40,26 +47,27 @@ const TTL = 6 * 60 * 60 * 1000; // 6h
 
 async function fetchRemote(
   url: string,
-  timeoutMs = 10000
+  timeoutMs = 15000
 ): Promise<Buffer | null> {
   try {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
 
-    // 先用 HEAD 检查文件是否存在
-    const headResp = await fetch(url, { method: 'HEAD', signal: controller.signal });
-    if (!headResp.ok || headResp.status >= 400) {
-      clearTimeout(id);
-      return null;
-    }
+    // 优化的请求头，提升兼容性，减少 SSL 问题
+    const headers = {
+      'User-Agent':
+        'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36',
+      Accept: '*/*',
+      'Accept-Encoding': 'identity', // 避免压缩导致的问题
+      Connection: 'close', // 避免连接复用问题
+      'Cache-Control': 'no-cache',
+    };
 
-    // 文件存在，获取完整内容
+    // 直接获取文件内容，跳过 HEAD 检查（减少请求次数）
     const resp = await fetch(url, {
       method: 'GET',
       signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+      headers,
     });
     clearTimeout(id);
 
@@ -69,7 +77,7 @@ async function fetchRemote(
 
     return Buffer.from(ab);
   } catch (error) {
-    console.warn(`[SpiderJar] Failed to fetch ${url}:`, error instanceof Error ? error.message : 'Unknown error');
+    // 记录但不抛出错误，让系统尝试下一个候选
     return null;
   }
 }

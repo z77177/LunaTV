@@ -17,7 +17,7 @@ interface SecurityConfig {
 export default function TVBoxConfigPage() {
   const [copied, setCopied] = useState(false);
   const [format, setFormat] = useState<'json' | 'base64'>('json');
-  const [configMode, setConfigMode] = useState<'standard' | 'safe' | 'yingshicang'>('standard');
+  const [configMode, setConfigMode] = useState<'standard' | 'safe' | 'fast' | 'yingshicang'>('standard');
   const [securityConfig, setSecurityConfig] = useState<SecurityConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -162,14 +162,14 @@ export default function TVBoxConfigPage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               配置模式
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <label className="flex items-center cursor-pointer p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
                 <input
                   type="radio"
                   name="configMode"
                   value="standard"
                   checked={configMode === 'standard'}
-                  onChange={(e) => setConfigMode(e.target.value as 'standard' | 'safe' | 'yingshicang')}
+                  onChange={(e) => setConfigMode(e.target.value as 'standard' | 'safe' | 'fast' | 'yingshicang')}
                   className="mr-2 w-4 h-4 text-blue-600 focus:ring-blue-500"
                 />
                 <div className="text-sm">
@@ -183,12 +183,26 @@ export default function TVBoxConfigPage() {
                   name="configMode"
                   value="safe"
                   checked={configMode === 'safe'}
-                  onChange={(e) => setConfigMode(e.target.value as 'standard' | 'safe' | 'yingshicang')}
+                  onChange={(e) => setConfigMode(e.target.value as 'standard' | 'safe' | 'fast' | 'yingshicang')}
                   className="mr-2 w-4 h-4 text-blue-600 focus:ring-blue-500"
                 />
                 <div className="text-sm">
                   <span className="font-medium text-gray-900 dark:text-white block">精简模式</span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">提高兼容</span>
+                </div>
+              </label>
+              <label className="flex items-center cursor-pointer p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:border-green-500 dark:hover:border-green-400 transition-colors">
+                <input
+                  type="radio"
+                  name="configMode"
+                  value="fast"
+                  checked={configMode === 'fast'}
+                  onChange={(e) => setConfigMode(e.target.value as 'standard' | 'safe' | 'fast' | 'yingshicang')}
+                  className="mr-2 w-4 h-4 text-green-600 focus:ring-green-500"
+                />
+                <div className="text-sm">
+                  <span className="font-medium text-gray-900 dark:text-white block">快速模式</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">优化切换</span>
                 </div>
               </label>
               <label className="flex items-center cursor-pointer p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
@@ -197,7 +211,7 @@ export default function TVBoxConfigPage() {
                   name="configMode"
                   value="yingshicang"
                   checked={configMode === 'yingshicang'}
-                  onChange={(e) => setConfigMode(e.target.value as 'standard' | 'safe' | 'yingshicang')}
+                  onChange={(e) => setConfigMode(e.target.value as 'standard' | 'safe' | 'fast' | 'yingshicang')}
                   className="mr-2 w-4 h-4 text-blue-600 focus:ring-blue-500"
                 />
                 <div className="text-sm">
@@ -211,6 +225,8 @@ export default function TVBoxConfigPage() {
                 ? '包含完整配置（IJK优化、广告过滤、DoH等），推荐使用'
                 : configMode === 'safe'
                 ? '仅包含核心配置，遇到TVBox兼容性问题时使用'
+                : configMode === 'fast'
+                ? '⚡ 优化源切换速度，减少卡顿和SSL错误，适合频繁切换源的用户'
                 : '专为影视仓优化，包含播放规则和兼容性修复'}
             </p>
           </div>
