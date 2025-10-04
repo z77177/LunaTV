@@ -580,6 +580,29 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
                       </div>
                     )}
                   </div>
+
+                  {/* Spider 选择状态（新增）*/}
+                  {(diagnoseResult as any).spider_status && (
+                    <div className='mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs'>
+                      <div className='font-medium text-blue-800 dark:text-blue-200 mb-1'>Spider 选择状态:</div>
+                      <div className='space-y-0.5 text-blue-700 dark:text-blue-300'>
+                        <div>• 来源: {(diagnoseResult as any).spider_status.fromCache ? '缓存' : '实时探测'}</div>
+                        <div>• 成功: {(diagnoseResult as any).spider_status.success ? '✓' : '✗ (使用fallback)'}</div>
+                        <div>• 尝试次数: {(diagnoseResult as any).spider_status.tried}</div>
+                        <div>• 时间: {new Date((diagnoseResult as any).spider_status.timestamp).toLocaleTimeString('zh-CN')}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 备用代理地址（新增）*/}
+                  {(diagnoseResult as any).spider_backup && (
+                    <div className='mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs'>
+                      <div className='text-gray-600 dark:text-gray-400 mb-1'>备用代理地址:</div>
+                      <div className='text-gray-900 dark:text-gray-100 break-all font-mono'>
+                        {(diagnoseResult as any).spider_backup}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
