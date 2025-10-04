@@ -7,22 +7,13 @@
 import crypto from 'crypto';
 
 // Remote jar candidates (order by stability and SSL compatibility)
-// 优先使用支持 HTTPS 且稳定的源，减少 SSL handshake 错误
+// 只保留经过验证可用的源（2025-10-04 测试通过）
 const CANDIDATES: string[] = [
-  // 优先：国内稳定源（避免 SSL 问题）
-  'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar',
-  'https://gitee.com/q215613905/TVBoxOS/raw/main/JAR/XC.jar',
+  // GitHub 可用源 #1: FongMi (283KB, 200 OK)
+  'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
 
-  // jsDelivr CDN（全球加速，SSL 稳定）
-  'https://cdn.jsdelivr.net/gh/hjdhnx/dr_py@main/js/drpy.jar',
-  'https://cdn.jsdelivr.net/gh/FongMi/CatVodSpider@main/jar/spider.jar',
-
-  // GitHub 原始链接（备用）
-  'https://raw.githubusercontent.com/hjdhnx/dr_py/main/js/drpy.jar',
-  'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/spider.jar',
-
-  // 代理源（最后备用）
-  'https://ghproxy.com/https://raw.githubusercontent.com/hjdhnx/dr_py/main/js/drpy.jar',
+  // GitHub 可用源 #2: qlql765 (174KB, 200 OK)
+  'https://raw.githubusercontent.com/qlql765/CatVodTVSpider-by-zhixc/main/jar/custom_spider.jar',
 ];
 
 // 内置稳定 JAR 作为最终 fallback - 提取自实际工作的 spider.jar
