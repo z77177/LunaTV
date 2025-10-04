@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Monitor, Shield, Smartphone, Tv } from 'lucide-react';
+import { AlertTriangle, Monitor, Shield, Smartphone, Tv, Activity } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import PageLayout from '@/components/PageLayout';
@@ -14,12 +14,32 @@ interface SecurityConfig {
   rateLimit: number;
 }
 
+interface DiagnosisResult {
+  spider?: string;
+  spiderPrivate?: boolean;
+  spiderAccessible?: boolean;
+  spiderStatus?: number;
+  contentLength?: string;
+  lastModified?: string;
+  spider_url?: string;
+  spider_md5?: string;
+  spider_cached?: boolean;
+  spider_real_size?: number;
+  spider_tried?: number;
+  spider_success?: boolean;
+  spider_backup?: string;
+  issues?: string[];
+  error?: string;
+}
+
 export default function TVBoxConfigPage() {
   const [copied, setCopied] = useState(false);
   const [format, setFormat] = useState<'json' | 'base64'>('json');
   const [configMode, setConfigMode] = useState<'standard' | 'safe' | 'fast' | 'yingshicang'>('standard');
   const [securityConfig, setSecurityConfig] = useState<SecurityConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisResult | null>(null);
 
   // 获取安全配置（使用普通用户可访问的接口）
   const fetchSecurityConfig = useCallback(async () => {
@@ -67,6 +87,24 @@ export default function TVBoxConfigPage() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Copy failed silently
+    }
+  };
+
+  const handleDiagnose = async () => {
+    setDiagnosing(true);
+    setDiagnosisResult(null);
+    try {
+      const params = new URLSearchParams();
+      if (securityConfig?.enableAuth && securityConfig.token) {
+        params.append('token', securityConfig.token);
+      }
+      const response = await fetch(`/api/tvbox/diagnose?${params.toString()}`);
+      const data = await response.json();
+      setDiagnosisResult(data);
+    } catch (error) {
+      setDiagnosisResult({ error: '诊断失败，请稍后重试' });
+    } finally {
+      setDiagnosing(false);
     }
   };
 
@@ -387,6 +425,107 @@ export default function TVBoxConfigPage() {
               <li>• 频率限制可能影响频繁刷新，属于正常现象</li>
             )}
           </ul>
+        </div>
+
+        {/* 诊断功能 */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                🔍 配置诊断
+              </h2>
+            </div>
+            <button
+              onClick={handleDiagnose}
+              disabled={diagnosing}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+            >
+              {diagnosing ? '诊断中...' : '开始诊断'}
+            </button>
+          </div>
+
+          {diagnosisResult && (
+            <div className="space-y-4">
+              {diagnosisResult.error ? (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
+                  <p className="text-red-700 dark:text-red-300">{diagnosisResult.error}</p>
+                </div>
+              ) : (
+                <>
+                  {/* Spider JAR 状态 */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Spider JAR:</h3>
+                    <div className="font-mono text-xs text-gray-600 dark:text-gray-300 break-all mb-2">
+                      {diagnosisResult.spider}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {diagnosisResult.spiderPrivate === false && (
+                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
+                          ✓ Spider 是公网地址
+                        </span>
+                      )}
+                      {diagnosisResult.spiderAccessible ? (
+                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
+                          ✓ Spider 可访问 (状态码: {diagnosisResult.spiderStatus})
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
+                          ✗ Spider 不可访问
+                        </span>
+                      )}
+                    </div>
+                    {diagnosisResult.lastModified && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        最后修改: {new Date(diagnosisResult.lastModified).toLocaleString('zh-CN')}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Spider Jar 状态 */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Spider Jar 状态:</h3>
+                    <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                      <li>• 来源: {diagnosisResult.spider_url || 'unknown'}</li>
+                      <li>• MD5: {diagnosisResult.spider_md5 || 'unknown'}</li>
+                      <li>• 缓存: {diagnosisResult.spider_cached ? '✓ 是' : '✗ 否（实时下载）'}</li>
+                      <li>• 真实大小: {diagnosisResult.spider_real_size ? `${Math.round(diagnosisResult.spider_real_size / 1024)}KB` : 'unknown'}</li>
+                      <li>• 尝试次数: {diagnosisResult.spider_tried || 0}</li>
+                      <li>• 状态: {diagnosisResult.spider_success ? '✓ 成功' : '✗ 降级（使用fallback jar）'}</li>
+                    </ul>
+                  </div>
+
+                  {/* 备用代理地址 */}
+                  {diagnosisResult.spider_backup && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">备用代理地址:</h3>
+                      <p className="font-mono text-xs text-blue-700 dark:text-blue-300 break-all">
+                        {diagnosisResult.spider_backup}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 问题列表 */}
+                  {diagnosisResult.issues && diagnosisResult.issues.length > 0 && (
+                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg">
+                      <h3 className="font-semibold text-orange-800 dark:text-orange-300 mb-2">发现以下问题:</h3>
+                      <ul className="text-sm text-orange-700 dark:text-orange-300 space-y-1">
+                        {diagnosisResult.issues.map((issue, idx) => (
+                          <li key={idx}>• {issue}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {!diagnosisResult && !diagnosing && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+              点击 "开始诊断" 检查 TVBox 配置的健康状态
+            </p>
+          )}
         </div>
       </div>
     </PageLayout>
