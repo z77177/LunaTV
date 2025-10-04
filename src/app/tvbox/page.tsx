@@ -17,8 +17,10 @@ interface SecurityConfig {
 interface DiagnosisResult {
   spider?: string;
   spiderPrivate?: boolean;
-  spiderAccessible?: boolean;
+  spiderReachable?: boolean;
   spiderStatus?: number;
+  spiderSizeKB?: number;
+  spiderLastModified?: string;
   contentLength?: string;
   lastModified?: string;
   spider_url?: string;
@@ -28,7 +30,17 @@ interface DiagnosisResult {
   spider_tried?: number;
   spider_success?: boolean;
   spider_backup?: string;
+  spider_candidates?: string[];
+  status?: number;
+  contentType?: string;
+  hasJson?: boolean;
+  sitesCount?: number;
+  livesCount?: number;
+  parsesCount?: number;
+  privateApis?: number;
+  configUrl?: string;
   issues?: string[];
+  pass?: boolean;
   error?: string;
 }
 
@@ -465,19 +477,30 @@ export default function TVBoxConfigPage() {
                           ✓ Spider 是公网地址
                         </span>
                       )}
-                      {diagnosisResult.spiderAccessible ? (
-                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
-                          ✓ Spider 可访问 (状态码: {diagnosisResult.spiderStatus})
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
-                          ✗ Spider 不可访问
+                      {diagnosisResult.spiderReachable !== undefined && (
+                        diagnosisResult.spiderReachable ? (
+                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
+                            ✓ Spider 可访问 {diagnosisResult.spiderStatus && `(状态码: ${diagnosisResult.spiderStatus})`}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
+                            ✗ Spider 不可访问 {diagnosisResult.spiderStatus && `(状态码: ${diagnosisResult.spiderStatus})`}
+                          </span>
+                        )
+                      )}
+                      {diagnosisResult.spiderSizeKB !== undefined && (
+                        <span className={`px-2 py-1 rounded ${
+                          diagnosisResult.spiderSizeKB < 50
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                            : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        }`}>
+                          {diagnosisResult.spiderSizeKB < 50 ? '⚠' : '✓'} 文件大小: {diagnosisResult.spiderSizeKB}KB
                         </span>
                       )}
                     </div>
-                    {diagnosisResult.lastModified && (
+                    {diagnosisResult.spiderLastModified && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        最后修改: {new Date(diagnosisResult.lastModified).toLocaleString('zh-CN')}
+                        最后修改: {new Date(diagnosisResult.spiderLastModified).toLocaleString('zh-CN')}
                       </p>
                     )}
                   </div>
