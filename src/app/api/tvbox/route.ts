@@ -628,7 +628,7 @@ export async function GET(request: NextRequest) {
     // 使用新的 Spider Jar 管理逻辑（下载真实 jar + 缓存）
     const jarInfo = await getSpiderJar(forceSpiderRefresh);
 
-    // 🔑 最终策略：优先使用远程公网 jar，失败时使用多个备选方案
+    // 🔑 最终策略：优先使用远程公网 jar，失败时使用本地代理
     let finalSpiderUrl: string;
 
     if (jarInfo.success && jarInfo.source !== 'fallback') {
@@ -636,15 +636,9 @@ export async function GET(request: NextRequest) {
       finalSpiderUrl = `${jarInfo.source};md5;${jarInfo.md5}`;
       console.log(`[Spider] 使用远程公网 jar: ${jarInfo.source}`);
     } else {
-      // 远程失败，使用多个备选方案，提升成功率
-      const fallbackJars = [
-        'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar;md5;e53eb37c4dc3dce1c8ee0c996ca3a024',
-        'https://gitee.com/q215613905/TVBoxOS/raw/main/JAR/XC.jar;md5;e53eb37c4dc3dce1c8ee0c996ca3a024',
-        `https://cdn.jsdelivr.net/gh/hjdhnx/dr_py@main/js/drpy.jar;md5;${jarInfo.md5}`,
-      ];
-      // 随机选择一个备选jar，避免单点失败
-      finalSpiderUrl = fallbackJars[Math.floor(Math.random() * fallbackJars.length)];
-      console.warn(`[Spider] 远程 jar 获取失败，随机选择备用: ${finalSpiderUrl.split(';')[0]}`);
+      // 远程失败，使用本地代理端点（确保100%可用）
+      finalSpiderUrl = `${baseUrl}/api/proxy/spider.jar;md5;${jarInfo.md5}`;
+      console.warn(`[Spider] 远程 jar 获取失败，使用本地代理: ${finalSpiderUrl.split(';')[0]}`);
     }
 
     // 如果用户源配置中有自定义jar，优先使用（但必须是公网地址）
@@ -765,7 +759,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 添加 Spider 状态透明化字段（帮助诊断）
-    tvboxConfig.spider_backup = 'https://gitcode.net/qq_26898231/TVBox/-/raw/main/JAR/XC.jar';
+    tvboxConfig.spider_backup = `${baseUrl}/api/proxy/spider.jar`; // 本地代理地址
     tvboxConfig.spider_candidates = getCandidates();
 
     // 根据format参数返回不同格式
