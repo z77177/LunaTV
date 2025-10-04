@@ -509,8 +509,8 @@ export default function TVBoxConfigPage() {
                   <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Spider Jar 状态:</h3>
                     <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                      <li>• 来源: {diagnosisResult.spider_url || 'unknown'}</li>
-                      <li>• MD5: {diagnosisResult.spider_md5 || 'unknown'}</li>
+                      <li className="break-all">• 来源: {diagnosisResult.spider_url || 'unknown'}</li>
+                      <li className="break-all">• MD5: {diagnosisResult.spider_md5 || 'unknown'}</li>
                       <li>• 缓存: {diagnosisResult.spider_cached ? '✓ 是' : '✗ 否（实时下载）'}</li>
                       <li>• 真实大小: {diagnosisResult.spider_real_size ? `${Math.round(diagnosisResult.spider_real_size / 1024)}KB` : 'unknown'}</li>
                       <li>• 尝试次数: {diagnosisResult.spider_tried || 0}</li>
