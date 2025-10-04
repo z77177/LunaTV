@@ -286,11 +286,7 @@ export async function GET(request: NextRequest) {
           if (response.ok) {
             const data = await response.json();
             if (data.class && Array.isArray(data.class)) {
-              // 只提取子分类（type_pid != 0），过滤掉空的父分类
-              categories = data.class
-                .filter((cat: any) => cat.type_pid && cat.type_pid != 0)
-                .map((cat: any) => cat.type_name || cat.name)
-                .filter((name: string) => name);
+              categories = data.class.map((cat: any) => cat.type_name || cat.name).filter((name: string) => name);
             }
           }
         } catch (error) {
