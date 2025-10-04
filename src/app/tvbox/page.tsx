@@ -51,6 +51,7 @@ export default function TVBoxConfigPage() {
   const [format, setFormat] = useState<'json' | 'base64'>('json');
   const [configMode, setConfigMode] = useState<'standard' | 'safe' | 'fast' | 'yingshicang'>('standard');
   const [securityConfig, setSecurityConfig] = useState<SecurityConfig | null>(null);
+  const [siteName, setSiteName] = useState('MoonTV');
   const [loading, setLoading] = useState(true);
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisResult | null>(null);
@@ -62,6 +63,7 @@ export default function TVBoxConfigPage() {
       if (response.ok) {
         const data = await response.json();
         setSecurityConfig(data.securityConfig || null);
+        setSiteName(data.siteName || 'MoonTV');
       }
     } catch (error) {
       console.error('获取安全配置失败:', error);
@@ -136,7 +138,7 @@ export default function TVBoxConfigPage() {
                 TVBox 配置
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                将 LunaTV 的视频源导入到 TVBox 应用中使用
+                将 {siteName} 的视频源导入到 TVBox 应用中使用
               </p>
             </div>
           </div>
