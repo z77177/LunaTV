@@ -567,6 +567,18 @@ const TVBoxSecurityConfig = ({ config, refreshConfig }: TVBoxSecurityConfigProps
                         )}
                       </div>
                     )}
+                    {diagnoseResult.spiderSizeKB !== undefined && (
+                      <div className='text-xs'>
+                        <span className={diagnoseResult.spiderSizeKB < 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}>
+                          {diagnoseResult.spiderSizeKB < 50 ? '⚠' : '✓'} 文件大小: {diagnoseResult.spiderSizeKB}KB
+                        </span>
+                      </div>
+                    )}
+                    {diagnoseResult.spiderLastModified && (
+                      <div className='text-xs text-gray-600 dark:text-gray-400'>
+                        最后修改: {new Date(diagnoseResult.spiderLastModified).toLocaleString('zh-CN')}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -65,6 +65,46 @@ async function tryFetchHead(
   }
 }
 
+// 调用 health 端点检查 spider jar 健康状态
+async function checkSpiderHealth(
+  spider: string
+): Promise<{
+  accessible: boolean;
+  status?: number;
+  contentLength?: string;
+  lastModified?: string;
+  error?: string;
+}> {
+  try {
+    const cleanUrl = spider.split(';')[0];
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(cleanUrl, {
+      method: 'HEAD',
+      signal: controller.signal,
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    return {
+      accessible: response.ok,
+      status: response.status,
+      contentLength: response.headers.get('content-length') || undefined,
+      lastModified: response.headers.get('last-modified') || undefined,
+    };
+  } catch (error) {
+    return {
+      accessible: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const baseUrl = getBaseUrl(req);
@@ -156,13 +196,28 @@ export async function GET(req: NextRequest) {
           spider.startsWith('http://') ||
           spider.startsWith('https://')
         ) {
-          const spiderCheck = await tryFetchHead(spider, 3500);
-          result.spiderReachable = spiderCheck.ok;
-          result.spiderStatus = spiderCheck.status;
-          if (!spiderCheck.ok) {
+          // 使用增强的健康检查
+          const healthCheck = await checkSpiderHealth(spider);
+          result.spiderReachable = healthCheck.accessible;
+          result.spiderStatus = healthCheck.status;
+          result.spiderContentLength = healthCheck.contentLength;
+          result.spiderLastModified = healthCheck.lastModified;
+
+          if (!healthCheck.accessible) {
             result.issues.push(
-              `spider unreachable: ${spiderCheck.status || spiderCheck.error}`
+              `spider unreachable: ${healthCheck.status || healthCheck.error}`
             );
+          } else {
+            // 验证文件大小（spider jar 通常大于 100KB）
+            if (healthCheck.contentLength) {
+              const sizeKB = parseInt(healthCheck.contentLength) / 1024;
+              result.spiderSizeKB = Math.round(sizeKB);
+              if (sizeKB < 50) {
+                result.issues.push(
+                  `spider jar size suspicious: ${result.spiderSizeKB}KB (expected >100KB)`
+                );
+              }
+            }
           }
         }
       }
