@@ -387,7 +387,7 @@ GET /api/tvbox/health?url=JAR_URL
 
 ## 🙏 致谢
 
-- Spider jar 管理优化参考 [DecoTV](https://github.com/decoTV/DecoTV) 项目
+- Spider jar 管理优化参考 [DecoTV](https://github.com/Decohererk/DecoTV) 项目
 - 配置功能设计参考 [KatelyaTV](https://github.com/katelya77/KatelyaTV) 项目
 - 感谢开源社区的贡献
 

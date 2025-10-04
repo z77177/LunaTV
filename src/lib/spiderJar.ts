@@ -14,6 +14,9 @@ const CANDIDATES: string[] = [
 
   // GitHub 可用源 #2: qlql765 (174KB, 200 OK)
   'https://raw.githubusercontent.com/qlql765/CatVodTVSpider-by-zhixc/main/jar/custom_spider.jar',
+
+  // GitHub 可用源 #3: gaotianliuyun (260KB, 200 OK)
+  'https://raw.githubusercontent.com/gaotianliuyun/gao/master/jar/custom_spider.jar',
 ];
 
 // 内置稳定 JAR 作为最终 fallback - 提取自实际工作的 spider.jar
