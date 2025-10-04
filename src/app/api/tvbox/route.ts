@@ -260,7 +260,14 @@ interface TVBoxConfig {
   }>; // 播放规则（用于影视仓模式）
   maxHomeVideoContent?: string; // 首页最大视频数量
   spider_backup?: string; // 备用本地代理地址
-  spider_status?: typeof lastSpiderStatus; // Spider 选择状态
+  spider_status?: {
+    fromCache: boolean;
+    success: boolean;
+    selected: string;
+    tried: number;
+    forceRefresh: boolean;
+    timestamp: number;
+  }; // Spider 选择状态
   spider_candidates?: string[]; // 候选地址列表
 }
 
