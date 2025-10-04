@@ -440,7 +440,7 @@ export default function TVBoxConfigPage() {
         </div>
 
         {/* 诊断功能 */}
-        <div className="mt-6 mb-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -458,7 +458,7 @@ export default function TVBoxConfigPage() {
           </div>
 
           {diagnosisResult && (
-            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+            <div className="space-y-4">
               {diagnosisResult.error ? (
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
                   <p className="text-red-700 dark:text-red-300">{diagnosisResult.error}</p>
