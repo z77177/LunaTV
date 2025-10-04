@@ -119,6 +119,17 @@ interface TVBoxConfig {
     }>;
   }>; // IJK播放器配置
   ads?: string[]; // 广告过滤规则
+  doh?: Array<{
+    name: string;
+    url: string;
+    ips: string[];
+  }>; // DNS over HTTPS 配置
+  rules?: Array<{
+    name: string;
+    hosts: string[];
+    regex: string[];
+  }>; // 播放规则（用于影视仓模式）
+  maxHomeVideoContent?: string; // 首页最大视频数量
 }
 
 export async function GET(request: NextRequest) {
