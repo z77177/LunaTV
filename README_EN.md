@@ -172,6 +172,8 @@ This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
 
 - [Tech Stack](#tech-stack)
 - [Deployment](#deployment)
+  - [Docker Deployment (Recommended)](#deployment)
+  - [Vercel Deployment (Serverless)](#vercel-deployment-serverless)
 - [Configuration File](#configuration-file)
 - [Environment Variables](#environment-variables)
 - [Feature Configuration](#feature-configuration)
@@ -285,7 +287,7 @@ networks:
     driver: bridge
 ```
 
-### ☁️ Upstash Cloud Storage
+### ☁️ Upstash Cloud Storage (Docker)
 
 Suitable for scenarios where self-hosted databases are not available. Fully managed Redis service.
 
@@ -308,6 +310,89 @@ services:
       - UPSTASH_URL=https://your-instance.upstash.io
       - UPSTASH_TOKEN=your_upstash_token
 ```
+
+---
+
+## 🌐 Vercel Deployment (Serverless)
+
+### Vercel + Upstash Solution
+
+Perfect for users without servers. Completely free deployment (Vercel Free Tier + Upstash Free Tier).
+
+#### Prerequisites
+
+1. **Create Upstash Redis Instance**
+   - Visit [upstash.com](https://upstash.com/)
+   - Register and create a new Redis database
+   - Select region (choose the closest to your location)
+   - Copy **REST URL** and **REST TOKEN**
+
+2. **Fork This Project**
+   - Fork this repository to your GitHub account
+
+#### Deployment Steps
+
+1. **Import to Vercel**
+   - Visit [vercel.com](https://vercel.com/)
+   - Login and click "Add New" > "Project"
+   - Import your forked repository
+   - Click "Import"
+
+2. **Configure Environment Variables**
+
+   Add the following environment variables in Vercel project settings:
+
+   ```env
+   # Required: Admin Account
+   USERNAME=admin
+   PASSWORD=your_secure_password
+
+   # Required: Storage Configuration
+   NEXT_PUBLIC_STORAGE_TYPE=upstash
+   UPSTASH_URL=https://your-redis-instance.upstash.io
+   UPSTASH_TOKEN=AxxxxxxxxxxxxxxxxxxxxxxxxxxxQ==
+
+   # Optional: Site Configuration
+   SITE_BASE=https://your-domain.vercel.app
+   NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
+   ANNOUNCEMENT=Welcome to LunaTV Enhanced Edition
+
+   # Optional: Douban Proxy (Recommended)
+   NEXT_PUBLIC_DOUBAN_PROXY_TYPE=cmliussss-cdn-tencent
+   NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE=cmliussss-cdn-tencent
+
+   # Optional: Search Configuration
+   NEXT_PUBLIC_SEARCH_MAX_PAGE=5
+   NEXT_PUBLIC_FLUID_SEARCH=true
+   ```
+
+3. **Deploy Project**
+   - Click "Deploy" button
+   - Wait for build to complete (approximately 2-5 minutes)
+   - Access the domain provided by Vercel after successful deployment
+
+4. **Bind Custom Domain (Optional)**
+   - Click "Domains" in Vercel project settings
+   - Add your custom domain
+   - Configure DNS resolution as instructed
+
+#### ⚠️ Vercel Deployment Limitations
+
+- **Serverless Constraints**: Vercel free tier has 10-second function execution time limit, some time-consuming operations may timeout
+- **Traffic Limit**: Vercel free tier provides 100GB monthly bandwidth, sufficient for personal use
+- **Cold Start**: First visit after long inactivity may be slower (approximately 1-3 seconds)
+- **Limited Features**: Due to serverless architecture, the following features may be restricted:
+  - High concurrent search requests
+  - Long video danmaku loading
+  - Complex data analytics
+
+#### 💡 Vercel Deployment Advantages
+
+- ✅ **Completely Free**: Vercel and Upstash free tiers are sufficient for personal use
+- ✅ **Zero Maintenance**: No server management required, auto-scaling
+- ✅ **Global CDN**: Fast access worldwide
+- ✅ **Auto Deployment**: Automatic deployment on code push
+- ✅ **HTTPS Support**: Automatic SSL certificate configuration
 
 ---
 
@@ -420,82 +505,116 @@ You can also enter specific content like "Harry Potter", which works the same as
 
 ## 🎛️ Feature Configuration
 
-All advanced features can be configured in the **Admin Panel** without modifying code or restarting services.
+All features can be configured in the **Admin Panel** without modifying code or restarting services.
 
 ### Admin Panel Access
 
 Visit `http://your-domain:3000/admin` and login with admin account.
 
-### Configurable Feature Modules
+### Admin Panel Feature Modules
 
-#### 🎥 YouTube Integration
-- **Location**: Admin Panel > Configuration > YouTube Settings
-- **Options**:
-  - YouTube Data API v3 key
-  - Search result cache duration
-  - Default search sorting
-  - Content type filtering (video/live/channel)
+The admin panel provides the following feature modules (some features are owner-only):
 
-#### 🔍 Cloud Drive Search
-- **Location**: Admin Panel > Configuration > Cloud Drive Search
-- **Options**:
-  - PanSou API configuration
-  - Search result cache strategy
-  - Filtering options (file type, size)
+#### 📁 Configuration File (Owner Only)
+- **Configuration Subscription**:
+  - Subscription URL settings
+  - Auto-fetch remote configuration
+  - Support for Base58 encoded JSON format
+- **Configuration File Editor**:
+  - JSON format configuration editor
+  - Online save configuration
 
-#### 💬 Danmaku System
-- **Location**: Admin Panel > Configuration > Danmaku Settings
-- **Options**:
-  - Third-party danmaku API toggle
-  - Default danmaku source priority
-  - Smart performance optimization toggle
-  - Cache duration settings
+#### ⚙️ Site Configuration
+- **Basic Settings**:
+  - Site name
+  - Site announcement
+- **Douban Data Proxy**:
+  - Direct/Cors Proxy/Douban CDN/Custom proxy
+  - Custom proxy URL
+- **Douban Image Proxy**:
+  - Direct/Server proxy/Official CDN/Custom proxy
+  - Custom image proxy URL
+- **Search Interface Settings**:
+  - Max search pages (1-50)
+  - API cache time (seconds)
+  - Fluid search toggle
+- **Content Filtering**:
+  - Adult content filter toggle
+- **TMDB Actor Search**:
+  - TMDB API Key
+  - Language settings (Chinese/English/Japanese/Korean)
+  - Feature enable toggle
 
-#### 🤖 AI Recommendations
-- **Location**: Admin Panel > Configuration > AI Settings
-- **Options**:
-  - OpenAI API Key
-  - Model selection (GPT-4/GPT-5/o series)
-  - Max Tokens setting (default 3000)
-  - Dynamic prompt management
+#### 👥 User Configuration
+- **User Registration Settings** (Owner Only):
+  - User registration toggle
+  - Auto cleanup inactive users
+  - Retention days configuration
+- **User Group Management**:
+  - Add/Edit/Delete user groups
+  - Available video source permission configuration
+- **User List**:
+  - Batch assign user groups
+  - Add/Edit users
+  - Change password
+  - Ban/Unban users
+  - Set admin privileges
+  - Delete users
 
-#### 📺 IPTV Live TV
-- **Location**: Admin Panel > Live TV Management
-- **Options**:
-  - m3u/m3u8 subscription links
-  - EPG program guide URL
-  - Live source aggregation toggle
-  - Auto refresh interval
+#### 🎬 Video Source Configuration
+- **Video Source Management**:
+  - Add video source (name, API address)
+  - Batch enable/disable/delete
+  - Video source validity detection
+  - Drag-and-drop sorting
+  - Edit/Delete individual sources
 
-#### 🎬 Short Drama
-- **Location**: Admin Panel > Configuration > Short Drama Settings
-- **Options**:
-  - Short drama API endpoint
-  - Cache strategy
-  - Mobile proxy toggle
+#### 📺 Live Source Configuration
+- **Live Source Management**:
+  - Add live source (name, m3u/m3u8 address)
+  - Refresh live source data
+  - Drag-and-drop sorting
+  - Edit/Delete live sources
 
-#### 👥 User Management
-- **Location**: Admin Panel > User Management
-- **Features**:
-  - User group permission settings
-  - Inactive user cleanup configuration
-  - Registration toggle control
-  - User level management
+#### 🏷️ Category Configuration
+- **Custom Categories**:
+  - Add/Edit custom categories
+  - Drag-and-drop sorting
+  - Douban search-based categories
 
-#### 📊 Playback Statistics
-- **Location**: Admin Panel > Statistics Management
-- **Features**:
-  - Global statistics dashboard
-  - User viewing behavior analysis
-  - Popular content rankings
-  - Data export
+#### 🔍 Cloud Drive Search Configuration
+- **Basic Settings**:
+  - Cloud drive search feature toggle
+  - PanSou service address
+  - Request timeout
+- **Supported Cloud Disk Types**:
+  - Baidu Netdisk, Aliyun Drive, Quark, Tianyi Cloud
+  - UC Drive, Mobile Cloud, 115 Drive, PikPak
+  - Xunlei, 123 Drive
+  - Magnet links, ED2K links
 
-#### 🔐 TVBox Integration
-- **Location**: User Menu > TVBox Configuration
-- **Features**:
-  - IP whitelist management
-  - Token generation and reset
-  - TVBox config file export
+#### 🤖 AI Recommendation Configuration
+- OpenAI API configuration
+- Model selection and parameters
+- Recommendation prompt management
+
+#### 🎥 YouTube Configuration
+- YouTube Data API v3 key
+- Search and cache configuration
+- Feature enable toggle
+
+#### 🔐 TVBox Security Configuration
+- IP whitelist management
+- Token authentication configuration
+- TVBox API settings
+
+#### 🗄️ Cache Management (Owner Only)
+- View and clear various caches
+- YouTube, cloud drive, Douban, danmaku cache statistics
+
+#### 📦 Data Migration (Owner Only)
+- Import/Export entire site data
+- Database migration tools
 
 ---
 
