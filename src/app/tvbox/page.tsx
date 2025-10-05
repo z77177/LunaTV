@@ -517,10 +517,10 @@ export default function TVBoxConfigPage() {
                 智能 Spider 管理
               </h3>
               <ul className="text-gray-600 dark:text-gray-400 space-y-1 ml-6">
-                <li>• 自动探测多源（GitCode/Gitee/GitHub）</li>
-                <li>• SSL 错误自动降级</li>
-                <li>• 6 小时缓存 + 真实 MD5 验证</li>
-                <li>• 零服务器带宽消耗（直连 CDN）</li>
+                <li>• 自动探测多源（GitHub）</li>
+                <li>• 智能重试 + 失败源记录</li>
+                <li>• 动态缓存（成功 4h / 失败 10min）</li>
+                <li>• JAR 文件验证 + 真实 MD5</li>
               </ul>
             </div>
             <div className="space-y-2">
