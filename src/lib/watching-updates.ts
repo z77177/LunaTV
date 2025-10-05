@@ -73,10 +73,6 @@ export async function checkWatchingUpdates(): Promise<void> {
   try {
     console.log('开始检查追番更新...');
 
-    // 强制刷新播放记录缓存，确保获取最新的播放记录数据
-    console.log('强制刷新播放记录缓存以确保数据同步...');
-    forceRefreshPlayRecordsCache();
-
     // 检查缓存是否有效
     const lastCheckTime = STORAGE_TYPE !== 'localstorage'
       ? memoryLastCheckTime
@@ -90,8 +86,12 @@ export async function checkWatchingUpdates(): Promise<void> {
       return;
     }
 
-    // 获取用户的播放记录
-    const recordsObj = await getAllPlayRecords();
+    // 🔧 优化：立即清除缓存并强制从服务器获取最新播放记录
+    console.log('🔄 强制从服务器获取最新播放记录以确保数据同步...');
+    forceRefreshPlayRecordsCache(true);
+
+    // 获取用户的播放记录（强制刷新）
+    const recordsObj = await getAllPlayRecords(true);
     const records = Object.entries(recordsObj).map(([key, record]) => ({
       ...record,
       id: key
@@ -723,6 +723,30 @@ export function clearWatchingUpdates(): void {
     }
   } catch (error) {
     console.error('清除新集数更新状态失败:', error);
+  }
+}
+
+/**
+ * 强制清除watching updates缓存（包括内存和localStorage）
+ * 用于播放记录更新后立即清除缓存
+ */
+export function forceClearWatchingUpdatesCache(): void {
+  try {
+    console.log('🔄 强制清除 watching-updates 缓存');
+
+    // 清除内存缓存
+    memoryWatchingUpdatesCache = null;
+    memoryLastCheckTime = 0;
+
+    // 清除 localStorage 缓存（如果存在）
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(WATCHING_UPDATES_CACHE_KEY);
+      localStorage.removeItem(LAST_CHECK_TIME_KEY);
+    }
+
+    console.log('✅ watching-updates 缓存已清除');
+  } catch (error) {
+    console.error('清除 watching-updates 缓存失败:', error);
   }
 }
 
