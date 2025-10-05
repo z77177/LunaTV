@@ -164,6 +164,10 @@ function PlayPageClient() {
   // 集数相关
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(0);
 
+  // 换源相关状态
+  const [availableSources, setAvailableSources] = useState<SearchResult[]>([]);
+  const availableSourcesRef = useRef<SearchResult[]>([]);
+
   const currentSourceRef = useRef(currentSource);
   const currentIdRef = useRef(currentId);
   const videoTitleRef = useRef(videoTitle);
@@ -260,9 +264,6 @@ function PlayPageClient() {
   // 上次使用的播放速率，默认 1.0
   const lastPlaybackRateRef = useRef<number>(1.0);
 
-  // 换源相关状态
-  const [availableSources, setAvailableSources] = useState<SearchResult[]>([]);
-  const availableSourcesRef = useRef<SearchResult[]>([]);
   const [sourceSearchLoading, setSourceSearchLoading] = useState(false);
   const [sourceSearchError, setSourceSearchError] = useState<string | null>(
     null
