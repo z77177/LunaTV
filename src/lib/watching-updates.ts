@@ -68,22 +68,25 @@ const updateListeners = new Set<(hasUpdates: boolean) => void>();
 /**
  * 检查追番更新
  * 真实API调用检查用户的播放记录，检测是否有新集数更新
+ * @param forceRefresh 是否强制刷新，跳过缓存时间检查
  */
-export async function checkWatchingUpdates(): Promise<void> {
+export async function checkWatchingUpdates(forceRefresh = false): Promise<void> {
   try {
-    console.log('开始检查追番更新...');
+    console.log('开始检查追番更新...', forceRefresh ? '(强制刷新)' : '');
 
-    // 检查缓存是否有效
-    const lastCheckTime = STORAGE_TYPE !== 'localstorage'
-      ? memoryLastCheckTime
-      : parseInt(localStorage.getItem(LAST_CHECK_TIME_KEY) || '0');
-    const currentTime = Date.now();
+    // 检查缓存是否有效（除非强制刷新）
+    if (!forceRefresh) {
+      const lastCheckTime = STORAGE_TYPE !== 'localstorage'
+        ? memoryLastCheckTime
+        : parseInt(localStorage.getItem(LAST_CHECK_TIME_KEY) || '0');
+      const currentTime = Date.now();
 
-    if (currentTime - lastCheckTime < CACHE_DURATION) {
-      console.log('距离上次检查时间太短，使用缓存结果');
-      const cached = getCachedWatchingUpdates();
-      notifyListeners(cached);
-      return;
+      if (currentTime - lastCheckTime < CACHE_DURATION) {
+        console.log('距离上次检查时间太短，使用缓存结果');
+        const cached = getCachedWatchingUpdates();
+        notifyListeners(cached);
+        return;
+      }
     }
 
     // 🔧 优化：立即清除缓存并强制从服务器获取最新播放记录
