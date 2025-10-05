@@ -82,6 +82,27 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 
 ---
 
+## ⚠️ Important Notices
+
+### 📦 Project Status
+
+- **Notice**: After deployment, this is an **empty shell project** with **no built-in video sources or live streaming sources**. You need to collect and configure them yourself.
+- **Demo Site**: [https://lunatv.smone.us](https://lunatv.smone.us) for short-term testing. Database is cleaned regularly.
+
+### 🚫 Distribution Restrictions
+
+**Do NOT promote this project on Bilibili, Xiaohongshu (RedNote), WeChat Official Accounts, Douyin (TikTok China), Toutiao, or other Chinese mainland social platforms through videos or articles. This project does NOT authorize any "Tech Weekly/Monthly" projects or sites to include it.**
+
+### 📜 Open Source License
+
+This project is licensed under **CC BY-NC-SA 4.0**, with the following terms:
+- ❌ **Commercial use is prohibited**
+- ✅ **Personal learning and use is allowed**
+- ✅ **Derivative works and distribution are allowed**
+- ⚠️ **Any derivative projects must retain this project's address and be open-sourced under the same license**
+
+---
+
 ## ✨ Complete Feature List
 
 ### 🎬 Content Aggregation
@@ -614,7 +635,17 @@ View [Complete Changelog](CHANGELOG) for all version changes.
 
 ## 📄 License
 
-[MIT](LICENSE) © 2025 LunaTV Enhanced Edition & Contributors
+[![CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+
+This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+**This means**:
+- ✅ You are free to share, copy, and modify this project
+- ✅ You must give appropriate credit, provide a link to the license
+- ❌ You may not use this project for commercial purposes
+- ⚠️ If you remix, transform, or build upon the material, you must distribute your contributions under the same license
+
+© 2025 LunaTV Enhanced Edition & Contributors
 
 Based on [MoonTV](https://github.com/MoonTechLab/LunaTV) with extensive customization.
 

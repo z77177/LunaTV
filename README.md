@@ -82,6 +82,27 @@
 
 ---
 
+## ⚠️ 重要声明
+
+### 📦 项目状态
+
+- **注意**：部署后项目为**空壳项目**，**无内置播放源和直播源**，需要自行收集配置
+- **演示站**：[https://lunatv.smone.us](https://lunatv.smone.us) 供短期体验，数据库定时清理
+
+### 🚫 传播限制
+
+**请不要在 B站、小红书、微信公众号、抖音、今日头条或其他中国大陆社交平台发布视频或文章宣传本项目，不授权任何"科技周刊/月刊"类项目或站点收录本项目。**
+
+### 📜 开源协议
+
+本项目采用 **CC BY-NC-SA 4.0 协议**，具体条款：
+- ❌ **禁止任何商业化行为**
+- ✅ **允许个人学习和使用**
+- ✅ **允许二次开发和分发**
+- ⚠️ **任何衍生项目必须保留本项目地址并以相同协议开源**
+
+---
+
 ## ✨ 完整功能列表
 
 ### 🎬 内容聚合
@@ -614,7 +635,17 @@ services:
 
 ## 📄 License
 
-[MIT](LICENSE) © 2025 LunaTV Enhanced Edition & Contributors
+[![CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+
+本项目采用 [CC BY-NC-SA 4.0 协议](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans) 开源。
+
+**这意味着**：
+- ✅ 您可以自由地分享、复制和修改本项目
+- ✅ 您必须给予适当的署名，提供指向本许可协议的链接
+- ❌ 您不得将本项目用于商业目的
+- ⚠️ 若您修改、转换或以本项目为基础进行创作，您必须以相同的许可协议分发您的作品
+
+© 2025 LunaTV Enhanced Edition & Contributors
 
 基于 [MoonTV](https://github.com/MoonTechLab/LunaTV) 进行二次开发。
 
