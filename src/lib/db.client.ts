@@ -87,6 +87,7 @@ const STORAGE_TYPE = (() => {
       | 'localstorage'
       | 'redis'
       | 'upstash'
+      | 'kvrocks'
       | undefined) ||
     'localstorage';
   return raw;
@@ -840,7 +841,7 @@ export async function savePlayRecord(
     }
   }
 
-  // 数据库存储模式：乐观更新策略（包括 redis 和 upstash）
+  // 数据库存储模式：乐观更新策略（包括 redis、upstash 和 kvrocks）
   if (STORAGE_TYPE !== 'localstorage') {
     // 立即更新缓存
     const cachedRecords = cacheManager.getCachedPlayRecords() || {};
@@ -886,6 +887,24 @@ export async function savePlayRecord(
           delete (record as any)._shouldClearCache;
         } catch (cacheError) {
           console.warn('清除缓存失败:', cacheError);
+        }
+      } else {
+        // 🔧 优化：即使没有 _shouldClearCache 标志，也要从服务器同步最新数据以确保缓存一致性
+        // 特别是对于 kvrocks 等需要实时同步的场景
+        try {
+          const freshData = await fetchFromApi<Record<string, PlayRecord>>(`/api/playrecords`);
+          // 只有数据真正不同时才更新缓存
+          if (JSON.stringify(cachedRecords) !== JSON.stringify(freshData)) {
+            cacheManager.cachePlayRecords(freshData);
+            window.dispatchEvent(
+              new CustomEvent('playRecordsUpdated', {
+                detail: freshData,
+              })
+            );
+            console.log('✅ 播放记录已同步最新数据');
+          }
+        } catch (syncError) {
+          console.warn('同步最新播放记录失败:', syncError);
         }
       }
 
