@@ -85,12 +85,10 @@ export default function SkipController({
   // 加载跳过配置
   const loadSkipConfig = useCallback(async () => {
     try {
-      console.log('🔄 开始加载配置:', { source, id });
       const config = await getEpisodeSkipConfig(source, id);
-      console.log('✅ 配置加载完成:', config);
       setSkipConfig(config);
     } catch (err) {
-      console.error('❌ 加载跳过配置失败:', err);
+      console.error('加载跳过配置失败:', err);
     }
   }, [source, id]);
 
@@ -160,10 +158,7 @@ export default function SkipController({
   // 检查当前播放时间是否在跳过区间内
   const checkSkipSegment = useCallback(
     (time: number) => {
-      if (!skipConfig?.segments?.length) {
-        console.log('⚠️ skipConfig 为空，跳过检查');
-        return;
-      }
+      if (!skipConfig?.segments?.length) return;
 
       const currentSegment = skipConfig.segments.find(
         (segment) => time >= segment.start && time <= segment.end
@@ -174,7 +169,6 @@ export default function SkipController({
 
         // 检查当前片段是否开启自动跳过（默认为true）
         const shouldAutoSkip = currentSegment.autoSkip !== false;
-        console.log('📍 检测到片段:', { type: currentSegment.type, shouldAutoSkip, segment: currentSegment });
 
         if (shouldAutoSkip) {
           // 自动跳过：延迟1秒执行跳过
