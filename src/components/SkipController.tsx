@@ -97,9 +97,14 @@ export default function SkipController({
 
   // 自动跳过逻辑
   const handleAutoSkip = useCallback((segment: SkipSegment) => {
-    if (!artPlayerRef.current) return;
+    console.log('⏭️ handleAutoSkip 被调用:', segment);
+    if (!artPlayerRef.current) {
+      console.log('❌ artPlayerRef.current 为空，无法跳过');
+      return;
+    }
 
     const targetTime = segment.end + 1;
+    console.log('⏭️ 执行跳过，跳转到:', targetTime);
     artPlayerRef.current.currentTime = targetTime;
     lastSkipTimeRef.current = Date.now();
 
@@ -208,6 +213,13 @@ export default function SkipController({
         (segment) => time >= segment.start && time <= segment.end
       );
 
+      console.log('🔍 检查片段:', {
+        time,
+        currentSegment: currentSegment?.type,
+        currentSkipSegment: currentSkipSegment?.type,
+        isNew: currentSegment && currentSegment !== currentSkipSegment
+      });
+
       if (currentSegment && currentSegment !== currentSkipSegment) {
         setCurrentSkipSegment(currentSegment);
 
@@ -218,8 +230,10 @@ export default function SkipController({
         if (shouldAutoSkip) {
           // 自动跳过：延迟1秒执行跳过
           if (autoSkipTimeoutRef.current) {
+            console.log('⏱️ 清除旧的 timeout');
             clearTimeout(autoSkipTimeoutRef.current);
           }
+          console.log('⏱️ 设置新的 timeout (1秒后执行跳过)');
           autoSkipTimeoutRef.current = setTimeout(() => {
             handleAutoSkip(currentSegment);
           }, 1000);
