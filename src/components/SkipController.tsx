@@ -456,7 +456,25 @@ export default function SkipController({
     }
   }, [currentTime, checkSkipSegment]);
 
-  // 清理定时器
+  // 当 source 或 id 变化时，清理所有状态（换集时）
+  useEffect(() => {
+    setShowCountdown(false);
+    setShowSkipButton(false);
+    setCurrentSkipSegment(null);
+    setCountdownSeconds(0);
+
+    if (skipTimeoutRef.current) {
+      clearTimeout(skipTimeoutRef.current);
+    }
+    if (autoSkipTimeoutRef.current) {
+      clearTimeout(autoSkipTimeoutRef.current);
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+    }
+  }, [source, id]);
+
+  // 组件卸载时清理定时器
   useEffect(() => {
     return () => {
       if (skipTimeoutRef.current) {
