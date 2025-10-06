@@ -33,13 +33,25 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: '缺少配置键' }, { status: 400 });
         }
 
-        const skipConfig = await db.getSkipConfig(finalUsername, key);
+        // 解析 key 为 source 和 id (格式: source+id)
+        const [source, id] = key.split('+');
+        if (!source || !id) {
+          return NextResponse.json({ error: '无效的key格式' }, { status: 400 });
+        }
+
+        const skipConfig = await db.getSkipConfig(finalUsername, source, id);
         return NextResponse.json({ config: skipConfig });
       }
 
       case 'set': {
         if (!key || !config) {
           return NextResponse.json({ error: '缺少配置键或配置数据' }, { status: 400 });
+        }
+
+        // 解析 key 为 source 和 id (格式: source+id)
+        const [source, id] = key.split('+');
+        if (!source || !id) {
+          return NextResponse.json({ error: '无效的key格式' }, { status: 400 });
         }
 
         // 验证配置数据结构
@@ -59,7 +71,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        await db.setSkipConfig(finalUsername, key, config as EpisodeSkipConfig);
+        await db.setSkipConfig(finalUsername, source, id, config as EpisodeSkipConfig);
         return NextResponse.json({ success: true });
       }
 
@@ -73,7 +85,13 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: '缺少配置键' }, { status: 400 });
         }
 
-        await db.deleteSkipConfig(finalUsername, key);
+        // 解析 key 为 source 和 id (格式: source+id)
+        const [source, id] = key.split('+');
+        if (!source || !id) {
+          return NextResponse.json({ error: '无效的key格式' }, { status: 400 });
+        }
+
+        await db.deleteSkipConfig(finalUsername, source, id);
         return NextResponse.json({ success: true });
       }
 
