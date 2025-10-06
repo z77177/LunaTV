@@ -118,15 +118,15 @@ export interface IStorage {
     userName: string,
     source: string,
     id: string
-  ): Promise<SkipConfig | null>;
+  ): Promise<EpisodeSkipConfig | null>;
   setSkipConfig(
     userName: string,
     source: string,
     id: string,
-    config: SkipConfig
+    config: EpisodeSkipConfig
   ): Promise<void>;
   deleteSkipConfig(userName: string, source: string, id: string): Promise<void>;
-  getAllSkipConfigs(userName: string): Promise<{ [key: string]: SkipConfig }>;
+  getAllSkipConfigs(userName: string): Promise<{ [key: string]: EpisodeSkipConfig }>;
 
   // 数据清理相关
   clearAllData(): Promise<void>;
