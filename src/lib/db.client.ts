@@ -59,7 +59,7 @@ interface UserCacheStore {
   playRecords?: CacheData<Record<string, PlayRecord>>;
   favorites?: CacheData<Record<string, Favorite>>;
   searchHistory?: CacheData<string[]>;
-  skipConfigs?: CacheData<Record<string, SkipConfig>>;
+  skipConfigs?: CacheData<Record<string, EpisodeSkipConfig>>;
   userStats?: CacheData<UserStats>; // 添加用户统计数据缓存
   // 注意：豆瓣缓存已迁移到统一存储，不再需要这里的缓存结构
 }
@@ -334,7 +334,7 @@ class HybridCacheManager {
   /**
    * 获取缓存的跳过片头片尾配置
    */
-  getCachedSkipConfigs(): Record<string, SkipConfig> | null {
+  getCachedSkipConfigs(): Record<string, EpisodeSkipConfig> | null {
     const username = this.getCurrentUsername();
     if (!username) return null;
 
@@ -351,7 +351,7 @@ class HybridCacheManager {
   /**
    * 缓存跳过片头片尾配置
    */
-  cacheSkipConfigs(data: Record<string, SkipConfig>): void {
+  cacheSkipConfigs(data: Record<string, EpisodeSkipConfig>): void {
     const username = this.getCurrentUsername();
     if (!username) return;
 
