@@ -1887,7 +1887,7 @@ export async function saveSkipConfig(
  * 获取所有跳过片头片尾配置。
  * 数据库存储模式下使用混合缓存策略：优先返回缓存数据，后台异步同步最新数据。
  */
-export async function getAllSkipConfigs(): Promise<Record<string, SkipConfig>> {
+export async function getAllSkipConfigs(): Promise<Record<string, EpisodeSkipConfig>> {
   // 服务器端渲染阶段直接返回空
   if (typeof window === 'undefined') {
     return {};
@@ -1939,7 +1939,7 @@ export async function getAllSkipConfigs(): Promise<Record<string, SkipConfig>> {
   try {
     const raw = localStorage.getItem('moontv_skip_configs');
     if (!raw) return {};
-    return JSON.parse(raw) as Record<string, SkipConfig>;
+    return JSON.parse(raw) as Record<string, EpisodeSkipConfig>;
   } catch (err) {
     console.error('读取跳过片头片尾配置失败:', err);
     triggerGlobalError('读取跳过片头片尾配置失败');
