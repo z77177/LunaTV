@@ -34,6 +34,7 @@ export default function SkipController({
   onSettingModeChange,
   onNextEpisode,
 }: SkipControllerProps) {
+  console.log('🎬 SkipController 渲染:', { source, id, title });
   const [skipConfig, setSkipConfig] = useState<EpisodeSkipConfig | null>(null);
   const [showSkipButton, setShowSkipButton] = useState(false);
   const [currentSkipSegment, setCurrentSkipSegment] = useState<SkipSegment | null>(null);
@@ -160,12 +161,50 @@ export default function SkipController({
   // 检查当前播放时间是否在跳过区间内
   const checkSkipSegment = useCallback(
     (time: number) => {
-      if (!skipConfig?.segments?.length) {
-        console.log('⚠️ skipConfig 为空，跳过检查');
+      // 如果没有保存的配置，使用 batchSettings 默认配置
+      let segments = skipConfig?.segments;
+
+      if (!segments || segments.length === 0) {
+        // 根据 batchSettings 生成临时配置
+        const tempSegments: SkipSegment[] = [];
+
+        // 添加片头配置
+        const openingStart = timeToSeconds(batchSettings.openingStart);
+        const openingEnd = timeToSeconds(batchSettings.openingEnd);
+        if (openingStart < openingEnd) {
+          tempSegments.push({
+            type: 'opening',
+            start: openingStart,
+            end: openingEnd,
+            autoSkip: batchSettings.autoSkip,
+          });
+        }
+
+        // 添加片尾配置（如果设置了）
+        if (duration > 0 && batchSettings.endingStart) {
+          const endingStartSeconds = timeToSeconds(batchSettings.endingStart);
+          const endingStart = batchSettings.endingMode === 'remaining'
+            ? duration - endingStartSeconds
+            : endingStartSeconds;
+
+          tempSegments.push({
+            type: 'ending',
+            start: endingStart,
+            end: duration,
+            autoSkip: batchSettings.autoSkip,
+            autoNextEpisode: batchSettings.autoNextEpisode,
+          });
+        }
+
+        segments = tempSegments;
+        console.log('📋 使用默认配置:', segments);
+      }
+
+      if (!segments || segments.length === 0) {
         return;
       }
 
-      const currentSegment = skipConfig.segments.find(
+      const currentSegment = segments.find(
         (segment) => time >= segment.start && time <= segment.end
       );
 
@@ -213,7 +252,7 @@ export default function SkipController({
       // 检查片尾倒计时
       checkEndingCountdown(time);
     },
-    [skipConfig, currentSkipSegment, handleAutoSkip, checkEndingCountdown]
+    [skipConfig, currentSkipSegment, handleAutoSkip, checkEndingCountdown, batchSettings, duration, timeToSeconds]
   );
 
   // 执行跳过
@@ -431,6 +470,7 @@ export default function SkipController({
 
   // 初始化加载配置
   useEffect(() => {
+    console.log('🔥 useEffect 触发，准备调用 loadSkipConfig');
     loadSkipConfig();
   }, [loadSkipConfig]);
 
