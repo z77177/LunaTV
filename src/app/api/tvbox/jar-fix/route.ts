@@ -38,10 +38,22 @@ const VERIFIED_JAR_SOURCES = [
     priority: 2,
   },
   {
+    url: 'https://gh-proxy.com/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
+    name: 'gh-proxy代理源',
+    region: 'proxy',
+    priority: 3,
+  },
+  {
+    url: 'https://ghps.cc/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
+    name: 'ghps.cc代理源',
+    region: 'proxy',
+    priority: 3,
+  },
+  {
     url: 'https://cors.isteed.cc/github.com/FongMi/CatVodSpider/raw/main/jar/custom_spider.jar',
     name: 'CORS代理源',
     region: 'proxy',
-    priority: 3,
+    priority: 4,
   },
 ];
 
