@@ -1600,7 +1600,7 @@ export async function refreshAllCache(): Promise<void> {
         fetchFromApi<Record<string, PlayRecord>>(`/api/playrecords`),
         fetchFromApi<Record<string, Favorite>>(`/api/favorites`),
         fetchFromApi<string[]>(`/api/searchhistory`),
-        fetchFromApi<Record<string, SkipConfig>>(`/api/skipconfigs`),
+        fetchFromApi<Record<string, EpisodeSkipConfig>>(`/api/skipconfigs`),
       ]);
 
     if (playRecords.status === 'fulfilled') {
@@ -1900,7 +1900,7 @@ export async function getAllSkipConfigs(): Promise<Record<string, SkipConfig>> {
 
     if (cachedData) {
       // 返回缓存数据，同时后台异步更新
-      fetchFromApi<Record<string, SkipConfig>>(`/api/skipconfigs`)
+      fetchFromApi<Record<string, EpisodeSkipConfig>>(`/api/skipconfigs`)
         .then((freshData) => {
           // 只有数据真正不同时才更新缓存
           if (JSON.stringify(cachedData) !== JSON.stringify(freshData)) {
@@ -1922,7 +1922,7 @@ export async function getAllSkipConfigs(): Promise<Record<string, SkipConfig>> {
     } else {
       // 缓存为空，直接从 API 获取并缓存
       try {
-        const freshData = await fetchFromApi<Record<string, SkipConfig>>(
+        const freshData = await fetchFromApi<Record<string, EpisodeSkipConfig>>(
           `/api/skipconfigs`
         );
         cacheManager.cacheSkipConfigs(freshData);
