@@ -5,6 +5,7 @@ import { Redis } from '@upstash/redis';
 import { AdminConfig } from './admin.types';
 import {
   ContentStat,
+  EpisodeSkipConfig,
   Favorite,
   IStorage,
   PlayRecord,
@@ -366,6 +367,73 @@ export class UpstashRedisStorage implements IStorage {
         if (match) {
           const sourceAndId = match[1];
           configs[sourceAndId] = value as SkipConfig;
+        }
+      }
+    });
+
+    return configs;
+  }
+
+  // ---------- 剧集跳过配置（新版，多片段支持）----------
+  private episodeSkipConfigKey(user: string, source: string, id: string) {
+    return `u:${user}:episodeskip:${source}+${id}`;
+  }
+
+  async getEpisodeSkipConfig(
+    userName: string,
+    source: string,
+    id: string
+  ): Promise<EpisodeSkipConfig | null> {
+    const val = await withRetry(() =>
+      this.client.get(this.episodeSkipConfigKey(userName, source, id))
+    );
+    return val ? (val as EpisodeSkipConfig) : null;
+  }
+
+  async saveEpisodeSkipConfig(
+    userName: string,
+    source: string,
+    id: string,
+    config: EpisodeSkipConfig
+  ): Promise<void> {
+    await withRetry(() =>
+      this.client.set(this.episodeSkipConfigKey(userName, source, id), config)
+    );
+  }
+
+  async deleteEpisodeSkipConfig(
+    userName: string,
+    source: string,
+    id: string
+  ): Promise<void> {
+    await withRetry(() =>
+      this.client.del(this.episodeSkipConfigKey(userName, source, id))
+    );
+  }
+
+  async getAllEpisodeSkipConfigs(
+    userName: string
+  ): Promise<{ [key: string]: EpisodeSkipConfig }> {
+    const pattern = `u:${userName}:episodeskip:*`;
+    const keys = await withRetry(() => this.client.keys(pattern));
+
+    if (keys.length === 0) {
+      return {};
+    }
+
+    const configs: { [key: string]: EpisodeSkipConfig } = {};
+
+    // 批量获取所有配置
+    const values = await withRetry(() => this.client.mget(keys));
+
+    keys.forEach((key, index) => {
+      const value = values[index];
+      if (value) {
+        // 从key中提取source+id
+        const match = key.match(/^u:.+?:episodeskip:(.+)$/);
+        if (match) {
+          const sourceAndId = match[1];
+          configs[sourceAndId] = value as EpisodeSkipConfig;
         }
       }
     });

@@ -15,12 +15,12 @@
  */
 
 import { getAuthInfoFromBrowserCookie } from './auth';
-import { SkipConfig, UserPlayStat } from './types';
+import { SkipConfig, UserPlayStat, SkipSegment, EpisodeSkipConfig } from './types';
 import type { PlayRecord } from './types';
 import { forceClearWatchingUpdatesCache } from './watching-updates';
 
 // 重新导出类型以保持API兼容性
-export type { PlayRecord } from './types';
+export type { PlayRecord, SkipSegment, EpisodeSkipConfig } from './types';
 
 // 全局错误触发函数
 function triggerGlobalError(message: string) {
@@ -2422,5 +2422,190 @@ export async function clearUserStats(): Promise<void> {
   } catch (error) {
     console.error('清除用户统计数据失败:', error);
     throw error;
+  }
+}
+
+// ============================================================================
+// ---- 新版跳过配置接口（支持多片段）----
+// ============================================================================
+
+/**
+ * 生成新版跳过配置的存储 key
+ */
+function generateEpisodeSkipConfigKey(source: string, id: string): string {
+  return `episode_skip_${source}_${id}`;
+}
+
+/**
+ * 获取剧集跳过配置（新版，支持多片段）
+ * 数据库存储模式下使用混合缓存策略：优先返回缓存数据，后台异步同步最新数据
+ */
+export async function getEpisodeSkipConfig(
+  source: string,
+  id: string
+): Promise<EpisodeSkipConfig | null> {
+  // 服务器端渲染阶段直接返回空
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const key = generateEpisodeSkipConfigKey(source, id);
+
+  // 数据库存储模式：使用混合缓存策略（包括 redis、upstash、kvrocks）
+  if (STORAGE_TYPE !== 'localstorage') {
+    try {
+      // 直接从 API 获取
+      const response = await fetch(`/api/episode-skip-config?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null; // 配置不存在
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const config = await response.json();
+      return config;
+    } catch (err) {
+      console.error('获取剧集跳过配置失败:', err);
+      return null;
+    }
+  }
+
+  // localStorage 模式
+  try {
+    const raw = localStorage.getItem('lunatv_episode_skip_configs');
+    if (!raw) return null;
+    const configs = JSON.parse(raw) as Record<string, EpisodeSkipConfig>;
+    return configs[key] || null;
+  } catch (err) {
+    console.error('读取剧集跳过配置失败:', err);
+    return null;
+  }
+}
+
+/**
+ * 保存剧集跳过配置（新版，支持多片段）
+ * 数据库存储模式下使用乐观更新：先更新缓存，再异步同步到数据库
+ */
+export async function saveEpisodeSkipConfig(
+  source: string,
+  id: string,
+  config: EpisodeSkipConfig
+): Promise<void> {
+  const key = generateEpisodeSkipConfigKey(source, id);
+
+  // 数据库存储模式：乐观更新策略（包括 redis、upstash、kvrocks）
+  if (STORAGE_TYPE !== 'localstorage') {
+    try {
+      const response = await fetch('/api/episode-skip-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          source,
+          id,
+          config,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // 触发更新事件
+      window.dispatchEvent(
+        new CustomEvent('episodeSkipConfigUpdated', {
+          detail: { source, id, config },
+        })
+      );
+
+      return;
+    } catch (err) {
+      console.error('保存剧集跳过配置失败:', err);
+      triggerGlobalError('保存跳过配置失败');
+      throw err;
+    }
+  }
+
+  // localStorage 模式
+  try {
+    const raw = localStorage.getItem('lunatv_episode_skip_configs');
+    const configs = raw ? (JSON.parse(raw) as Record<string, EpisodeSkipConfig>) : {};
+    configs[key] = config;
+    localStorage.setItem('lunatv_episode_skip_configs', JSON.stringify(configs));
+
+    window.dispatchEvent(
+      new CustomEvent('episodeSkipConfigUpdated', {
+        detail: { source, id, config },
+      })
+    );
+  } catch (err) {
+    console.error('保存剧集跳过配置失败:', err);
+    triggerGlobalError('保存跳过配置失败');
+    throw err;
+  }
+}
+
+/**
+ * 删除剧集跳过配置（新版）
+ * 数据库存储模式下使用乐观更新：先更新缓存，再异步同步到数据库
+ */
+export async function deleteEpisodeSkipConfig(
+  source: string,
+  id: string
+): Promise<void> {
+  const key = generateEpisodeSkipConfigKey(source, id);
+
+  // 数据库存储模式：乐观更新策略（包括 redis、upstash、kvrocks）
+  if (STORAGE_TYPE !== 'localstorage') {
+    try {
+      const response = await fetch(`/api/episode-skip-config?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // 触发删除事件
+      window.dispatchEvent(
+        new CustomEvent('episodeSkipConfigDeleted', {
+          detail: { source, id },
+        })
+      );
+
+      return;
+    } catch (err) {
+      console.error('删除剧集跳过配置失败:', err);
+      triggerGlobalError('删除跳过配置失败');
+      throw err;
+    }
+  }
+
+  // localStorage 模式
+  try {
+    const raw = localStorage.getItem('lunatv_episode_skip_configs');
+    if (!raw) return;
+
+    const configs = JSON.parse(raw) as Record<string, EpisodeSkipConfig>;
+    delete configs[key];
+    localStorage.setItem('lunatv_episode_skip_configs', JSON.stringify(configs));
+
+    window.dispatchEvent(
+      new CustomEvent('episodeSkipConfigDeleted', {
+        detail: { source, id },
+      })
+    );
+  } catch (err) {
+    console.error('删除剧集跳过配置失败:', err);
+    triggerGlobalError('删除跳过配置失败');
+    throw err;
   }
 }

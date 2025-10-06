@@ -5,6 +5,7 @@ import { KvrocksStorage } from './kvrocks.db';
 import { RedisStorage } from './redis.db';
 import {
   ContentStat,
+  EpisodeSkipConfig,
   Favorite,
   IStorage,
   PlayRecord,
@@ -235,6 +236,48 @@ export class DbManager {
   ): Promise<{ [key: string]: SkipConfig }> {
     if (typeof (this.storage as any).getAllSkipConfigs === 'function') {
       return (this.storage as any).getAllSkipConfigs(userName);
+    }
+    return {};
+  }
+
+  // ---------- 剧集跳过配置（新版，多片段支持）----------
+  async getEpisodeSkipConfig(
+    userName: string,
+    source: string,
+    id: string
+  ): Promise<EpisodeSkipConfig | null> {
+    if (typeof (this.storage as any).getEpisodeSkipConfig === 'function') {
+      return (this.storage as any).getEpisodeSkipConfig(userName, source, id);
+    }
+    return null;
+  }
+
+  async saveEpisodeSkipConfig(
+    userName: string,
+    source: string,
+    id: string,
+    config: EpisodeSkipConfig
+  ): Promise<void> {
+    if (typeof (this.storage as any).saveEpisodeSkipConfig === 'function') {
+      await (this.storage as any).saveEpisodeSkipConfig(userName, source, id, config);
+    }
+  }
+
+  async deleteEpisodeSkipConfig(
+    userName: string,
+    source: string,
+    id: string
+  ): Promise<void> {
+    if (typeof (this.storage as any).deleteEpisodeSkipConfig === 'function') {
+      await (this.storage as any).deleteEpisodeSkipConfig(userName, source, id);
+    }
+  }
+
+  async getAllEpisodeSkipConfigs(
+    userName: string
+  ): Promise<{ [key: string]: EpisodeSkipConfig }> {
+    if (typeof (this.storage as any).getAllEpisodeSkipConfigs === 'function') {
+      return (this.storage as any).getAllEpisodeSkipConfigs(userName);
     }
     return {};
   }
