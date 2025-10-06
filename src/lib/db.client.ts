@@ -15,7 +15,7 @@
  */
 
 import { getAuthInfoFromBrowserCookie } from './auth';
-import { SkipConfig, UserPlayStat, SkipSegment, EpisodeSkipConfig } from './types';
+import { UserPlayStat, SkipSegment, EpisodeSkipConfig } from './types';
 import type { PlayRecord } from './types';
 import { forceClearWatchingUpdatesCache } from './watching-updates';
 
