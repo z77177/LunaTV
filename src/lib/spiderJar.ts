@@ -11,7 +11,7 @@ import crypto from 'crypto';
 // 注意：所有源地址都经过实际测试验证（2025-10-06）
 const DOMESTIC_CANDIDATES: string[] = [
   // 国内优先源（经过验证的真实可用源）
-  // 暂无可用国内源
+  'https://hub.gitmirror.com/raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar', // GitMirror CDN (有效JAR)
 ];
 
 const INTERNATIONAL_CANDIDATES: string[] = [

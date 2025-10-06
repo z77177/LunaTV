@@ -14,6 +14,12 @@ export const dynamic = 'force-dynamic';
 // 验证通过的稳定 JAR 源列表（2025-10-06 测试 - 已验证文件头）
 const VERIFIED_JAR_SOURCES = [
   {
+    url: 'https://hub.gitmirror.com/raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
+    name: 'GitMirror国内CDN',
+    region: 'domestic',
+    priority: 1,
+  },
+  {
     url: 'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
     name: 'GitHub-FongMi官方',
     region: 'international',
