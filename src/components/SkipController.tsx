@@ -167,10 +167,10 @@ export default function SkipController({
       if (currentSegment && currentSegment !== currentSkipSegment) {
         setCurrentSkipSegment(currentSegment);
 
-        // 检查是否开启自动跳过
-        const hasAutoSkipSetting = skipConfig.segments.some(s => s.autoSkip !== false);
+        // 检查当前片段是否开启自动跳过（默认为true）
+        const shouldAutoSkip = currentSegment.autoSkip !== false;
 
-        if (hasAutoSkipSetting) {
+        if (shouldAutoSkip) {
           // 自动跳过：延迟1秒执行跳过
           if (autoSkipTimeoutRef.current) {
             clearTimeout(autoSkipTimeoutRef.current);
