@@ -11,14 +11,8 @@ export const dynamic = 'force-dynamic';
  * 专门用于诊断和修复 JAR 加载问题
  */
 
-// 验证通过的稳定 JAR 源列表（2025-10-06 测试）
+// 验证通过的稳定 JAR 源列表（2025-10-06 测试 - 已验证文件头）
 const VERIFIED_JAR_SOURCES = [
-  {
-    url: 'https://raw.iqiq.io/FongMi/CatVodSpider/main/jar/custom_spider.jar',
-    name: '国内CDN加速',
-    region: 'domestic',
-    priority: 1,
-  },
   {
     url: 'https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
     name: 'GitHub-FongMi官方',
@@ -44,16 +38,10 @@ const VERIFIED_JAR_SOURCES = [
     priority: 3,
   },
   {
-    url: 'https://ghps.cc/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/jar/custom_spider.jar',
-    name: 'ghps.cc代理源',
-    region: 'proxy',
-    priority: 3,
-  },
-  {
     url: 'https://cors.isteed.cc/github.com/FongMi/CatVodSpider/raw/main/jar/custom_spider.jar',
     name: 'CORS代理源',
     region: 'proxy',
-    priority: 4,
+    priority: 3,
   },
 ];
 
