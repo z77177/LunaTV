@@ -393,18 +393,18 @@ export abstract class BaseRedisStorage implements IStorage {
     userName: string,
     source: string,
     id: string
-  ): Promise<SkipConfig | null> {
+  ): Promise<EpisodeSkipConfig | null> {
     const val = await this.withRetry(() =>
       this.client.get(this.skipConfigKey(userName, source, id))
     );
-    return val ? (JSON.parse(val) as SkipConfig) : null;
+    return val ? (JSON.parse(val) as EpisodeSkipConfig) : null;
   }
 
   async setSkipConfig(
     userName: string,
     source: string,
     id: string,
-    config: SkipConfig
+    config: EpisodeSkipConfig
   ): Promise<void> {
     await this.withRetry(() =>
       this.client.set(
@@ -426,7 +426,7 @@ export abstract class BaseRedisStorage implements IStorage {
 
   async getAllSkipConfigs(
     userName: string
-  ): Promise<{ [key: string]: SkipConfig }> {
+  ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     const pattern = `u:${userName}:skip:*`;
     const keys = await this.withRetry(() => this.client.keys(pattern));
 
@@ -434,7 +434,7 @@ export abstract class BaseRedisStorage implements IStorage {
       return {};
     }
 
-    const configs: { [key: string]: SkipConfig } = {};
+    const configs: { [key: string]: EpisodeSkipConfig } = {};
 
     // 批量获取所有配置
     const values = await this.withRetry(() => this.client.mGet(keys));

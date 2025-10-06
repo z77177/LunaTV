@@ -316,18 +316,18 @@ export class UpstashRedisStorage implements IStorage {
     userName: string,
     source: string,
     id: string
-  ): Promise<SkipConfig | null> {
+  ): Promise<EpisodeSkipConfig | null> {
     const val = await withRetry(() =>
       this.client.get(this.skipConfigKey(userName, source, id))
     );
-    return val ? (val as SkipConfig) : null;
+    return val ? (val as EpisodeSkipConfig) : null;
   }
 
   async setSkipConfig(
     userName: string,
     source: string,
     id: string,
-    config: SkipConfig
+    config: EpisodeSkipConfig
   ): Promise<void> {
     await withRetry(() =>
       this.client.set(this.skipConfigKey(userName, source, id), config)
@@ -346,7 +346,7 @@ export class UpstashRedisStorage implements IStorage {
 
   async getAllSkipConfigs(
     userName: string
-  ): Promise<{ [key: string]: SkipConfig }> {
+  ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     const pattern = `u:${userName}:skip:*`;
     const keys = await withRetry(() => this.client.keys(pattern));
 
@@ -354,7 +354,7 @@ export class UpstashRedisStorage implements IStorage {
       return {};
     }
 
-    const configs: { [key: string]: SkipConfig } = {};
+    const configs: { [key: string]: EpisodeSkipConfig } = {};
 
     // 批量获取所有配置
     const values = await withRetry(() => this.client.mget(keys));

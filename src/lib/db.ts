@@ -203,7 +203,7 @@ export class DbManager {
     userName: string,
     source: string,
     id: string
-  ): Promise<SkipConfig | null> {
+  ): Promise<EpisodeSkipConfig | null> {
     if (typeof (this.storage as any).getSkipConfig === 'function') {
       return (this.storage as any).getSkipConfig(userName, source, id);
     }
@@ -214,7 +214,7 @@ export class DbManager {
     userName: string,
     source: string,
     id: string,
-    config: SkipConfig
+    config: EpisodeSkipConfig
   ): Promise<void> {
     if (typeof (this.storage as any).setSkipConfig === 'function') {
       await (this.storage as any).setSkipConfig(userName, source, id, config);
@@ -233,7 +233,7 @@ export class DbManager {
 
   async getAllSkipConfigs(
     userName: string
-  ): Promise<{ [key: string]: SkipConfig }> {
+  ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     if (typeof (this.storage as any).getAllSkipConfigs === 'function') {
       return (this.storage as any).getAllSkipConfigs(userName);
     }
