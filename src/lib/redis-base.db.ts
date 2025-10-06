@@ -10,7 +10,6 @@ import {
   IStorage,
   PlayRecord,
   PlayStatsResult,
-  SkipConfig,
   UserPlayStat,
 } from './types';
 
@@ -446,7 +445,7 @@ export abstract class BaseRedisStorage implements IStorage {
         const match = key.match(/^u:.+?:skip:(.+)$/);
         if (match) {
           const sourceAndId = match[1];
-          configs[sourceAndId] = JSON.parse(value as string) as SkipConfig;
+          configs[sourceAndId] = JSON.parse(value as string) as EpisodeSkipConfig;
         }
       }
     });

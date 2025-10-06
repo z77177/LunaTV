@@ -10,7 +10,6 @@ import {
   IStorage,
   PlayRecord,
   PlayStatsResult,
-  SkipConfig,
   UserPlayStat,
 } from './types';
 
@@ -366,7 +365,7 @@ export class UpstashRedisStorage implements IStorage {
         const match = key.match(/^u:.+?:skip:(.+)$/);
         if (match) {
           const sourceAndId = match[1];
-          configs[sourceAndId] = value as SkipConfig;
+          configs[sourceAndId] = value as EpisodeSkipConfig;
         }
       }
     });

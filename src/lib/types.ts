@@ -200,14 +200,7 @@ export interface DoubanResult {
   list: DoubanItem[];
 }
 
-// 跳过片头片尾配置数据结构（旧版，保留向后兼容）
-export interface SkipConfig {
-  enable: boolean; // 是否启用跳过片头片尾
-  intro_time: number; // 片头时间（秒）
-  outro_time: number; // 片尾时间（秒）
-}
-
-// ---- 新版跳过配置（多片段支持）----
+// ---- 跳过配置（多片段支持）----
 
 // 单个跳过片段
 export interface SkipSegment {

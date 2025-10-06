@@ -10,7 +10,6 @@ import {
   IStorage,
   PlayRecord,
   PlayStatsResult,
-  SkipConfig,
   UserPlayStat,
 } from './types';
 import { UpstashRedisStorage } from './upstash.db';
