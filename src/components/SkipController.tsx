@@ -387,7 +387,7 @@ export default function SkipController({
 
       if (batchSettings.endingMode === 'remaining') {
         // 剩余时间模式：保存剩余时间信息
-        const actualStartSeconds = duration - endingStartSeconds;
+        let actualStartSeconds = duration - endingStartSeconds;
 
         if (actualStartSeconds < 0) {
           actualStartSeconds = 0;
