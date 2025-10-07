@@ -87,13 +87,41 @@ export default function SkipController({
     }
   }, [position]);
 
+  // 触摸开始
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('.drag-handle')) {
+      setIsDragging(true);
+      const touch = e.touches[0];
+      dragStartPos.current = {
+        x: touch.clientX - position.x,
+        y: touch.clientY - position.y,
+      };
+    }
+  }, [position]);
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return;
 
     const newX = e.clientX - dragStartPos.current.x;
     const newY = e.clientY - dragStartPos.current.y;
 
-    // 限制在屏幕范围内
+    const maxX = window.innerWidth - (panelRef.current?.offsetWidth || 200);
+    const maxY = window.innerHeight - (panelRef.current?.offsetHeight || 200);
+
+    setPosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY)),
+    });
+  }, [isDragging]);
+
+  // 触摸移动
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!isDragging) return;
+
+    const touch = e.touches[0];
+    const newX = touch.clientX - dragStartPos.current.x;
+    const newY = touch.clientY - dragStartPos.current.y;
+
     const maxX = window.innerWidth - (panelRef.current?.offsetWidth || 200);
     const maxY = window.innerHeight - (panelRef.current?.offsetHeight || 200);
 
@@ -105,23 +133,26 @@ export default function SkipController({
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-    // 保存位置到 localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('skipControllerPosition', JSON.stringify(position));
     }
   }, [position]);
 
-  // 添加全局鼠标事件监听
+  // 添加全局事件监听
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchend', handleMouseUp);
       return () => {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleMouseUp);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove]);
 
   // 时间格式转换函数
   const timeToSeconds = useCallback((timeStr: string): number => {
@@ -929,6 +960,7 @@ export default function SkipController({
         <div
           ref={panelRef}
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           style={{
             position: 'fixed',
             left: `${position.x}px`,
