@@ -27,7 +27,7 @@ export const changelog: ChangelogEntry[] = [
     "📝 Zeabur部署指南KVRocks配置更正：修正KVRocks持久化卷路径说明，从`/data`改为正确的`/var/lib/kvrocks/db`",
     "🌐 Zeabur一键部署模板链接更新：更新README中的Zeabur一键部署模板链接",
     "🏠 Zeabur部署完成后域名设置提醒：添加部署完成后需要设置访问域名的重要提示",
-    "📚 README锚点链接修复：修复"设置访问域名"部分的锚点链接"
+    "📚 README锚点链接修复：修复设置访问域名部分的锚点链接"
     ],
     fixed: [
     "🔧 original_episodes损坏和无限API请求防护：防止original_episodes数据损坏导致的无限API请求问题",
