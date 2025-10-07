@@ -209,7 +209,7 @@ export default function SkipController({
             end: duration,
             autoSkip: batchSettings.autoSkip,
             autoNextEpisode: batchSettings.autoNextEpisode,
-            mode: batchSettings.endingMode,
+            mode: batchSettings.endingMode as 'absolute' | 'remaining',
             remainingTime: batchSettings.endingMode === 'remaining' ? endingStartSeconds : undefined,
           });
         }
