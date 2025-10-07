@@ -87,7 +87,10 @@ This project is a deeply customized version based on **MoonTV**, continuously de
 ### 📦 Project Status
 
 - **Notice**: After deployment, this is an **empty shell project** with **no built-in video sources or live streaming sources**. You need to collect and configure them yourself.
-- **Demo Site**: [https://lunatv.smone.us](https://lunatv.smone.us) for short-term testing. Database is cleaned regularly.
+- **Demo Sites**:
+  - Zeabur Deployment: [https://smonetv.zeabur.app](https://smonetv.zeabur.app)
+  - Vercel Deployment: [https://lunatv.smone.us](https://lunatv.smone.us)
+  - For short-term testing. Database is cleaned regularly.
 
 ### 🚫 Distribution Restrictions
 
@@ -318,12 +321,7 @@ Zeabur is a one-stop cloud deployment platform. Using pre-built Docker images al
 
 **Deployment Steps:**
 
-1. **Add LunaTV Service**
-   - Click "Add Service" > "Docker Images"
-   - Enter image name: `ghcr.io/szemeng76/lunatv:latest`
-   - Configure port: `3000` (HTTP)
-
-2. **Add KVRocks Service**
+1. **Add KVRocks Service** (Add database first)
    - Click "Add Service" > "Docker Images"
    - Enter image name: `apache/kvrocks`
    - Configure port: `6666` (TCP)
@@ -336,6 +334,11 @@ Zeabur is a one-stop cloud deployment platform. Using pre-built Docker images al
      * Save configuration
 
    > 💡 **Important**: Persistent volume path must be set to `/data`, so KVRocks will automatically create config files and database files in that directory.
+
+2. **Add LunaTV Service**
+   - Click "Add Service" > "Docker Images"
+   - Enter image name: `ghcr.io/szemeng76/lunatv:latest`
+   - Configure port: `3000` (HTTP)
 
 3. **Configure Environment Variables**
 
