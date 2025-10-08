@@ -89,7 +89,7 @@ jobs:
           images: ghcr.io/${{ steps.lowercase.outputs.owner }}/lunatv
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ steps.version_check.outputs.current_version }},enable=${{ steps.version_check.outputs.version_changed == 'true' && is_default_branch }}
+            type=raw,value=${{ steps.version_check.outputs.current_version }},enable=${{ steps.version_check.outputs.version_changed == 'true' }}
             type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
 
       - name: Build and push by digest
