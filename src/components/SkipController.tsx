@@ -51,6 +51,20 @@ export default function SkipController({
     autoNextEpisode: true,  // 自动下一集开关
   });
 
+  // 从 localStorage 读取用户全局设置
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedEnableAutoSkip = localStorage.getItem('enableAutoSkip');
+      const savedEnableAutoNextEpisode = localStorage.getItem('enableAutoNextEpisode');
+
+      setBatchSettings(prev => ({
+        ...prev,
+        autoSkip: savedEnableAutoSkip !== null ? JSON.parse(savedEnableAutoSkip) : true,
+        autoNextEpisode: savedEnableAutoNextEpisode !== null ? JSON.parse(savedEnableAutoNextEpisode) : true,
+      }));
+    }
+  }, []);
+
   const lastSkipTimeRef = useRef<number>(0);
   const skipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoSkipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
