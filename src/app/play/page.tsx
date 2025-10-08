@@ -4047,11 +4047,15 @@ function PlayPageClient() {
                   <div className='absolute top-4 right-4 z-10'>
                     <button
                       onClick={() => setIsSkipSettingOpen(true)}
-                      className='group flex items-center gap-2 px-4 py-2 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-lg border border-white/20 hover:border-white/40 shadow-lg hover:shadow-xl transition-all duration-300'
+                      className='group flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-xl border border-white/30 hover:border-white/50 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] hover:shadow-[0_8px_32px_0_rgba(255,255,255,0.18)] hover:scale-105 transition-all duration-300 ease-out'
                       title='跳过设置'
+                      style={{
+                        backdropFilter: 'blur(20px) saturate(180%)',
+                        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                      }}
                     >
                       <svg
-                        className='w-5 h-5 text-white/80 group-hover:text-white transition-colors'
+                        className='w-5 h-5 text-white drop-shadow-lg group-hover:rotate-90 transition-all duration-300'
                         fill='none'
                         stroke='currentColor'
                         viewBox='0 0 24 24'
@@ -4063,7 +4067,7 @@ function PlayPageClient() {
                           d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4'
                         />
                       </svg>
-                      <span className='text-sm font-medium text-white/90 group-hover:text-white transition-colors hidden sm:inline'>
+                      <span className='text-sm font-medium text-white drop-shadow-lg transition-all duration-300 hidden sm:inline'>
                         跳过设置
                       </span>
                     </button>
