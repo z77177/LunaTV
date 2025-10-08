@@ -766,23 +766,21 @@ export default function SkipController({
                   <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                     结束时间 (分:秒)
                   </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={batchSettings.openingEnd}
-                      onChange={(e) => setBatchSettings({...batchSettings, openingEnd: e.target.value})}
-                      className="flex-1 px-4 py-2.5 border border-gray-300/50 dark:border-gray-600/50 rounded-lg bg-white/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 backdrop-blur-sm focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all"
-                      placeholder="1:30"
-                    />
-                    <button
-                      onClick={markCurrentAsOpeningEnd}
-                      className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105 whitespace-nowrap backdrop-blur-sm"
-                      title="标记当前播放时间为片头结束时间"
-                    >
-                      📍 标记
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">格式: 分:秒 (如 1:30) 或点击标记按钮</p>
+                  <input
+                    type="text"
+                    value={batchSettings.openingEnd}
+                    onChange={(e) => setBatchSettings({...batchSettings, openingEnd: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-600/50 rounded-lg bg-white/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 backdrop-blur-sm focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all mb-2"
+                    placeholder="1:30"
+                  />
+                  <button
+                    onClick={markCurrentAsOpeningEnd}
+                    className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105 backdrop-blur-sm"
+                    title="标记当前播放时间为片头结束时间"
+                  >
+                      📍 标记当前时间
+                  </button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">格式: 分:秒 (如 1:30)</p>
                 </div>
               </div>
 
@@ -834,26 +832,24 @@ export default function SkipController({
                   <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                     {batchSettings.endingMode === 'remaining' ? '剩余时间 (分:秒)' : '开始时间 (分:秒)'}
                   </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={batchSettings.endingStart}
-                      onChange={(e) => setBatchSettings({...batchSettings, endingStart: e.target.value})}
-                      className="flex-1 px-4 py-2.5 border border-gray-300/50 dark:border-gray-600/50 rounded-lg bg-white/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 backdrop-blur-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all"
-                      placeholder={batchSettings.endingMode === 'remaining' ? '2:00' : '20:00'}
-                    />
-                    <button
-                      onClick={markCurrentAsEndingStart}
-                      className="px-4 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105 whitespace-nowrap backdrop-blur-sm"
-                      title="标记当前播放时间为片尾开始时间"
-                    >
-                      📍 标记
-                    </button>
-                  </div>
+                  <input
+                    type="text"
+                    value={batchSettings.endingStart}
+                    onChange={(e) => setBatchSettings({...batchSettings, endingStart: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-600/50 rounded-lg bg-white/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 backdrop-blur-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all mb-2"
+                    placeholder={batchSettings.endingMode === 'remaining' ? '2:00' : '20:00'}
+                  />
+                  <button
+                    onClick={markCurrentAsEndingStart}
+                    className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105 backdrop-blur-sm"
+                    title="标记当前播放时间为片尾开始时间"
+                  >
+                    📍 标记当前时间
+                  </button>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
                     {batchSettings.endingMode === 'remaining'
-                      ? '当剩余时间达到此值时开始倒计时，或点击标记按钮'
-                      : '从视频开始播放此时间后开始检测片尾，或点击标记按钮'
+                      ? '当剩余时间达到此值时开始倒计时'
+                      : '从视频开始播放此时间后开始检测片尾'
                     }
                   </p>
                 </div>
