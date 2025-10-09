@@ -730,26 +730,31 @@ export default function SkipController({
       const openingSegment = skipConfig.segments.find(s => s.type === 'opening');
       const endingSegment = skipConfig.segments.find(s => s.type === 'ending');
 
+      console.log('🔄 [skipConfig变化] 同步时间字段到 batchSettings，保留 autoSkip/autoNextEpisode');
+
       // 🔑 只更新时间相关的字段，不更新 autoSkip 和 autoNextEpisode
-      setBatchSettings(prev => ({
-        ...prev,
-        openingStart: openingSegment ? secondsToTime(openingSegment.start) : prev.openingStart,
-        openingEnd: openingSegment ? secondsToTime(openingSegment.end) : prev.openingEnd,
-        endingStart: endingSegment
-          ? (endingSegment.mode === 'remaining' && endingSegment.remainingTime
-              ? secondsToTime(endingSegment.remainingTime)
-              : (duration > 0 ? secondsToTime(duration - endingSegment.start) : prev.endingStart))
-          : prev.endingStart,
-        endingEnd: endingSegment
-          ? (endingSegment.mode === 'remaining' && endingSegment.end < duration && duration > 0
-              ? secondsToTime(duration - endingSegment.end)
-              : '')
-          : prev.endingEnd,
-        endingMode: endingSegment?.mode === 'absolute' ? 'absolute' : 'remaining',
-        // 🔑 保持当前的 autoSkip 和 autoNextEpisode 不变（已经通过其他 useEffect 从 localStorage 读取）
-      }));
+      setBatchSettings(prev => {
+        console.log('🔍 [skipConfig变化] 当前 prev.autoSkip:', prev.autoSkip, 'prev.autoNextEpisode:', prev.autoNextEpisode);
+        return {
+          ...prev,
+          openingStart: openingSegment ? secondsToTime(openingSegment.start) : prev.openingStart,
+          openingEnd: openingSegment ? secondsToTime(openingSegment.end) : prev.openingEnd,
+          endingStart: endingSegment
+            ? (endingSegment.mode === 'remaining' && endingSegment.remainingTime
+                ? secondsToTime(endingSegment.remainingTime)
+                : (duration > 0 ? secondsToTime(duration - endingSegment.start) : prev.endingStart))
+            : prev.endingStart,
+          endingEnd: endingSegment
+            ? (endingSegment.mode === 'remaining' && endingSegment.end < duration && duration > 0
+                ? secondsToTime(duration - endingSegment.end)
+                : '')
+            : prev.endingEnd,
+          endingMode: endingSegment?.mode === 'absolute' ? 'absolute' : 'remaining',
+          // 🔑 保持当前的 autoSkip 和 autoNextEpisode 不变（已经通过其他 useEffect 从 localStorage 读取）
+        };
+      });
     }
-  }, [skipConfig, secondsToTime, duration]); // 🔑 保留 duration依赖，确保计算准确
+  }, [skipConfig, duration]); // 🔑 移除 secondsToTime 依赖，避免不必要的触发
 
   // 监听播放时间变化
   useEffect(() => {
