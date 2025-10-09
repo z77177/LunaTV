@@ -674,6 +674,22 @@ export default function SkipController({
     loadSkipConfig();
   }, [loadSkipConfig]);
 
+  // 🔑 确保每次 source/id 变化时，都从 localStorage 读取用户全局设置
+  useEffect(() => {
+    const savedEnableAutoSkip = localStorage.getItem('enableAutoSkip');
+    const savedEnableAutoNextEpisode = localStorage.getItem('enableAutoNextEpisode');
+    const userAutoSkip = savedEnableAutoSkip !== null ? JSON.parse(savedEnableAutoSkip) : true;
+    const userAutoNextEpisode = savedEnableAutoNextEpisode !== null ? JSON.parse(savedEnableAutoNextEpisode) : true;
+
+    console.log('🔄 从 localStorage 读取用户设置:', { userAutoSkip, userAutoNextEpisode });
+
+    setBatchSettings(prev => ({
+      ...prev,
+      autoSkip: userAutoSkip,
+      autoNextEpisode: userAutoNextEpisode,
+    }));
+  }, [source, id]); // 切换集数时重新读取用户设置
+
   // 当 skipConfig 改变时，同步到 batchSettings（但保留用户全局设置）
   // 🔑 注意：这个 useEffect 只在 skipConfig 改变时触发，不受 duration 影响
   useEffect(() => {
@@ -682,13 +698,7 @@ export default function SkipController({
       const openingSegment = skipConfig.segments.find(s => s.type === 'opening');
       const endingSegment = skipConfig.segments.find(s => s.type === 'ending');
 
-      // 🔑 从 localStorage 读取用户全局设置，避免被覆盖
-      const savedEnableAutoSkip = localStorage.getItem('enableAutoSkip');
-      const savedEnableAutoNextEpisode = localStorage.getItem('enableAutoNextEpisode');
-      const userAutoSkip = savedEnableAutoSkip !== null ? JSON.parse(savedEnableAutoSkip) : true;
-      const userAutoNextEpisode = savedEnableAutoNextEpisode !== null ? JSON.parse(savedEnableAutoNextEpisode) : true;
-
-      // 更新批量设置状态（使用用户全局设置，而不是配置文件中的值）
+      // 🔑 只更新时间相关的字段，不更新 autoSkip 和 autoNextEpisode
       setBatchSettings(prev => ({
         ...prev,
         openingStart: openingSegment ? secondsToTime(openingSegment.start) : prev.openingStart,
@@ -704,12 +714,10 @@ export default function SkipController({
               : '')
           : prev.endingEnd,
         endingMode: endingSegment?.mode === 'absolute' ? 'absolute' : 'remaining',
-        // 🔑 使用用户全局设置，而不是配置文件中的值
-        autoSkip: userAutoSkip,
-        autoNextEpisode: userAutoNextEpisode,
+        // 🔑 保持当前的 autoSkip 和 autoNextEpisode 不变（已经通过其他 useEffect 从 localStorage 读取）
       }));
     }
-  }, [skipConfig, secondsToTime]); // 🔑 移除 duration 依赖，避免拉进度条时重置设置
+  }, [skipConfig, secondsToTime, duration]); // 🔑 保留 duration依赖，确保计算准确
 
   // 监听播放时间变化
   useEffect(() => {
