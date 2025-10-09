@@ -48,7 +48,14 @@ export default function SkipController({
     const userAutoSkip = savedEnableAutoSkip !== null ? JSON.parse(savedEnableAutoSkip) : true;
     const userAutoNextEpisode = savedEnableAutoNextEpisode !== null ? JSON.parse(savedEnableAutoNextEpisode) : true;
 
-    console.log('🎯 [useState初始化] 从 localStorage 读取用户设置:', { userAutoSkip, userAutoNextEpisode });
+    console.log('🎯 [useState初始化] localStorage原始值:', {
+      savedEnableAutoSkip,
+      savedEnableAutoNextEpisode
+    });
+    console.log('🎯 [useState初始化] 解析后的值:', {
+      userAutoSkip,
+      userAutoNextEpisode
+    });
 
     return {
       openingStart: '0:00',   // 片头开始时间（分:秒格式）
@@ -116,6 +123,10 @@ export default function SkipController({
 
   // 🔑 同步 batchSettings 到 ref
   useEffect(() => {
+    console.log('🔄 [batchSettings变化]:', {
+      autoSkip: batchSettings.autoSkip,
+      autoNextEpisode: batchSettings.autoNextEpisode
+    });
     batchSettingsRef.current = batchSettings;
   }, [batchSettings]);
 
@@ -798,6 +809,44 @@ export default function SkipController({
     };
   }, []);
 
+  // 🔑 关闭弹窗的统一处理函数
+  const handleCloseDialog = useCallback(() => {
+    onSettingModeChange?.(false);
+    // 取消时从 localStorage 读取用户设置，不能硬编码默认值
+    const savedEnableAutoSkip = localStorage.getItem('enableAutoSkip');
+    const savedEnableAutoNextEpisode = localStorage.getItem('enableAutoNextEpisode');
+    const userAutoSkip = savedEnableAutoSkip !== null ? JSON.parse(savedEnableAutoSkip) : true;
+    const userAutoNextEpisode = savedEnableAutoNextEpisode !== null ? JSON.parse(savedEnableAutoNextEpisode) : true;
+
+    console.log('❌ [关闭弹窗] 从 localStorage 读取用户设置:', { userAutoSkip, userAutoNextEpisode });
+
+    setBatchSettings({
+      openingStart: '0:00',
+      openingEnd: '1:30',
+      endingMode: 'remaining',
+      endingStart: '2:00',
+      endingEnd: '',
+      autoSkip: userAutoSkip,
+      autoNextEpisode: userAutoNextEpisode,
+    });
+  }, [onSettingModeChange]);
+
+  // 🔑 监听 ESC 键关闭弹窗
+  useEffect(() => {
+    if (!isSettingMode) return;
+
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCloseDialog();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscKey);
+    return () => {
+      window.removeEventListener('keydown', handleEscKey);
+    };
+  }, [isSettingMode, handleCloseDialog]);
+
   return (
     <div className="skip-controller">
       {/* 跳过按钮 - 放在播放器内左上角 */}
@@ -819,18 +868,34 @@ export default function SkipController({
 
       {/* 设置模式面板 - 增强版批量设置 */}
       {isSettingMode && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in"
+          onClick={handleCloseDialog}
+        >
           <div
             className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[0_20px_60px_0_rgba(0,0,0,0.4)] border border-white/20 dark:border-gray-700/50 animate-scale-in"
             style={{
               backdropFilter: 'blur(20px) saturate(180%)',
               WebkitBackdropFilter: 'blur(20px) saturate(180%)',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-2 border-b border-gray-200/50 dark:border-gray-700/50 pb-4">
-              <span className="text-2xl">⚙️</span>
-              智能跳过设置
-            </h3>
+            {/* 标题栏带关闭按钮 */}
+            <div className="flex items-center justify-between mb-6 border-b border-gray-200/50 dark:border-gray-700/50 pb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <span className="text-2xl">⚙️</span>
+                智能跳过设置
+              </h3>
+              <button
+                onClick={handleCloseDialog}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                title="关闭 (ESC)"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
             {/* 全局开关 */}
             <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/30 dark:to-indigo-900/30 p-5 rounded-xl mb-6 border border-blue-100/50 dark:border-blue-800/50 shadow-sm backdrop-blur-sm">
@@ -1036,18 +1101,7 @@ export default function SkipController({
                 💾 保存智能配置
               </button>
               <button
-                onClick={() => {
-                  onSettingModeChange?.(false);
-                  setBatchSettings({
-                    openingStart: '0:00',
-                    openingEnd: '1:30',
-                    endingMode: 'remaining',
-                    endingStart: '2:00',
-                    endingEnd: '',
-                    autoSkip: true,
-                    autoNextEpisode: true,
-                  });
-                }}
+                onClick={handleCloseDialog}
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 backdrop-blur-sm"
               >
                 ❌ 取消
