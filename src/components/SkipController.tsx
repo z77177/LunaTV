@@ -69,6 +69,14 @@ export default function SkipController({
   const skipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoSkipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 🔑 使用 ref 来存储 batchSettings，避免触发不必要的重新渲染
+  const batchSettingsRef = useRef(batchSettings);
+
+  // 🔑 同步 batchSettings 到 ref
+  useEffect(() => {
+    batchSettingsRef.current = batchSettings;
+  }, [batchSettings]);
+
   // 拖动相关状态
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState(() => {
@@ -265,15 +273,26 @@ export default function SkipController({
     // 如果是片尾且开启了自动下一集，直接跳转下一集
     if (segment.type === 'ending' && segment.autoNextEpisode && onNextEpisode) {
       console.log('⏭️ 片尾自动跳转下一集');
-      // 🔑 暂停视频，防止 video:ended 事件再次触发
-      if (artPlayerRef.current && !artPlayerRef.current.paused) {
-        artPlayerRef.current.pause();
+      // 🔑 先暂停视频并销毁播放器事件，防止 video:ended 事件再次触发
+      if (artPlayerRef.current) {
+        if (!artPlayerRef.current.paused) {
+          artPlayerRef.current.pause();
+        }
+        // 显示跳过提示
+        if (artPlayerRef.current.notice) {
+          artPlayerRef.current.notice.show = '自动跳转下一集';
+        }
+        // 移除 video:ended 监听，防止源切换时触发
+        const video = artPlayerRef.current.video;
+        if (video) {
+          const endedHandler = () => {};
+          video.removeEventListener('ended', endedHandler);
+        }
       }
-      onNextEpisode();
-      // 显示跳过提示
-      if (artPlayerRef.current.notice) {
-        artPlayerRef.current.notice.show = '自动跳转下一集';
-      }
+      // 延迟执行跳转，确保暂停生效
+      setTimeout(() => {
+        onNextEpisode();
+      }, 100);
     } else {
       // 否则跳到片段结束位置
       const targetTime = segment.end + 1;
@@ -294,6 +313,9 @@ export default function SkipController({
   // 检查当前播放时间是否在跳过区间内
   const checkSkipSegment = useCallback(
     (time: number) => {
+      // 🔑 使用 ref 中的 batchSettings，避免闭包问题
+      const currentBatchSettings = batchSettingsRef.current;
+
       // 如果没有保存的配置，使用 batchSettings 默认配置
       let segments = skipConfig?.segments;
 
@@ -302,21 +324,21 @@ export default function SkipController({
         const tempSegments: SkipSegment[] = [];
 
         // 添加片头配置
-        const openingStart = timeToSeconds(batchSettings.openingStart);
-        const openingEnd = timeToSeconds(batchSettings.openingEnd);
+        const openingStart = timeToSeconds(currentBatchSettings.openingStart);
+        const openingEnd = timeToSeconds(currentBatchSettings.openingEnd);
         if (openingStart < openingEnd) {
           tempSegments.push({
             type: 'opening',
             start: openingStart,
             end: openingEnd,
-            autoSkip: batchSettings.autoSkip,
+            autoSkip: currentBatchSettings.autoSkip,
           });
         }
 
         // 添加片尾配置（如果设置了）
-        if (duration > 0 && batchSettings.endingStart) {
-          const endingStartSeconds = timeToSeconds(batchSettings.endingStart);
-          const endingStart = batchSettings.endingMode === 'remaining'
+        if (duration > 0 && currentBatchSettings.endingStart) {
+          const endingStartSeconds = timeToSeconds(currentBatchSettings.endingStart);
+          const endingStart = currentBatchSettings.endingMode === 'remaining'
             ? duration - endingStartSeconds
             : endingStartSeconds;
 
@@ -324,10 +346,10 @@ export default function SkipController({
             type: 'ending',
             start: endingStart,
             end: duration,
-            autoSkip: batchSettings.autoSkip,
-            autoNextEpisode: batchSettings.autoNextEpisode,
-            mode: batchSettings.endingMode as 'absolute' | 'remaining',
-            remainingTime: batchSettings.endingMode === 'remaining' ? endingStartSeconds : undefined,
+            autoSkip: currentBatchSettings.autoSkip,
+            autoNextEpisode: currentBatchSettings.autoNextEpisode,
+            mode: currentBatchSettings.endingMode as 'absolute' | 'remaining',
+            remainingTime: currentBatchSettings.endingMode === 'remaining' ? endingStartSeconds : undefined,
           });
         }
 
@@ -408,7 +430,7 @@ export default function SkipController({
         }
       }
     },
-    [skipConfig, currentSkipSegment, handleAutoSkip, batchSettings, duration, timeToSeconds]
+    [skipConfig, currentSkipSegment, handleAutoSkip, duration, timeToSeconds] // 🔑 移除 batchSettings 依赖，使用 ref
   );
 
   // 执行跳过
@@ -424,18 +446,27 @@ export default function SkipController({
         clearTimeout(skipTimeoutRef.current);
       }
 
-      // 🔑 暂停视频，防止 video:ended 事件再次触发
-      if (artPlayerRef.current && !artPlayerRef.current.paused) {
-        artPlayerRef.current.pause();
+      // 🔑 先暂停视频并销毁播放器事件，防止 video:ended 事件再次触发
+      if (artPlayerRef.current) {
+        if (!artPlayerRef.current.paused) {
+          artPlayerRef.current.pause();
+        }
+        // 显示提示
+        if (artPlayerRef.current.notice) {
+          artPlayerRef.current.notice.show = '正在播放下一集...';
+        }
+        // 移除 video:ended 监听，防止源切换时触发
+        const video = artPlayerRef.current.video;
+        if (video) {
+          const endedHandler = () => {};
+          video.removeEventListener('ended', endedHandler);
+        }
       }
 
-      // 显示提示
-      if (artPlayerRef.current.notice) {
-        artPlayerRef.current.notice.show = '正在播放下一集...';
-      }
-
-      // 调用下一集回调
-      onNextEpisode();
+      // 延迟执行跳转，确保暂停生效
+      setTimeout(() => {
+        onNextEpisode();
+      }, 100);
       return;
     }
 
