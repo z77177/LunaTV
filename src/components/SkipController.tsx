@@ -51,18 +51,50 @@ export default function SkipController({
     autoNextEpisode: true,  // 自动下一集开关
   });
 
-  // 从 localStorage 读取用户全局设置
+  // 🔑 从 localStorage 读取用户全局设置，并监听变化
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return;
+
+    // 读取 localStorage 的函数
+    const loadUserSettings = () => {
       const savedEnableAutoSkip = localStorage.getItem('enableAutoSkip');
       const savedEnableAutoNextEpisode = localStorage.getItem('enableAutoNextEpisode');
+      const userAutoSkip = savedEnableAutoSkip !== null ? JSON.parse(savedEnableAutoSkip) : true;
+      const userAutoNextEpisode = savedEnableAutoNextEpisode !== null ? JSON.parse(savedEnableAutoNextEpisode) : true;
+
+      console.log('🔄 [SkipController] 读取用户设置:', { userAutoSkip, userAutoNextEpisode });
 
       setBatchSettings(prev => ({
         ...prev,
-        autoSkip: savedEnableAutoSkip !== null ? JSON.parse(savedEnableAutoSkip) : true,
-        autoNextEpisode: savedEnableAutoNextEpisode !== null ? JSON.parse(savedEnableAutoNextEpisode) : true,
+        autoSkip: userAutoSkip,
+        autoNextEpisode: userAutoNextEpisode,
       }));
-    }
+    };
+
+    // 初始化时读取一次
+    loadUserSettings();
+
+    // 🔑 监听 storage 事件（其他标签页或窗口的变化）
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'enableAutoSkip' || e.key === 'enableAutoNextEpisode') {
+        console.log('🔄 [SkipController] localStorage 变化:', e.key, e.newValue);
+        loadUserSettings();
+      }
+    };
+
+    // 🔑 监听自定义事件（同一页面内UserMenu的变化）
+    const handleLocalSettingsChange = () => {
+      console.log('🔄 [SkipController] 检测到本地设置变化');
+      loadUserSettings();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('localStorageChanged', handleLocalSettingsChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('localStorageChanged', handleLocalSettingsChange);
+    };
   }, []);
 
   const lastSkipTimeRef = useRef<number>(0);
@@ -797,6 +829,8 @@ export default function SkipController({
                       setBatchSettings({...batchSettings, autoSkip: newValue});
                       // 🔑 保存到 localStorage，确保跨集保持
                       localStorage.setItem('enableAutoSkip', JSON.stringify(newValue));
+                      // 🔑 通知其他组件 localStorage 已更新
+                      window.dispatchEvent(new Event('localStorageChanged'));
                     }}
                     className="rounded"
                   />
@@ -815,6 +849,8 @@ export default function SkipController({
                       setBatchSettings({...batchSettings, autoNextEpisode: newValue});
                       // 🔑 保存到 localStorage，确保跨集保持
                       localStorage.setItem('enableAutoNextEpisode', JSON.stringify(newValue));
+                      // 🔑 通知其他组件 localStorage 已更新
+                      window.dispatchEvent(new Event('localStorageChanged'));
                     }}
                     className="rounded"
                   />
