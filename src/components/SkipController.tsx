@@ -265,6 +265,10 @@ export default function SkipController({
     // 如果是片尾且开启了自动下一集，直接跳转下一集
     if (segment.type === 'ending' && segment.autoNextEpisode && onNextEpisode) {
       console.log('⏭️ 片尾自动跳转下一集');
+      // 🔑 暂停视频，防止 video:ended 事件再次触发
+      if (artPlayerRef.current && !artPlayerRef.current.paused) {
+        artPlayerRef.current.pause();
+      }
       onNextEpisode();
       // 显示跳过提示
       if (artPlayerRef.current.notice) {
@@ -418,6 +422,11 @@ export default function SkipController({
 
       if (skipTimeoutRef.current) {
         clearTimeout(skipTimeoutRef.current);
+      }
+
+      // 🔑 暂停视频，防止 video:ended 事件再次触发
+      if (artPlayerRef.current && !artPlayerRef.current.paused) {
+        artPlayerRef.current.pause();
       }
 
       // 显示提示
@@ -647,6 +656,7 @@ export default function SkipController({
   }, [loadSkipConfig]);
 
   // 当 skipConfig 改变时，同步到 batchSettings（但保留用户全局设置）
+  // 🔑 注意：这个 useEffect 只在 skipConfig 改变时触发，不受 duration 影响
   useEffect(() => {
     if (skipConfig && skipConfig.segments.length > 0) {
       // 找到片头和片尾片段
@@ -662,25 +672,25 @@ export default function SkipController({
       // 更新批量设置状态（使用用户全局设置，而不是配置文件中的值）
       setBatchSettings(prev => ({
         ...prev,
-        openingStart: openingSegment ? secondsToTime(openingSegment.start) : '0:00',
-        openingEnd: openingSegment ? secondsToTime(openingSegment.end) : '1:30',
+        openingStart: openingSegment ? secondsToTime(openingSegment.start) : prev.openingStart,
+        openingEnd: openingSegment ? secondsToTime(openingSegment.end) : prev.openingEnd,
         endingStart: endingSegment
           ? (endingSegment.mode === 'remaining' && endingSegment.remainingTime
               ? secondsToTime(endingSegment.remainingTime)
-              : secondsToTime(duration - endingSegment.start))
-          : '2:00',
+              : (duration > 0 ? secondsToTime(duration - endingSegment.start) : prev.endingStart))
+          : prev.endingStart,
         endingEnd: endingSegment
-          ? (endingSegment.mode === 'remaining' && endingSegment.end < duration
+          ? (endingSegment.mode === 'remaining' && endingSegment.end < duration && duration > 0
               ? secondsToTime(duration - endingSegment.end)
               : '')
-          : '',
+          : prev.endingEnd,
         endingMode: endingSegment?.mode === 'absolute' ? 'absolute' : 'remaining',
         // 🔑 使用用户全局设置，而不是配置文件中的值
         autoSkip: userAutoSkip,
         autoNextEpisode: userAutoNextEpisode,
       }));
     }
-  }, [skipConfig, duration, secondsToTime]);
+  }, [skipConfig, secondsToTime]); // 🔑 移除 duration 依赖，避免拉进度条时重置设置
 
   // 监听播放时间变化
   useEffect(() => {
