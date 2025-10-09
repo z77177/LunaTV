@@ -273,7 +273,7 @@ export default function SkipController({
     // 如果是片尾且开启了自动下一集，直接跳转下一集
     if (segment.type === 'ending' && segment.autoNextEpisode && onNextEpisode) {
       console.log('⏭️ 片尾自动跳转下一集');
-      // 🔑 先暂停视频并销毁播放器事件，防止 video:ended 事件再次触发
+      // 🔑 先暂停视频，防止 video:ended 事件再次触发
       if (artPlayerRef.current) {
         if (!artPlayerRef.current.paused) {
           artPlayerRef.current.pause();
@@ -281,12 +281,6 @@ export default function SkipController({
         // 显示跳过提示
         if (artPlayerRef.current.notice) {
           artPlayerRef.current.notice.show = '自动跳转下一集';
-        }
-        // 移除 video:ended 监听，防止源切换时触发
-        const video = artPlayerRef.current.video;
-        if (video) {
-          const endedHandler = () => {};
-          video.removeEventListener('ended', endedHandler);
         }
       }
       // 延迟执行跳转，确保暂停生效
@@ -454,12 +448,6 @@ export default function SkipController({
         // 显示提示
         if (artPlayerRef.current.notice) {
           artPlayerRef.current.notice.show = '正在播放下一集...';
-        }
-        // 移除 video:ended 监听，防止源切换时触发
-        const video = artPlayerRef.current.video;
-        if (video) {
-          const endedHandler = () => {};
-          video.removeEventListener('ended', endedHandler);
         }
       }
 
