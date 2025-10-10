@@ -438,34 +438,22 @@ function SearchPageClient() {
       }
     );
 
+    // 获取滚动位置的函数
     const getScrollTop = () => {
-      return document.body.scrollTop || 0;
+      return document.body.scrollTop || document.documentElement.scrollTop || 0;
     };
 
-    let isRunning = false;
-    const checkScrollPosition = () => {
-      if (!isRunning) return;
-
-      const scrollTop = getScrollTop();
-      const shouldShow = scrollTop > 300;
-      setShowBackToTop(shouldShow);
-
-      requestAnimationFrame(checkScrollPosition);
-    };
-
-    isRunning = true;
-    checkScrollPosition();
-
+    // 滚动事件处理
     const handleScroll = () => {
       const scrollTop = getScrollTop();
       setShowBackToTop(scrollTop > 300);
     };
 
+    // 监听 body 元素的滚动事件
     document.body.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       unsubscribe();
-      isRunning = false;
       document.body.removeEventListener('scroll', handleScroll);
     };
   }, []);
@@ -851,13 +839,16 @@ function SearchPageClient() {
     // 其余由 searchParams 变化的 effect 处理
   };
 
+  // 返回顶部功能
   const scrollToTop = () => {
     try {
+      // 根据调试结果，真正的滚动容器是 document.body
       document.body.scrollTo({
         top: 0,
         behavior: 'smooth',
       });
     } catch (error) {
+      // 如果平滑滚动完全失败，使用立即滚动
       document.body.scrollTop = 0;
     }
   };
