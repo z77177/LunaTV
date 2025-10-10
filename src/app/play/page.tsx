@@ -3671,7 +3671,13 @@ function PlayPageClient() {
         // 🔑 检查是否已经通过 SkipController 触发了下一集，避免重复触发
         if (isSkipControllerTriggeredRef.current) {
           console.log('⏭️ SkipController 已触发下一集，跳过 video:ended 自动播放');
-          isSkipControllerTriggeredRef.current = false; // 重置标记
+          // 🔥 关键修复：延迟重置标志，而不是立即重置
+          // 因为集数切换是异步的，需要等待新集数开始加载后再重置标志
+          // 对于短剧，需要调用API解析URL，可能需要更长时间
+          setTimeout(() => {
+            console.log('🔄 延迟重置 SkipController 标志');
+            isSkipControllerTriggeredRef.current = false;
+          }, 2000); // 2秒延迟，确保新集数已经开始加载
           return;
         }
 

@@ -336,10 +336,9 @@ export default function SkipController({
           artPlayerRef.current.notice.show = '自动跳转下一集';
         }
       }
-      // 延迟执行跳转，确保暂停生效
-      setTimeout(() => {
-        onNextEpisode();
-      }, 100);
+      // 🔥 关键修复：立即调用 onNextEpisode，不使用延迟
+      // onNextEpisode 内部会设置 isSkipControllerTriggeredRef 标志，必须在 video:ended 事件之前设置
+      onNextEpisode();
     } else {
       // 否则跳到片段结束位置
       const targetTime = segment.end + 1;
@@ -493,7 +492,7 @@ export default function SkipController({
         clearTimeout(skipTimeoutRef.current);
       }
 
-      // 🔑 先暂停视频并销毁播放器事件，防止 video:ended 事件再次触发
+      // 🔑 先暂停视频并显示提示，防止 video:ended 事件再次触发
       if (artPlayerRef.current) {
         if (!artPlayerRef.current.paused) {
           artPlayerRef.current.pause();
@@ -504,10 +503,9 @@ export default function SkipController({
         }
       }
 
-      // 延迟执行跳转，确保暂停生效
-      setTimeout(() => {
-        onNextEpisode();
-      }, 100);
+      // 🔥 关键修复：立即调用 onNextEpisode，不使用延迟
+      // onNextEpisode 内部会设置 isSkipControllerTriggeredRef 标志，必须在 video:ended 事件之前设置
+      onNextEpisode();
       return;
     }
 
