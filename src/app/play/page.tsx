@@ -367,6 +367,7 @@ function PlayPageClient() {
   const isSourceChangingRef = useRef<boolean>(false); // 标记是否正在换源
   const isEpisodeChangingRef = useRef<boolean>(false); // 标记是否正在切换集数
   const isSkipControllerTriggeredRef = useRef<boolean>(false); // 标记是否通过 SkipController 触发了下一集
+  const videoEndedHandledRef = useRef<boolean>(false); // 🔥 标记当前视频的 video:ended 事件是否已经被处理过（防止多个监听器重复触发）
 
   // 🚀 新增：连续切换源防抖和资源管理
   const sourceSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -3527,6 +3528,10 @@ function PlayPageClient() {
 
       // 监听视频可播放事件，这时恢复播放进度更可靠
       artPlayerRef.current.on('video:canplay', () => {
+        // 🔥 重置 video:ended 处理标志，因为这是新视频
+        videoEndedHandledRef.current = false;
+        console.log('🔄 新视频加载完成，重置 video:ended 处理标志');
+
         // 若存在需要恢复的播放进度，则跳转
         if (resumeTimeRef.current && resumeTimeRef.current > 0) {
           try {
@@ -3668,9 +3673,18 @@ function PlayPageClient() {
 
       // 监听视频播放结束事件，自动播放下一集
       artPlayerRef.current.on('video:ended', () => {
+        // 🔥 关键修复：首先检查这个 video:ended 事件是否已经被处理过
+        // 因为可能存在多个监听器（播放器重新创建时旧监听器未完全清除）
+        if (videoEndedHandledRef.current) {
+          console.log('⚠️ video:ended 事件已被处理过，跳过重复触发');
+          return;
+        }
+
         // 🔑 检查是否已经通过 SkipController 触发了下一集，避免重复触发
         if (isSkipControllerTriggeredRef.current) {
           console.log('⏭️ SkipController 已触发下一集，跳过 video:ended 自动播放');
+          // 标记已处理
+          videoEndedHandledRef.current = true;
           // 🔥 关键修复：延迟重置标志，而不是立即重置
           // 因为集数切换是异步的，需要等待新集数开始加载后再重置标志
           // 对于短剧，需要调用API解析URL，可能需要更长时间
@@ -3685,6 +3699,8 @@ function PlayPageClient() {
         const idx = currentEpisodeIndexRef.current;
         if (d && d.episodes && idx < d.episodes.length - 1) {
           console.log('⏭️ video:ended 触发自动播放下一集');
+          // 标记已处理
+          videoEndedHandledRef.current = true;
           setTimeout(() => {
             setCurrentEpisodeIndex(idx + 1);
           }, 1000);
