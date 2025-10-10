@@ -242,9 +242,8 @@ function HomeClient() {
   return (
     <PageLayout>
       <div className='px-2 sm:px-10 py-4 sm:py-8 overflow-visible'>
-        {/* 欢迎横幅 - 只在首页显示 */}
-        {activeTab === 'home' && (
-          <div className='mb-6 mt-0 md:mt-12 relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-[2px] shadow-lg animate-[slideDown_0.5s_ease-out]'>
+        {/* 欢迎横幅 - 在所有 tab 显示 */}
+        <div className='mb-6 mt-0 md:mt-12 relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-[2px] shadow-lg animate-[slideDown_0.5s_ease-out]'>
             <div className='relative bg-white dark:bg-gray-900 rounded-2xl p-5 sm:p-6'>
               {/* 装饰性背景 */}
               <div className='absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl'></div>
@@ -284,8 +283,7 @@ function HomeClient() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+        </div>
 
         {/* 顶部 Tab 切换 */}
         <div className='mb-8 flex flex-col sm:flex-row items-center justify-center gap-4'>
