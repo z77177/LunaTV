@@ -438,9 +438,9 @@ function SearchPageClient() {
       }
     );
 
-    // 获取滚动位置的函数 - 专门针对 body 滚动
+    // 获取滚动位置的函数 - 同时检测 body 和 documentElement
     const getScrollTop = () => {
-      return document.body.scrollTop || 0;
+      return document.body.scrollTop || document.documentElement.scrollTop || 0;
     };
 
     // 使用 requestAnimationFrame 持续检测滚动位置
