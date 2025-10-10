@@ -118,6 +118,9 @@ export default function SkipController({
   const skipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoSkipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 🔥 关键修复：记录已处理的片段，防止重复触发
+  const lastProcessedSegmentRef = useRef<{ type: string; episodeId: string } | null>(null);
+
   // 🔑 使用 ref 来存储 batchSettings，避免触发不必要的重新渲染
   const batchSettingsRef = useRef(batchSettings);
 
@@ -427,15 +430,27 @@ export default function SkipController({
         (segment) => time >= segment.start && time <= segment.end
       );
 
+      // 🔥 关键修复：使用 source + id 作为集数标识
+      const currentEpisodeId = `${source}_${id}`;
+      const lastProcessed = lastProcessedSegmentRef.current;
+
       console.log('🔍 检查片段:', {
         time,
         currentSegment: currentSegment?.type,
         currentSkipSegment: currentSkipSegment?.type,
+        currentEpisodeId,
+        lastProcessed,
         isNew: currentSegment && currentSegment.type !== currentSkipSegment?.type
       });
 
       // 比较片段类型而不是对象引用（避免临时对象导致的重复触发）
       if (currentSegment && currentSegment.type !== currentSkipSegment?.type) {
+        // 🔥 关键修复：检查是否已经处理过这个片段（同一集同一片段类型）
+        if (lastProcessed && lastProcessed.type === currentSegment.type && lastProcessed.episodeId === currentEpisodeId) {
+          console.log('⚠️ [防重复] 已处理过此片段，跳过 -', { type: currentSegment.type, episodeId: currentEpisodeId });
+          return;
+        }
+
         setCurrentSkipSegment(currentSegment);
 
         // 检查当前片段是否开启自动跳过（默认为true）
@@ -443,6 +458,10 @@ export default function SkipController({
         console.log('📍 检测到片段:', { type: currentSegment.type, shouldAutoSkip, segment: currentSegment });
 
         if (shouldAutoSkip) {
+          // 🔥 标记已处理
+          lastProcessedSegmentRef.current = { type: currentSegment.type, episodeId: currentEpisodeId };
+          console.log('🔒 [防重复] 标记片段已处理 -', lastProcessedSegmentRef.current);
+
           // 🔥 关键修复：立即执行跳过，不延迟！
           // 延迟会导致在延迟期间视频播放结束，触发 video:ended，导致跳2集
           console.log('⏭️ 立即执行自动跳过');
@@ -473,7 +492,7 @@ export default function SkipController({
         }
       }
     },
-    [skipConfig, currentSkipSegment, handleAutoSkip, duration, timeToSeconds] // 🔑 移除 batchSettings 依赖，使用 ref
+    [skipConfig, currentSkipSegment, handleAutoSkip, duration, timeToSeconds, source, id] // 🔥 添加 source 和 id 依赖，用于防重复检查
   );
 
   // 执行跳过
@@ -783,6 +802,9 @@ export default function SkipController({
   useEffect(() => {
     setShowSkipButton(false);
     setCurrentSkipSegment(null);
+    // 🔥 清除已处理标记，允许新集数重新处理
+    lastProcessedSegmentRef.current = null;
+    console.log('🔄 [换集] 清除已处理标记 -', { source, id });
 
     if (skipTimeoutRef.current) {
       clearTimeout(skipTimeoutRef.current);
