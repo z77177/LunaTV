@@ -440,16 +440,10 @@ export default function SkipController({
         console.log('📍 检测到片段:', { type: currentSegment.type, shouldAutoSkip, segment: currentSegment });
 
         if (shouldAutoSkip) {
-          // 自动跳过：延迟1秒执行跳过
-          if (autoSkipTimeoutRef.current) {
-            console.log('⏱️ 清除旧的 timeout');
-            clearTimeout(autoSkipTimeoutRef.current);
-          }
-          console.log('⏱️ 设置新的 timeout (1秒后执行跳过)');
-          autoSkipTimeoutRef.current = setTimeout(() => {
-            handleAutoSkip(currentSegment);
-          }, 1000);
-
+          // 🔥 关键修复：立即执行跳过，不延迟！
+          // 延迟会导致在延迟期间视频播放结束，触发 video:ended，导致跳2集
+          console.log('⏭️ 立即执行自动跳过');
+          handleAutoSkip(currentSegment);
           setShowSkipButton(false); // 自动跳过时不显示按钮
         } else {
           // 手动模式：显示跳过按钮
