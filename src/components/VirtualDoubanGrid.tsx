@@ -308,7 +308,7 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
       )}
       
       {/* 已加载完所有内容的提示 */}
-      {containerWidth > 100 && !hasMore && !hasNextVirtualPage && displayItemCount > INITIAL_BATCH_SIZE && (
+      {containerWidth > 100 && !hasMore && !hasNextVirtualPage && displayItemCount > 0 && (
         <div className='flex justify-center mt-8 py-8'>
           <div className='relative px-8 py-5 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
             {/* 装饰性背景 */}
@@ -319,9 +319,15 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
               {/* 完成图标 */}
               <div className='relative'>
                 <div className='w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg'>
-                  <svg className='w-7 h-7 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2.5' d='M5 13l4 4L19 7'></path>
-                  </svg>
+                  {isBangumi ? (
+                    <svg className='w-7 h-7 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'></path>
+                    </svg>
+                  ) : (
+                    <svg className='w-7 h-7 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2.5' d='M5 13l4 4L19 7'></path>
+                    </svg>
+                  )}
                 </div>
                 {/* 光圈效果 */}
                 <div className='absolute inset-0 rounded-full bg-blue-400/30 animate-ping'></div>
@@ -330,10 +336,10 @@ export const VirtualDoubanGrid: React.FC<VirtualDoubanGridProps> = ({
               {/* 文字 */}
               <div className='text-center'>
                 <p className='text-base font-semibold text-gray-800 dark:text-gray-200 mb-1'>
-                  已加载全部内容
+                  {isBangumi ? '本日番剧已全部显示' : '已加载全部内容'}
                 </p>
                 <p className='text-xs text-gray-600 dark:text-gray-400'>
-                  共 {displayItemCount} 项
+                  {isBangumi ? `今日共 ${displayItemCount} 部` : `共 ${displayItemCount} 项`}
                 </p>
               </div>
             </div>
