@@ -2123,18 +2123,13 @@ function PlayPageClient() {
   const handleNextEpisode = () => {
     const d = detailRef.current;
     const idx = currentEpisodeIndexRef.current;
-    console.log(`🔥🔥🔥 [handleNextEpisode] 被调用 - 当前集数: ${idx}, 目标集数: ${idx + 1}, 时间: ${Date.now()}`);
     if (d && d.episodes && idx < d.episodes.length - 1) {
       if (artPlayerRef.current && !artPlayerRef.current.paused) {
         saveCurrentPlayProgress();
       }
       // 🔑 标记通过 SkipController 触发了下一集
       isSkipControllerTriggeredRef.current = true;
-      console.log(`🎯 [handleNextEpisode] SkipController 触发下一集，设置标记为 true - 从集${idx}到集${idx + 1}`);
       setCurrentEpisodeIndex(idx + 1);
-      console.log(`✅ [handleNextEpisode] setCurrentEpisodeIndex(${idx + 1}) 已调用`);
-    } else {
-      console.log(`⚠️ [handleNextEpisode] 无法切换 - 已是最后一集或无剧集数据`);
     }
   };
 
@@ -3534,7 +3529,6 @@ function PlayPageClient() {
       artPlayerRef.current.on('video:canplay', () => {
         // 🔥 重置 video:ended 处理标志，因为这是新视频
         videoEndedHandledRef.current = false;
-        console.log('🔄 新视频加载完成，重置 video:ended 处理标志');
 
         // 若存在需要恢复的播放进度，则跳转
         if (resumeTimeRef.current && resumeTimeRef.current > 0) {
@@ -3678,43 +3672,28 @@ function PlayPageClient() {
       // 监听视频播放结束事件，自动播放下一集
       artPlayerRef.current.on('video:ended', () => {
         const idx = currentEpisodeIndexRef.current;
-        console.log(`🔥🔥🔥 [video:ended] 事件触发 - 当前集数: ${idx}, videoEndedHandled: ${videoEndedHandledRef.current}, skipControllerTriggered: ${isSkipControllerTriggeredRef.current}, 时间: ${Date.now()}`);
 
         // 🔥 关键修复：首先检查这个 video:ended 事件是否已经被处理过
-        // 因为可能存在多个监听器（播放器重新创建时旧监听器未完全清除）
         if (videoEndedHandledRef.current) {
-          console.log(`⚠️ [video:ended] 事件已被处理过，跳过重复触发 - 集数: ${idx}`);
           return;
         }
 
         // 🔑 检查是否已经通过 SkipController 触发了下一集，避免重复触发
         if (isSkipControllerTriggeredRef.current) {
-          console.log(`⏭️ [video:ended] SkipController 已触发下一集，跳过 video:ended 自动播放 - 集数: ${idx}`);
-          // 标记已处理
           videoEndedHandledRef.current = true;
-          console.log(`✅ [video:ended] 设置 videoEndedHandled = true`);
-          // 🔥 关键修复：延迟重置标志，而不是立即重置
-          // 因为集数切换是异步的，需要等待新集数开始加载后再重置标志
-          // 对于短剧，需要调用API解析URL，可能需要更长时间
+          // 🔥 关键修复：延迟重置标志，等待新集数开始加载
           setTimeout(() => {
-            console.log(`🔄 [video:ended] 延迟重置 SkipController 标志`);
             isSkipControllerTriggeredRef.current = false;
-          }, 2000); // 2秒延迟，确保新集数已经开始加载
+          }, 2000);
           return;
         }
 
         const d = detailRef.current;
         if (d && d.episodes && idx < d.episodes.length - 1) {
-          console.log(`⏭️ [video:ended] 触发自动播放下一集 - 从集${idx}到集${idx + 1}`);
-          // 标记已处理
           videoEndedHandledRef.current = true;
-          console.log(`✅ [video:ended] 设置 videoEndedHandled = true`);
           setTimeout(() => {
-            console.log(`⏰ [video:ended setTimeout] 1秒延迟结束，调用 setCurrentEpisodeIndex(${idx + 1})`);
             setCurrentEpisodeIndex(idx + 1);
           }, 1000);
-        } else {
-          console.log(`⚠️ [video:ended] 无法自动播放下一集 - 已是最后一集或无剧集数据`);
         }
       });
 
