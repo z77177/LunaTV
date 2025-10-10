@@ -438,22 +438,40 @@ function SearchPageClient() {
       }
     );
 
-    // 获取滚动位置的函数
+    // 获取滚动位置的函数 - 同时检测 body 和 documentElement
     const getScrollTop = () => {
       return document.body.scrollTop || document.documentElement.scrollTop || 0;
     };
 
-    // 滚动事件处理
+    // 使用 requestAnimationFrame 持续检测滚动位置
+    let isRunning = false;
+    const checkScrollPosition = () => {
+      if (!isRunning) return;
+
+      const scrollTop = getScrollTop();
+      const shouldShow = scrollTop > 300;
+      setShowBackToTop(shouldShow);
+
+      requestAnimationFrame(checkScrollPosition);
+    };
+
+    // 启动持续检测
+    isRunning = true;
+    checkScrollPosition();
+
+    // 监听 body 元素的滚动事件
     const handleScroll = () => {
       const scrollTop = getScrollTop();
       setShowBackToTop(scrollTop > 300);
     };
 
-    // 监听 body 元素的滚动事件
     document.body.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       unsubscribe();
+      isRunning = false; // 停止 requestAnimationFrame 循环
+
+      // 移除 body 滚动事件监听器
       document.body.removeEventListener('scroll', handleScroll);
     };
   }, []);
