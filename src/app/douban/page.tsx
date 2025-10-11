@@ -906,8 +906,8 @@ function DoubanPageClient() {
                       <div className='relative flex items-center gap-3'>
                         {/* 旋转圈 */}
                         <div className='relative'>
-                          <div className='animate-spin rounded-full h-8 w-8 border-3 border-green-200 dark:border-green-800'></div>
-                          <div className='absolute inset-0 animate-spin rounded-full h-8 w-8 border-3 border-transparent border-t-green-500 dark:border-t-green-400'></div>
+                          <div className='animate-spin rounded-full h-8 w-8 border-[3px] border-green-200 dark:border-green-800'></div>
+                          <div className='absolute inset-0 animate-spin rounded-full h-8 w-8 border-[3px] border-transparent border-t-green-500 dark:border-t-green-400'></div>
                         </div>
 
                         {/* 文字和点动画 */}
