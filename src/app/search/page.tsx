@@ -1670,29 +1670,16 @@ function SearchPageClient() {
         </div>
       </div>
 
-      {/* 返回顶部悬浮按钮 - 美化版 */}
+      {/* 返回顶部悬浮按钮 */}
       <button
         onClick={scrollToTop}
-        className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-14 h-14 rounded-full shadow-xl transition-all duration-300 ease-in-out flex items-center justify-center group relative overflow-hidden ${showBackToTop
-          ? 'opacity-100 translate-y-0 pointer-events-auto'
+        className={`fixed bottom-20 right-6 z-50 w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center ${showBackToTop
+          ? 'opacity-100 translate-y-0'
           : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
         aria-label='返回顶部'
       >
-        {/* 渐变背景 */}
-        <div className='absolute inset-0 bg-gradient-to-br from-green-400 via-green-500 to-emerald-600 group-hover:from-green-500 group-hover:via-green-600 group-hover:to-emerald-700 transition-all duration-300'></div>
-
-        {/* 光晕效果 */}
-        <div className='absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-all duration-300'></div>
-
-        {/* 脉冲动画圆环 */}
-        <div className='absolute inset-0 rounded-full bg-green-400/30 animate-ping'></div>
-
-        {/* 图标 */}
-        <ChevronUp className='relative z-10 w-6 h-6 text-white transition-all duration-300 group-hover:scale-125 group-hover:-translate-y-0.5' />
-
-        {/* 底部光效 */}
-        <div className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-transparent via-green-300/50 to-transparent rounded-full blur-sm group-hover:w-10 transition-all duration-300'></div>
+        <ChevronUp className='w-6 h-6' />
       </button>
     </PageLayout>
   );
