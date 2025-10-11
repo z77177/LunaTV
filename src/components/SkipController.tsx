@@ -765,6 +765,7 @@ export default function SkipController({
   // 当 source 或 id 变化时，清理所有状态（换集时）
   useEffect(() => {
     console.log(`🔄 [SkipController] 集数变化: source=${source}, id=${id}, 清理状态`);
+    console.log(`🧹 [SkipController] 清理前 lastProcessedSegmentRef:`, lastProcessedSegmentRef.current);
     setShowSkipButton(false);
     setCurrentSkipSegment(null);
     // 🔥 清除已处理标记，允许新集数重新处理
