@@ -404,6 +404,8 @@ export default function SkipController({
         (segment) => time >= segment.start && time <= segment.end
       );
 
+      console.log(`🔎 [SkipController] 查找片段结果: currentSegment=${currentSegment ? `${currentSegment.type}(${currentSegment.start}s-${currentSegment.end}s)` : 'null'}, currentSkipSegment=${currentSkipSegment?.type || 'null'}`);
+
       // 🔥 关键修复：使用 source + id 作为集数标识
       const currentEpisodeId = `${source}_${id}`;
       const lastProcessed = lastProcessedSegmentRef.current;
