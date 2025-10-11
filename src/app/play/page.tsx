@@ -4109,6 +4109,7 @@ function PlayPageClient() {
                     source={currentSource}
                     id={currentId}
                     title={detail.title}
+                    episodeIndex={currentEpisodeIndex}
                     artPlayerRef={artPlayerRef}
                     currentTime={currentPlayTime}
                     duration={videoDuration}

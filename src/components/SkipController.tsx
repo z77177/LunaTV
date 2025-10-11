@@ -15,6 +15,7 @@ interface SkipControllerProps {
   source: string;
   id: string;
   title: string;
+  episodeIndex?: number; // 新增：当前集数索引，用于区分不同集数
   artPlayerRef: React.MutableRefObject<any>;
   currentTime?: number;
   duration?: number;
@@ -27,6 +28,7 @@ export default function SkipController({
   source,
   id,
   title,
+  episodeIndex = 0,
   artPlayerRef,
   currentTime = 0,
   duration = 0,
@@ -406,8 +408,8 @@ export default function SkipController({
 
       console.log(`🔎 [SkipController] 查找片段结果: currentSegment=${currentSegment ? `${currentSegment.type}(${currentSegment.start}s-${currentSegment.end}s)` : 'null'}, currentSkipSegment=${currentSkipSegment?.type || 'null'}`);
 
-      // 🔥 关键修复：使用 source + id 作为集数标识
-      const currentEpisodeId = `${source}_${id}`;
+      // 🔥 关键修复：使用 source + id + episodeIndex 作为集数标识，确保不同集数有不同的ID
+      const currentEpisodeId = `${source}_${id}_${episodeIndex}`;
       const lastProcessed = lastProcessedSegmentRef.current;
 
       // 比较片段类型而不是对象引用（避免临时对象导致的重复触发）
@@ -460,7 +462,7 @@ export default function SkipController({
         }
       }
     },
-    [skipConfig, currentSkipSegment, handleAutoSkip, duration, timeToSeconds, source, id] // 🔥 添加 source 和 id 依赖，用于防重复检查
+    [skipConfig, currentSkipSegment, handleAutoSkip, duration, timeToSeconds, source, id, episodeIndex] // 🔥 添加 episodeIndex 依赖，用于防重复检查
   );
 
   // 执行跳过
@@ -762,9 +764,9 @@ export default function SkipController({
     }
   }, [currentTime, checkSkipSegment]);
 
-  // 当 source 或 id 变化时，清理所有状态（换集时）
+  // 当 source 或 id 或 episodeIndex 变化时，清理所有状态（换集时）
   useEffect(() => {
-    console.log(`🔄 [SkipController] 集数变化: source=${source}, id=${id}, 清理状态`);
+    console.log(`🔄 [SkipController] 集数变化: source=${source}, id=${id}, episodeIndex=${episodeIndex}, 清理状态`);
     console.log(`🧹 [SkipController] 清理前 lastProcessedSegmentRef:`, lastProcessedSegmentRef.current);
     setShowSkipButton(false);
     setCurrentSkipSegment(null);
@@ -778,7 +780,7 @@ export default function SkipController({
     if (autoSkipTimeoutRef.current) {
       clearTimeout(autoSkipTimeoutRef.current);
     }
-  }, [source, id]);
+  }, [source, id, episodeIndex]);
 
   // 组件卸载时清理定时器
   useEffect(() => {
