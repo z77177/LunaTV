@@ -109,6 +109,9 @@ export default function SkipController({
   // 🔥 关键修复：记录已处理的片段，防止重复触发
   const lastProcessedSegmentRef = useRef<{ type: string; episodeId: string } | null>(null);
 
+  // 🔥 新增：防止集数切换后立即触发的冷却时间
+  const episodeSwitchCooldownRef = useRef<number>(0);
+
   // 🔑 使用 ref 来存储 batchSettings，避免触发不必要的重新渲染
   const batchSettingsRef = useRef(batchSettings);
 
@@ -316,6 +319,10 @@ export default function SkipController({
           artPlayerRef.current.notice.show = '自动跳转下一集';
         }
       }
+      // 🔥 设置冷却时间，防止新集数立即触发
+      episodeSwitchCooldownRef.current = Date.now();
+      console.log(`🚫 [SkipController] 设置集数切换冷却时间: ${episodeSwitchCooldownRef.current}`);
+
       // 🔥 关键修复：立即调用 onNextEpisode，不使用延迟
       onNextEpisode();
     } else {
@@ -337,6 +344,14 @@ export default function SkipController({
   // 检查当前播放时间是否在跳过区间内
   const checkSkipSegment = useCallback(
     (time: number) => {
+      // 🔥 检查冷却时间：如果刚切换集数不到3秒，不处理任何跳过逻辑
+      const cooldownTime = 3000; // 3秒冷却时间
+      const timeSinceSwitch = Date.now() - episodeSwitchCooldownRef.current;
+      if (episodeSwitchCooldownRef.current > 0 && timeSinceSwitch < cooldownTime) {
+        // console.log(`⏳ [SkipController] 冷却中，已过${timeSinceSwitch}ms，还需${cooldownTime - timeSinceSwitch}ms`);
+        return;
+      }
+
       // 🔑 使用 ref 中的 batchSettings，避免闭包问题
       const currentBatchSettings = batchSettingsRef.current;
 
@@ -772,7 +787,9 @@ export default function SkipController({
     setCurrentSkipSegment(null);
     // 🔥 清除已处理标记，允许新集数重新处理
     lastProcessedSegmentRef.current = null;
-    console.log(`✅ [SkipController] 已清除 lastProcessedSegmentRef，允许新集数处理`);
+    // 🔥 设置冷却时间，防止新集数立即触发自动跳过
+    episodeSwitchCooldownRef.current = Date.now();
+    console.log(`✅ [SkipController] 已清除 lastProcessedSegmentRef，设置冷却时间，允许新集数处理`);
 
     if (skipTimeoutRef.current) {
       clearTimeout(skipTimeoutRef.current);
