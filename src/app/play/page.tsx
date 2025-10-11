@@ -1457,7 +1457,10 @@ function PlayPageClient() {
     // 🔥 标记正在切换集数（只在非换源时）
     if (!isSourceChangingRef.current) {
       isEpisodeChangingRef.current = true;
-      console.log('🔄 开始切换集数，标记为集数变化');
+      // 🔑 立即重置 SkipController 触发标志，允许新集数自动跳过片头片尾
+      isSkipControllerTriggeredRef.current = false;
+      videoEndedHandledRef.current = false;
+      console.log('🔄 开始切换集数，重置自动跳过标志');
     }
 
     updateVideoUrl(detail, currentEpisodeIndex);
