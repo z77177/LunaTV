@@ -1413,7 +1413,7 @@ const PlayStatsPage: React.FC = () => {
                         .filter(series => series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`new-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
-                            <div className="relative group-hover/card:z-[500] group-hover/card:scale-[1.05] transition-all duration-300 ease-in-out">
+                            <div className="relative group-hover/card:z-[500] transition-all duration-300 ease-in-out">
                               <VideoCard
                                 title={series.title}
                                 poster={series.cover || ''}
@@ -1428,7 +1428,7 @@ const PlayStatsPage: React.FC = () => {
                                 remarks={series.remarks}
                               />
                               {/* 新集数提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-[501]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-[501] transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
                             </div>
                             {/* 新集数徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-[502]">
@@ -1446,7 +1446,7 @@ const PlayStatsPage: React.FC = () => {
                         .filter(series => series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`new-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
-                            <div className="relative group-hover/card:z-[500] group-hover/card:scale-[1.05] transition-all duration-300 ease-in-out">
+                            <div className="relative group-hover/card:z-[500] transition-all duration-300 ease-in-out">
                               <VideoCard
                                 title={series.title}
                                 poster={series.cover || ''}
@@ -1461,7 +1461,7 @@ const PlayStatsPage: React.FC = () => {
                                 remarks={series.remarks}
                               />
                               {/* 新集数提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-[501]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-red-400 ring-opacity-50 animate-pulse pointer-events-none z-[501] transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
                             </div>
                             {/* 新集数徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-bounce z-[502]">
@@ -1496,7 +1496,7 @@ const PlayStatsPage: React.FC = () => {
                         .filter(series => series.hasContinueWatching && !series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`continue-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
-                            <div className="relative group-hover/card:z-[500] group-hover/card:scale-[1.05] transition-all duration-300 ease-in-out">
+                            <div className="relative group-hover/card:z-[500] transition-all duration-300 ease-in-out">
                               <VideoCard
                                 title={series.title}
                                 poster={series.cover || ''}
@@ -1511,7 +1511,7 @@ const PlayStatsPage: React.FC = () => {
                                 remarks={series.remarks}
                               />
                               {/* 继续观看提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-[501]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-[501] transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
                             </div>
                             {/* 继续观看徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-[502]">
@@ -1529,7 +1529,7 @@ const PlayStatsPage: React.FC = () => {
                         .filter(series => series.hasContinueWatching && !series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`continue-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
-                            <div className="relative group-hover/card:z-[500] group-hover/card:scale-[1.05] transition-all duration-300 ease-in-out">
+                            <div className="relative group-hover/card:z-[500] transition-all duration-300 ease-in-out">
                               <VideoCard
                                 title={series.title}
                                 poster={series.cover || ''}
@@ -1544,7 +1544,7 @@ const PlayStatsPage: React.FC = () => {
                                 remarks={series.remarks}
                               />
                               {/* 继续观看提示光环效果 */}
-                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-[501]"></div>
+                              <div className="absolute inset-0 rounded-lg ring-2 ring-blue-400 ring-opacity-50 animate-pulse pointer-events-none z-[501] transition-transform duration-300 ease-in-out group-hover/card:scale-[1.05]"></div>
                             </div>
                             {/* 继续观看徽章 */}
                             <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse z-[502]">
