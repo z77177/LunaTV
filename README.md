@@ -790,7 +790,7 @@ services:
 
 ### Selene - 官方移动客户端
 
-[Selene](https://github.com/MoonTechLab/Selene) 是由 MoonTV 原作者开发的官方移动端应用，基于 Flutter 构建，专为手机端优化。
+[Selene](https://github.com/XWF8188/Selene) 是由 MoonTV 原作者开发的官方移动端应用，基于 Flutter 构建，专为手机端优化。
 
 #### 支持平台
 - **Android**：5.0+ (API 21)，仅支持 ARM64 架构
@@ -807,7 +807,7 @@ services:
 
 #### 使用方法
 
-1. 从 [Selene Releases](https://github.com/MoonTechLab/Selene/releases) 下载最新版本
+1. 从 [Selene Releases](https://github.com/XWF8188/Selene/releases) 下载最新版本
    - Android：下载 `.apk` 文件
    - iOS：下载 `.ipa` 文件（需自签）
 2. 安装应用到手机
@@ -953,7 +953,7 @@ services:
 
 ## 📊 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=SzeMeng76/LunaTV&type=Date)](https://www.star-history.com/#SzeMeng76/LunaTV&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=XWF8188/LunaTV&type=Date)](https://www.star-history.com/#XWF8188/LunaTV&Date)
 
 ---
 
