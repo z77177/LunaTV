@@ -875,7 +875,7 @@ export default function SourceTestModule() {
           <>
             {/* 遮罩层 */}
             <div
-              className={`fixed inset-0 bg-black z-40 transition-opacity duration-300 ${
+              className={`fixed inset-0 bg-black z-[998] transition-opacity duration-300 ${
                 isDrawerAnimating ? 'bg-opacity-50' : 'bg-opacity-0'
               }`}
               onClick={handleCloseDrawer}
@@ -883,7 +883,7 @@ export default function SourceTestModule() {
 
             {/* 侧边抽屉 */}
             <div
-              className={`fixed inset-y-0 right-0 z-50 w-full sm:w-3/4 md:w-2/3 lg:w-3/5 xl:w-1/2 bg-white dark:bg-gray-800 shadow-2xl transition-transform duration-300 ease-in-out flex flex-col ${
+              className={`fixed inset-y-0 right-0 z-[1000] w-full sm:w-3/4 md:w-2/3 lg:w-3/5 xl:w-1/2 bg-white dark:bg-gray-800 shadow-2xl transition-transform duration-300 ease-in-out flex flex-col ${
                 isDrawerAnimating ? 'translate-x-0' : 'translate-x-full'
               }`}
             >
