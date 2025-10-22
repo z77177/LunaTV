@@ -181,8 +181,8 @@ export default function SourceTestModule() {
   const [isDrawerAnimating, setIsDrawerAnimating] = useState(false);
   const [onlyEnabled, setOnlyEnabled] = useState(true);
   const [sortKey, setSortKey] = useState<
-    'status' | 'responseTime' | 'resultCount' | 'matchRate' | 'name'
-  >('status');
+    'status' | 'responseTime' | 'resultCount' | 'matchRate' | 'name' | 'default'
+  >('default');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [mounted, setMounted] = useState(false);
 
@@ -440,6 +440,11 @@ export default function SourceTestModule() {
   const getSortedSources = () => {
     const scope = onlyEnabled ? sources.filter((s) => !s.disabled) : sources;
 
+    // 如果是默认排序，保持原始顺序，不排序
+    if (sortKey === 'default') {
+      return scope;
+    }
+
     const statusWeight = (s?: SourceTestResult) => {
       // 数值越大表示越靠后（差）
       if (!s) return 4; // 未测试
@@ -473,6 +478,8 @@ export default function SourceTestModule() {
           return typeof r?.matchRate === 'number' ? r!.matchRate! : -1; // 未测试置为-1，降序时排后
         case 'name':
           return src.name.toLowerCase();
+        default:
+          return 0;
       }
     };
 
@@ -671,6 +678,7 @@ export default function SourceTestModule() {
               onChange={(e) => setSortKey(e.target.value as any)}
               className='text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 sm:px-3 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'
             >
+              <option value='default'>默认顺序</option>
               <option value='status'>状态</option>
               <option value='responseTime'>耗时</option>
               <option value='resultCount'>结果数</option>
@@ -914,7 +922,7 @@ export default function SourceTestModule() {
               {/* 内容区域 */}
               <div className='flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-gray-900'>
                 {selectedResults.length > 0 ? (
-                  <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4'>
+                  <div className='grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4'>
                     {selectedResults.map((result, index) => (
                       <VideoCard
                         key={`${result.source}-${result.id}-${index}`}
