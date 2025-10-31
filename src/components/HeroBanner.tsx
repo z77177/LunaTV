@@ -34,11 +34,21 @@ export default function HeroBanner({
   const [isHovered, setIsHovered] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // 处理图片 URL，使用代理绕过防盗链
+  const getProxiedImageUrl = (url: string) => {
+    // 如果是豆瓣图片，使用代理
+    if (url?.includes('douban') || url?.includes('doubanio')) {
+      return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
   // 预加载图片
   useEffect(() => {
     items.forEach((item) => {
       const img = new Image();
-      img.src = item.backdrop || item.poster;
+      const imageUrl = item.backdrop || item.poster;
+      img.src = getProxiedImageUrl(imageUrl);
     });
   }, [items]);
 
@@ -131,7 +141,7 @@ export default function HeroBanner({
               }`}
             >
               <img
-                src={item.poster}
+                src={getProxiedImageUrl(item.poster)}
                 alt={item.title}
                 className='w-20 sm:w-32 md:w-40 lg:w-48 h-auto rounded-lg shadow-2xl ring-2 ring-white/20'
               />
