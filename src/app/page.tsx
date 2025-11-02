@@ -425,17 +425,50 @@ function HomeClient() {
                 <section className='mb-8'>
                   <HeroBanner
                     items={[
-                      ...hotMovies.slice(0, 2),
-                      ...hotTvShows.slice(0, 2),
-                      ...hotVarietyShows.slice(0, 1),
+                      // 豆瓣电影
+                      ...hotMovies.slice(0, 2).map((movie) => ({
+                        id: movie.id,
+                        title: movie.title,
+                        poster: movie.poster,
+                        description: movie.plot_summary,
+                        year: movie.year,
+                        rate: movie.rate,
+                        douban_id: Number(movie.id),
+                        type: 'movie',
+                      })),
+                      // 豆瓣电视剧
+                      ...hotTvShows.slice(0, 2).map((show) => ({
+                        id: show.id,
+                        title: show.title,
+                        poster: show.poster,
+                        description: show.plot_summary,
+                        year: show.year,
+                        rate: show.rate,
+                        douban_id: Number(show.id),
+                        type: 'tv',
+                      })),
+                      // 豆瓣综艺
+                      ...hotVarietyShows.slice(0, 1).map((show) => ({
+                        id: show.id,
+                        title: show.title,
+                        poster: show.poster,
+                        description: show.plot_summary,
+                        year: show.year,
+                        rate: show.rate,
+                        douban_id: Number(show.id),
+                        type: 'tv',
+                      })),
+                      // 短剧（非豆瓣）
                       ...hotShortDramas.slice(0, 2).map((drama) => ({
                         id: drama.id,
                         title: drama.name,
                         poster: drama.cover,
-                        plot_summary: drama.description || '',
+                        description: drama.description || '',
                         year: '',
                         rate: drama.score ? drama.score.toString() : '',
+                        type: 'shortdrama',
                       })),
+                      // 番剧（非豆瓣，来自 bangumi）
                       ...(bangumiCalendarData.length > 0
                         ? (() => {
                             const today = new Date();
@@ -448,25 +481,15 @@ function HomeClient() {
                               id: anime.id,
                               title: anime.name_cn || anime.name,
                               poster: anime.images?.large || anime.images?.common || anime.images?.medium || '/placeholder-poster.jpg',
-                              plot_summary: anime.summary || '',
+                              description: anime.summary || '',
                               year: anime.air_date?.split('-')?.[0] || '',
                               rate: anime.rating?.score?.toFixed(1) || '',
+                              douban_id: anime.id,
+                              type: 'anime',
                             }));
                           })()
                         : [])
-                    ]
-                      .map((item) => ({
-                        id: item.id,
-                        title: item.title,
-                        poster: item.poster,
-                        description: item.plot_summary,
-                        year: item.year,
-                        rate: item.rate,
-                        douban_id: Number(item.id),
-                        type: hotMovies.includes(item) ? 'movie' :
-                              hotTvShows.includes(item) ? 'tv' :
-                              hotVarietyShows.includes(item) ? 'tv' : 'tv',
-                      }))}
+                    ]}
                     autoPlayInterval={5000}
                     showControls={true}
                     showIndicators={true}
