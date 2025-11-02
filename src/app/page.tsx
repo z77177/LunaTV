@@ -421,10 +421,40 @@ function HomeClient() {
             // 首页视图
             <>
               {/* Hero Banner 轮播 */}
-              {!loading && (hotMovies.length > 0 || hotTvShows.length > 0) && (
+              {!loading && (hotMovies.length > 0 || hotTvShows.length > 0 || hotVarietyShows.length > 0 || hotShortDramas.length > 0) && (
                 <section className='mb-8'>
                   <HeroBanner
-                    items={[...hotMovies.slice(0, 5), ...hotTvShows.slice(0, 3)]
+                    items={[
+                      ...hotMovies.slice(0, 2),
+                      ...hotTvShows.slice(0, 2),
+                      ...hotVarietyShows.slice(0, 1),
+                      ...hotShortDramas.slice(0, 2).map((drama) => ({
+                        id: drama.id,
+                        title: drama.title,
+                        poster: drama.cover,
+                        plot_summary: drama.intro || '',
+                        year: '',
+                        rate: '',
+                      })),
+                      ...(bangumiCalendarData.length > 0
+                        ? (() => {
+                            const today = new Date();
+                            const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                            const currentWeekday = weekdays[today.getDay()];
+                            const todayAnimes = bangumiCalendarData.find(
+                              (item) => item.weekday.en === currentWeekday
+                            )?.items || [];
+                            return todayAnimes.slice(0, 1).map((anime) => ({
+                              id: anime.id,
+                              title: anime.name_cn || anime.name,
+                              poster: anime.images?.large || anime.images?.common || anime.images?.medium || '/placeholder-poster.jpg',
+                              plot_summary: anime.summary || '',
+                              year: anime.air_date?.split('-')?.[0] || '',
+                              rate: anime.rating?.score?.toFixed(1) || '',
+                            }));
+                          })()
+                        : [])
+                    ]
                       .map((item) => ({
                         id: item.id,
                         title: item.title,
@@ -433,7 +463,9 @@ function HomeClient() {
                         year: item.year,
                         rate: item.rate,
                         douban_id: Number(item.id),
-                        type: hotMovies.includes(item) ? 'movie' : 'tv',
+                        type: hotMovies.includes(item) ? 'movie' :
+                              hotTvShows.includes(item) ? 'tv' :
+                              hotVarietyShows.includes(item) ? 'tv' : 'tv',
                       }))}
                     autoPlayInterval={5000}
                     showControls={true}
