@@ -353,7 +353,7 @@ function HomeClient() {
           )}
         </div>
 
-        <div className='max-w-[95%] mx-auto'>
+        <div className='w-full mx-auto'>
           {activeTab === 'favorites' ? (
             // 收藏夹视图
             <section className='mb-8'>
@@ -430,11 +430,11 @@ function HomeClient() {
                       ...hotVarietyShows.slice(0, 1),
                       ...hotShortDramas.slice(0, 2).map((drama) => ({
                         id: drama.id,
-                        title: drama.title,
+                        title: drama.name,
                         poster: drama.cover,
-                        plot_summary: drama.intro || '',
+                        plot_summary: drama.description || '',
                         year: '',
-                        rate: '',
+                        rate: drama.score ? drama.score.toString() : '',
                       })),
                       ...(bangumiCalendarData.length > 0
                         ? (() => {
