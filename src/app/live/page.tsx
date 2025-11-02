@@ -25,7 +25,6 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import { parseCustomTimeFormat } from '@/lib/time';
-import { detectDVRSupport } from '@/lib/live';
 
 import EpgScrollableRow from '@/components/EpgScrollableRow';
 import PageLayout from '@/components/PageLayout';
@@ -153,16 +152,6 @@ function LivePageClient() {
   const [favorited, setFavorited] = useState(false);
   const favoritedRef = useRef(false);
   const currentChannelRef = useRef<LiveChannel | null>(null);
-
-  // 直播播放模式：'auto' 自动检测，'live' 强制直播模式，'dvr' 强制回放模式
-  const [livePlaybackMode, setLivePlaybackMode] = useState<'auto' | 'live' | 'dvr'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('livePlaybackMode');
-      return (saved as 'auto' | 'live' | 'dvr') || 'auto';
-    }
-    return 'auto';
-  });
-  const [supportsDVR, setSupportsDVR] = useState(false);
 
   // EPG数据清洗函数 - 去除重叠的节目，保留时间较短的，只显示今日节目
   const cleanEpgData = (programs: Array<{ start: string; end: string; title: string }>) => {
@@ -1247,28 +1236,6 @@ function LivePageClient() {
 
       const customType = { m3u8: m3u8Loader };
       const targetUrl = `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;
-
-      // 检测是否支持 DVR/时移功能
-      let isDVRSupported = false;
-      if (livePlaybackMode === 'auto') {
-        try {
-          isDVRSupported = await detectDVRSupport(targetUrl, currentSourceRef.current?.ua);
-          setSupportsDVR(isDVRSupported);
-          console.log('DVR检测结果:', isDVRSupported ? '支持回放' : '纯直播');
-        } catch (error) {
-          console.error('DVR检测失败:', error);
-        }
-      }
-
-      // 根据模式决定 isLive 设置
-      let isLiveMode = true;
-      if (livePlaybackMode === 'dvr') {
-        isLiveMode = false; // 强制回放模式
-      } else if (livePlaybackMode === 'auto') {
-        isLiveMode = !isDVRSupported; // 自动：如果支持DVR则显示进度条
-      }
-      // livePlaybackMode === 'live' 时保持 isLiveMode = true
-
       try {
         // 使用动态导入的 Artplayer
         const Artplayer = (window as any).DynamicArtplayer;
@@ -1282,7 +1249,7 @@ function LivePageClient() {
           url: targetUrl,
           poster: currentChannel.logo,
           volume: 0.7,
-          isLive: isLiveMode, // 根据检测结果或用户设置动态设置
+          isLive: true, // 设置为直播模式
           muted: false,
           autoplay: true,
           pip: true,
@@ -2019,55 +1986,8 @@ function LivePageClient() {
                           </div>
                         )}
                       </div>
-
-                      {/* 播放模式控制 */}
-                      <div className='pt-3 border-t border-gray-200 dark:border-gray-700'>
-                        <div className='flex items-center gap-3'>
-                          <label className='text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap'>
-                            进度条模式
-                          </label>
-                          <select
-                            value={livePlaybackMode}
-                            onChange={(e) => {
-                              const mode = e.target.value as 'auto' | 'live' | 'dvr';
-                              setLivePlaybackMode(mode);
-                              localStorage.setItem('livePlaybackMode', mode);
-                              // 模式切换后需要重新加载播放器
-                              if (currentChannel && videoUrl) {
-                                setVideoUrl('');
-                                setTimeout(() => setVideoUrl(currentChannel.url), 100);
-                              }
-                            }}
-                            className='flex-1 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-                          >
-                            <option value='auto'>自动检测</option>
-                            <option value='live'>强制直播</option>
-                            <option value='dvr'>强制回放</option>
-                          </select>
-                        </div>
-                        {livePlaybackMode === 'auto' && supportsDVR && (
-                          <div className='mt-2 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1.5 rounded'>
-                            ✓ 检测到支持回放，已启用进度条
-                          </div>
-                        )}
-                        {livePlaybackMode === 'auto' && !supportsDVR && currentChannel && (
-                          <div className='mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-2 py-1.5 rounded'>
-                            未检测到回放支持，使用直播模式
-                          </div>
-                        )}
-                        {livePlaybackMode === 'dvr' && (
-                          <div className='mt-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1.5 rounded'>
-                            强制回放模式，进度条已启用
-                          </div>
-                        )}
-                        {livePlaybackMode === 'live' && (
-                          <div className='mt-2 text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-2 py-1.5 rounded'>
-                            强制直播模式，进度条已隐藏
-                          </div>
-                        )}
-                      </div>
                     </div>
-
+                    
                     <div className='flex-1 overflow-y-auto space-y-2 pb-20'>
                       {liveSources.length > 0 ? (
                         liveSources.map((source) => {
