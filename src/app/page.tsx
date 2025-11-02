@@ -179,20 +179,25 @@ function HomeClient() {
           setHotMovies(movies);
 
           // 异步获取前2条电影的详情（用于Hero Banner）
-          movies.slice(0, 2).forEach(async (movie) => {
-            try {
-              const detailsRes = await getDoubanDetails(movie.id);
-              if (detailsRes.code === 200 && detailsRes.data?.plot_summary) {
-                setHotMovies(prev =>
-                  prev.map(m => m.id === movie.id
-                    ? { ...m, plot_summary: detailsRes.data!.plot_summary }
-                    : m
-                  )
-                );
+          Promise.all(
+            movies.slice(0, 2).map(async (movie) => {
+              try {
+                const detailsRes = await getDoubanDetails(movie.id);
+                if (detailsRes.code === 200 && detailsRes.data?.plot_summary) {
+                  return { id: movie.id, plot_summary: detailsRes.data.plot_summary };
+                }
+              } catch (error) {
+                console.warn(`获取电影 ${movie.id} 详情失败:`, error);
               }
-            } catch (error) {
-              console.warn(`获取电影 ${movie.id} 详情失败:`, error);
-            }
+              return null;
+            })
+          ).then((results) => {
+            setHotMovies(prev =>
+              prev.map(m => {
+                const detail = results.find(r => r?.id === m.id);
+                return detail ? { ...m, plot_summary: detail.plot_summary } : m;
+              })
+            );
           });
         } else {
           console.warn('获取热门电影失败:', moviesData.status === 'rejected' ? moviesData.reason : '数据格式错误');
@@ -204,20 +209,25 @@ function HomeClient() {
           setHotTvShows(tvShows);
 
           // 异步获取前2条剧集的详情（用于Hero Banner）
-          tvShows.slice(0, 2).forEach(async (show) => {
-            try {
-              const detailsRes = await getDoubanDetails(show.id);
-              if (detailsRes.code === 200 && detailsRes.data?.plot_summary) {
-                setHotTvShows(prev =>
-                  prev.map(s => s.id === show.id
-                    ? { ...s, plot_summary: detailsRes.data!.plot_summary }
-                    : s
-                  )
-                );
+          Promise.all(
+            tvShows.slice(0, 2).map(async (show) => {
+              try {
+                const detailsRes = await getDoubanDetails(show.id);
+                if (detailsRes.code === 200 && detailsRes.data?.plot_summary) {
+                  return { id: show.id, plot_summary: detailsRes.data.plot_summary };
+                }
+              } catch (error) {
+                console.warn(`获取剧集 ${show.id} 详情失败:`, error);
               }
-            } catch (error) {
-              console.warn(`获取剧集 ${show.id} 详情失败:`, error);
-            }
+              return null;
+            })
+          ).then((results) => {
+            setHotTvShows(prev =>
+              prev.map(s => {
+                const detail = results.find(r => r?.id === s.id);
+                return detail ? { ...s, plot_summary: detail.plot_summary } : s;
+              })
+            );
           });
         } else {
           console.warn('获取热门剧集失败:', tvShowsData.status === 'rejected' ? tvShowsData.reason : '数据格式错误');
@@ -231,19 +241,20 @@ function HomeClient() {
           // 异步获取第1条综艺的详情（用于Hero Banner）
           if (varietyShows.length > 0) {
             const show = varietyShows[0];
-            try {
-              const detailsRes = await getDoubanDetails(show.id);
-              if (detailsRes.code === 200 && detailsRes.data?.plot_summary) {
-                setHotVarietyShows(prev =>
-                  prev.map(s => s.id === show.id
-                    ? { ...s, plot_summary: detailsRes.data!.plot_summary }
-                    : s
-                  )
-                );
-              }
-            } catch (error) {
-              console.warn(`获取综艺 ${show.id} 详情失败:`, error);
-            }
+            getDoubanDetails(show.id)
+              .then((detailsRes) => {
+                if (detailsRes.code === 200 && detailsRes.data?.plot_summary) {
+                  setHotVarietyShows(prev =>
+                    prev.map(s => s.id === show.id
+                      ? { ...s, plot_summary: detailsRes.data!.plot_summary }
+                      : s
+                    )
+                  );
+                }
+              })
+              .catch((error) => {
+                console.warn(`获取综艺 ${show.id} 详情失败:`, error);
+              });
           }
         } else {
           console.warn('获取热门综艺失败:', varietyShowsData.status === 'rejected' ? varietyShowsData.reason : '数据格式错误');
@@ -255,23 +266,28 @@ function HomeClient() {
           setHotShortDramas(dramas);
 
           // 异步获取前2条短剧的详情（用于Hero Banner）
-          dramas.slice(0, 2).forEach(async (drama) => {
-            try {
-              const response = await fetch(`/api/shortdrama/detail?id=${drama.id}&episode=1`);
-              if (response.ok) {
-                const detailData = await response.json();
-                if (detailData.desc) {
-                  setHotShortDramas(prev =>
-                    prev.map(d => d.id === drama.id
-                      ? { ...d, description: detailData.desc }
-                      : d
-                    )
-                  );
+          Promise.all(
+            dramas.slice(0, 2).map(async (drama) => {
+              try {
+                const response = await fetch(`/api/shortdrama/detail?id=${drama.id}&episode=1`);
+                if (response.ok) {
+                  const detailData = await response.json();
+                  if (detailData.desc) {
+                    return { id: drama.id, description: detailData.desc };
+                  }
                 }
+              } catch (error) {
+                console.warn(`获取短剧 ${drama.id} 详情失败:`, error);
               }
-            } catch (error) {
-              console.warn(`获取短剧 ${drama.id} 详情失败:`, error);
-            }
+              return null;
+            })
+          ).then((results) => {
+            setHotShortDramas(prev =>
+              prev.map(d => {
+                const detail = results.find(r => r?.id === d.id);
+                return detail ? { ...d, description: detail.description } : d;
+              })
+            );
           });
         } else {
           console.warn('获取热门短剧失败:', shortDramasData.reason);
