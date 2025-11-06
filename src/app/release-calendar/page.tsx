@@ -302,7 +302,7 @@ export default function ReleaseCalendarPage() {
 
   return (
     <PageLayout activePath="/release-calendar">
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-blue-950 dark:to-purple-950 p-6">
       <div className="max-w-7xl mx-auto">
         {/* 页面标题 */}
         <div className="mb-8">
@@ -674,11 +674,15 @@ export default function ReleaseCalendarPage() {
                           days.push(
                             <div
                               key={dateStr}
-                              className={`${expandedDates.has(dateStr) ? 'min-h-[150px]' : 'min-h-[100px]'} p-2 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                                !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-800/50 text-gray-400' : 'bg-white dark:bg-gray-800'
+                              className={`${expandedDates.has(dateStr) ? 'min-h-[150px]' : 'min-h-[100px]'} p-2 rounded-xl transition-all duration-300 ${
+                                !isCurrentMonth
+                                  ? 'bg-gradient-to-br from-gray-50/50 to-gray-100/30 dark:from-gray-800/30 dark:to-gray-900/20 text-gray-400'
+                                  : 'bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/80 shadow-sm hover:shadow-md'
                               } ${
-                                isToday ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
-                              }`}
+                                isToday
+                                  ? 'ring-2 ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-800/20 shadow-lg shadow-blue-500/20'
+                                  : ''
+                              } hover:scale-[1.02] hover:-translate-y-0.5`}
                             >
                               {/* 日期数字 */}
                               <div className={`text-sm font-medium mb-1 ${
@@ -768,8 +772,10 @@ export default function ReleaseCalendarPage() {
                       }
 
                       return daysWithMovies.map(({ date, dateStr, isToday, items }) => (
-                        <div key={dateStr} className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 ${
-                          isToday ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
+                        <div key={dateStr} className={`rounded-xl p-4 transition-all duration-300 ${
+                          isToday
+                            ? 'ring-2 ring-blue-400 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-800/20 shadow-lg shadow-blue-500/20'
+                            : 'bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/80 shadow-sm hover:shadow-md'
                         }`}>
                           {/* 日期标题 */}
                           <div className={`flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-gray-700`}>
