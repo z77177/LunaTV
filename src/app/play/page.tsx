@@ -17,6 +17,7 @@ import {
   deleteFavorite,
   deletePlayRecord,
   generateStorageKey,
+  getAllFavorites,
   getAllPlayRecords,
   isFavorited,
   saveFavorite,
@@ -2384,7 +2385,7 @@ function PlayPageClient() {
         const realEpisodes = detail.episodes.length || 1;
 
         // 获取当前收藏的数据
-        const favorites = await import('@/lib/db.client').then(m => m.getAllFavorites());
+        const favorites = await getAllFavorites();
         const key = `${currentSource}+${currentId}`;
         const currentFavorite = favorites[key];
 
