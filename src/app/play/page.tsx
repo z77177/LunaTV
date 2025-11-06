@@ -4646,6 +4646,7 @@ function PlayPageClient() {
             ? 'opacity-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
+        style={{ left: 'auto' }}
         aria-label='返回顶部'
       >
         {/* 渐变背景 */}
