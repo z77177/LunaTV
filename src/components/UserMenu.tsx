@@ -2077,15 +2077,6 @@ export const UserMenu: React.FC = () => {
                     remarks={calculatedRemarks}
                     releaseDate={favorite.releaseDate}
                   />
-                  {/* 收藏时间标签 */}
-                  <div className='absolute top-2 right-2 bg-black/50 rounded px-2 py-1'>
-                    <span className='text-xs text-white font-medium'>
-                      {new Date(favorite.save_time).toLocaleDateString('zh-CN', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </span>
-                  </div>
                   {/* 收藏心形图标 */}
                   <div className='absolute bottom-2 right-2'>
                     <Heart className='w-4 h-4 text-red-500 fill-red-500' />
