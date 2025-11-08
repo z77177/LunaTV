@@ -131,8 +131,11 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     ? (actualEpisodes && actualEpisodes === 1 ? 'movie' : 'tv')
     : type;
 
-  // 判断是否为即将上映（未发布的内容）
-  const isUpcoming = remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映'));
+  // 判断是否为即将上映（未发布的内容）- 只有真正未上映的才算
+  const isUpcoming = remarks && remarks.includes('天后上映');
+
+  // 判断是否有上映相关标记（包括已上映、今日上映、即将上映）
+  const hasReleaseTag = remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映'));
 
   // 获取收藏状态（搜索结果页面不检查，但即将上映需要检查）
   useEffect(() => {
@@ -797,7 +800,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           )}
 
           {/* 类型徽章 - 左上角第一位（电影/电视剧）*/}
-          {remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映')) && type && (
+          {hasReleaseTag && type && (
             <div
               className={`absolute top-2 left-2 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 z-30 ${
                 type === 'movie'
@@ -827,7 +830,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           {actualEpisodes && actualEpisodes > 1 && !isUpcoming && !(from === 'favorite' && actualEpisodes === 99) && (
             <div
               className={`absolute left-2 bg-gradient-to-br from-emerald-500/95 via-teal-500/95 to-cyan-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-emerald-500/60 group-hover:ring-emerald-300/50 z-30 ${
-                remarks && remarks.includes('天后上映') && type ? 'top-[48px]' : 'top-2'
+                hasReleaseTag && type ? 'top-[48px]' : 'top-2'
               }`}
               style={{
                 WebkitUserSelect: 'none',
@@ -854,8 +857,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               className={`absolute left-2 bg-gradient-to-br from-indigo-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-purple-500/50 group-hover:ring-purple-300/50 ${
                 (() => {
                   let offset = 2; // 默认 top-2
-                  // 如果有即将上映的类型徽章
-                  if (remarks && remarks.includes('天后上映') && type) {
+                  // 如果有上映相关的类型徽章
+                  if (hasReleaseTag && type) {
                     offset += 46; // top-[48px]
                   }
                   // 如果有集数徽章
@@ -904,7 +907,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           )}
 
           {/* 上映状态徽章 - 美化版，放在底部左侧 */}
-          {remarks && (remarks.includes('天后上映') || remarks.includes('已上映') || remarks.includes('今日上映')) && (
+          {hasReleaseTag && (
             <div
               className="absolute bottom-2 left-2 bg-gradient-to-br from-orange-500/95 via-red-500/95 to-pink-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-orange-500/60 group-hover:ring-orange-300/50 animate-pulse"
               style={{

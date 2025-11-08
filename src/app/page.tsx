@@ -148,6 +148,8 @@ function HomeClient() {
     currentEpisode?: number;
     search_title?: string;
     origin?: 'vod' | 'live';
+    releaseDate?: string;
+    remarks?: string;
   };
 
   const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
@@ -568,6 +570,8 @@ function HomeClient() {
           currentEpisode,
           search_title: fav?.search_title,
           origin: fav?.origin,
+          releaseDate: fav?.releaseDate,
+          remarks: fav?.remarks,
         } as FavoriteItem;
       });
     setFavoriteItems(sorted);
@@ -695,16 +699,39 @@ function HomeClient() {
                 )}
               </div>
               <div className='justify-start grid grid-cols-3 gap-x-2 gap-y-14 sm:gap-y-20 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,_minmax(11rem,_1fr))] sm:gap-x-8'>
-                {favoriteItems.map((item) => (
-                  <div key={item.id + item.source} className='w-full'>
-                    <VideoCard
-                      query={item.search_title}
-                      {...item}
-                      from='favorite'
-                      type={item.episodes > 1 ? 'tv' : ''}
-                    />
-                  </div>
-                ))}
+                {favoriteItems.map((item) => {
+                  // 智能计算即将上映状态
+                  let calculatedRemarks = item.remarks;
+
+                  if (item.releaseDate) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const releaseDate = new Date(item.releaseDate);
+                    const daysDiff = Math.ceil((releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                    // 根据天数差异动态更新显示文字
+                    if (daysDiff < 0) {
+                      const daysAgo = Math.abs(daysDiff);
+                      calculatedRemarks = `已上映${daysAgo}天`;
+                    } else if (daysDiff === 0) {
+                      calculatedRemarks = '今日上映';
+                    } else {
+                      calculatedRemarks = `${daysDiff}天后上映`;
+                    }
+                  }
+
+                  return (
+                    <div key={item.id + item.source} className='w-full'>
+                      <VideoCard
+                        query={item.search_title}
+                        {...item}
+                        from='favorite'
+                        type={item.episodes > 1 ? 'tv' : ''}
+                        remarks={calculatedRemarks}
+                      />
+                    </div>
+                  );
+                })}
                 {favoriteItems.length === 0 && (
                   <div className='col-span-full flex flex-col items-center justify-center py-16 px-4'>
                     {/* SVG 插画 - 空收藏夹 */}
