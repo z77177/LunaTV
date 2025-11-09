@@ -849,9 +849,9 @@ export default function SkipController({
 
   return (
     <div className="skip-controller">
-      {/* 跳过按钮 - 放在播放器内左上角 */}
+      {/* 跳过按钮 - 固定在播放器左上角 */}
       {showSkipButton && currentSkipSegment && (
-        <div className="absolute top-4 left-4 z-[9999] bg-black/80 text-white px-4 py-2 rounded-lg backdrop-blur-sm border border-white/20 shadow-lg animate-fade-in">
+        <div className="fixed top-4 left-4 z-[9999] bg-black/80 text-white px-4 py-2 rounded-lg backdrop-blur-sm border border-white/20 shadow-lg animate-fade-in">
           <div className="flex items-center space-x-3">
             <span className="text-sm">
               {currentSkipSegment.type === 'opening' ? '检测到片头' : '检测到片尾'}
