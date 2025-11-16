@@ -202,11 +202,12 @@ div[data-media-provider] video {
   background-color: #000 !important; /* 其余区域填充为黑色 */
 }
 
-/* 隐藏移动端竖屏时的 pip 按钮 */
+/* 隐藏移动端的网页全屏和音量按钮，保留 PiP 功能 */
 @media (max-width: 1024px) {
-  .art-control-pip {
+  /* 保留 PiP 按钮，不再隐藏 */
+  /* .art-control-pip {
     display: none !important;
-  }
+  } */
 
   .art-control-fullscreenWeb {
     display: none !important;
