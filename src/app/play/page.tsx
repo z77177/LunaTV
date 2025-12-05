@@ -4733,14 +4733,9 @@ function PlayPageClient() {
                     {movieDetails.recommendations.map((item: any) => {
                       const playUrl = `/play?title=${encodeURIComponent(item.title)}&douban_id=${item.id}&prefer=true`;
                       return (
-                        <a
+                        <div
                           key={item.id}
-                          href={playUrl}
-                          className='block [&_*]:!pointer-events-none [&]:!pointer-events-auto'
-                          style={{
-                            WebkitTapHighlightColor: 'transparent',
-                            touchAction: 'manipulation'
-                          }}
+                          className='relative'
                         >
                           <VideoCard
                             id={item.id}
@@ -4751,7 +4746,15 @@ function PlayPageClient() {
                             from='douban'
                             isAggregate={true}
                           />
-                        </a>
+                          <a
+                            href={playUrl}
+                            className='absolute inset-0 z-50'
+                            style={{
+                              WebkitTapHighlightColor: 'transparent',
+                            }}
+                            aria-label={`观看 ${item.title}`}
+                          />
+                        </div>
                       );
                     })}
                   </div>
