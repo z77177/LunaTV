@@ -4730,18 +4730,30 @@ function PlayPageClient() {
                     <span>喜欢这部{movieDetails.episodes ? '剧' : '电影'}的人也喜欢</span>
                   </h3>
                   <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
-                    {movieDetails.recommendations.map((item: any) => (
-                      <VideoCard
-                        key={item.id}
-                        id={item.id}
-                        title={item.title}
-                        poster={item.poster}
-                        rate={item.rate}
-                        douban_id={parseInt(item.id)}
-                        from='douban'
-                        isAggregate={true}
-                      />
-                    ))}
+                    {movieDetails.recommendations.map((item: any) => {
+                      const playUrl = `/play?title=${encodeURIComponent(item.title)}&douban_id=${item.id}&prefer=true`;
+                      return (
+                        <a
+                          key={item.id}
+                          href={playUrl}
+                          className='block [&_*]:!pointer-events-none [&]:!pointer-events-auto'
+                          style={{
+                            WebkitTapHighlightColor: 'transparent',
+                            touchAction: 'manipulation'
+                          }}
+                        >
+                          <VideoCard
+                            id={item.id}
+                            title={item.title}
+                            poster={item.poster}
+                            rate={item.rate}
+                            douban_id={parseInt(item.id)}
+                            from='douban'
+                            isAggregate={true}
+                          />
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               )}
