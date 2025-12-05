@@ -4735,25 +4735,35 @@ function PlayPageClient() {
                       return (
                         <div
                           key={item.id}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // 使用完整页面重载而不是 Next.js 路由
-                            window.location.href = playUrl;
-                          }}
-                          onTouchStart={(e) => {
-                            // 阻止 VideoCard 的 touch 事件处理
-                            e.stopPropagation();
-                          }}
-                          onTouchMove={(e) => {
-                            // 阻止滑动时的处理
-                            e.stopPropagation();
-                          }}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // 使用完整页面重载
-                            window.location.href = playUrl;
+                          ref={(node) => {
+                            if (node) {
+                              // 移除旧的监听器
+                              const oldClick = (node as any)._clickHandler;
+                              const oldTouchEnd = (node as any)._touchEndHandler;
+                              if (oldClick) node.removeEventListener('click', oldClick, true);
+                              if (oldTouchEnd) node.removeEventListener('touchend', oldTouchEnd, true);
+
+                              // 添加捕获阶段的监听器
+                              const clickHandler = (e: Event) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                window.location.href = playUrl;
+                              };
+                              const touchEndHandler = (e: Event) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                window.location.href = playUrl;
+                              };
+
+                              node.addEventListener('click', clickHandler, true);
+                              node.addEventListener('touchend', touchEndHandler, true);
+
+                              // 保存引用以便清理
+                              (node as any)._clickHandler = clickHandler;
+                              (node as any)._touchEndHandler = touchEndHandler;
+                            }
                           }}
                           style={{
                             WebkitTapHighlightColor: 'transparent',
