@@ -4735,7 +4735,22 @@ function PlayPageClient() {
                       return (
                         <div
                           key={item.id}
-                          className='relative'
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.location.href = playUrl;
+                          }}
+                          onTouchStart={(e) => {
+                            // 标记这是推荐卡片的触摸
+                            (e.currentTarget as any)._isRecommendationTouch = true;
+                          }}
+                          onTouchEnd={(e) => {
+                            if ((e.currentTarget as any)._isRecommendationTouch) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              window.location.href = playUrl;
+                            }
+                          }}
                         >
                           <VideoCard
                             id={item.id}
@@ -4745,14 +4760,6 @@ function PlayPageClient() {
                             douban_id={parseInt(item.id)}
                             from='douban'
                             isAggregate={true}
-                          />
-                          <a
-                            href={playUrl}
-                            className='absolute inset-0 z-50'
-                            style={{
-                              WebkitTapHighlightColor: 'transparent',
-                            }}
-                            aria-label={`观看 ${item.title}`}
                           />
                         </div>
                       );
