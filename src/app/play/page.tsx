@@ -4738,18 +4738,26 @@ function PlayPageClient() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            // 使用完整页面重载而不是 Next.js 路由
                             window.location.href = playUrl;
                           }}
                           onTouchStart={(e) => {
-                            // 标记这是推荐卡片的触摸
-                            (e.currentTarget as any)._isRecommendationTouch = true;
+                            // 阻止 VideoCard 的 touch 事件处理
+                            e.stopPropagation();
+                          }}
+                          onTouchMove={(e) => {
+                            // 阻止滑动时的处理
+                            e.stopPropagation();
                           }}
                           onTouchEnd={(e) => {
-                            if ((e.currentTarget as any)._isRecommendationTouch) {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              window.location.href = playUrl;
-                            }
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // 使用完整页面重载
+                            window.location.href = playUrl;
+                          }}
+                          style={{
+                            WebkitTapHighlightColor: 'transparent',
+                            touchAction: 'manipulation'
                           }}
                         >
                           <VideoCard
