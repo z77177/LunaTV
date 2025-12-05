@@ -4733,35 +4733,25 @@ function PlayPageClient() {
                     {movieDetails.recommendations.map((item: any) => {
                       const playUrl = `/play?title=${encodeURIComponent(item.title)}&douban_id=${item.id}&prefer=true`;
                       return (
-                        <div
+                        <a
                           key={item.id}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            window.location.href = playUrl;
-                          }}
-                          className='cursor-pointer'
+                          href={playUrl}
+                          className='block'
                           style={{
                             WebkitTapHighlightColor: 'transparent',
                             touchAction: 'manipulation'
                           }}
                         >
-                          <div
-                            style={{
-                              pointerEvents: 'none'
-                            }}
-                          >
-                            <VideoCard
-                              id={item.id}
-                              title={item.title}
-                              poster={item.poster}
-                              rate={item.rate}
-                              douban_id={parseInt(item.id)}
-                              from='douban'
-                              isAggregate={true}
-                            />
-                          </div>
-                        </div>
+                          <VideoCard
+                            id={item.id}
+                            title={item.title}
+                            poster={item.poster}
+                            rate={item.rate}
+                            douban_id={parseInt(item.id)}
+                            from='douban'
+                            isAggregate={true}
+                          />
+                        </a>
                       );
                     })}
                   </div>
