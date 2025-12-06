@@ -23,6 +23,9 @@ function ScrollableRow({
   const checkScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });
 
+  // 使用 useMemo 缓存 children 数量，减少不必要的 effect 触发
+  const childrenCount = useMemo(() => Children.count(children), [children]);
+
   const checkScroll = useCallback(() => {
     if (containerRef.current) {
       const { scrollWidth, clientWidth, scrollLeft } = containerRef.current;
@@ -80,9 +83,6 @@ function ScrollableRow({
       }
     }
   }, [enableVirtualization, childrenCount]);
-
-  // 使用 useMemo 缓存 children 数量和可见子元素，减少不必要的 effect 触发
-  const childrenCount = useMemo(() => Children.count(children), [children]);
 
   // 虚拟化：只渲染可见范围内的子元素
   const visibleChildren = useMemo(() => {
