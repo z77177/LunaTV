@@ -49,6 +49,7 @@ export interface VideoCardProps {
   origin?: 'vod' | 'live';
   remarks?: string; // 备注信息（如"已完结"、"更新至20集"等）
   releaseDate?: string; // 上映日期 (YYYY-MM-DD)，用于即将上映内容
+  priority?: boolean; // 图片加载优先级（用于首屏可见图片）
 }
 
 export type VideoCardHandle = {
@@ -80,6 +81,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     origin = 'vod',
     remarks,
     releaseDate,
+    priority = false,
   }: VideoCardProps,
   ref
 ) {
@@ -673,7 +675,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               imageLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-md scale-105'
             }`}
             referrerPolicy='no-referrer'
-            loading='lazy'
+            loading={priority ? undefined : 'lazy'}
+            priority={priority}
             quality={75}
             onLoadingComplete={() => {
               setIsLoading(true);
