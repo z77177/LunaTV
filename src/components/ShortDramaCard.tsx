@@ -38,7 +38,7 @@ function ShortDramaCard({
 
   // 短剧的source固定为shortdrama
   const source = 'shortdrama';
-  const id = drama.id;
+  const id = drama.id.toString(); // 转换为字符串
 
   // 检查收藏状态
   useEffect(() => {
