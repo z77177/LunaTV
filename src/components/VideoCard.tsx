@@ -124,8 +124,9 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   // 使用 useMemo 缓存计算值，避免每次渲染重新计算
   const actualTitle = title;
   const actualPoster = poster;
-  const actualSource = source;
-  const actualId = id;
+  // 为豆瓣内容生成收藏用的source和id（仅用于收藏，不用于播放）
+  const actualSource = source || (from === 'douban' && douban_id ? 'douban' : '');
+  const actualId = id || (from === 'douban' && douban_id ? douban_id.toString() : '');
   const actualDoubanId = dynamicDoubanId;
   const actualEpisodes = dynamicEpisodes;
   const actualYear = year;
