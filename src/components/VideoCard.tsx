@@ -150,10 +150,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
     [remarks]
   );
 
-  // 获取收藏状态（搜索结果页面不检查，但即将上映需要检查）
+  // 获取收藏状态（搜索结果页面不检查）
   useEffect(() => {
-    // 即将上映的内容需要检查收藏状态
-    const shouldCheckFavorite = isUpcoming || (from !== 'douban' && from !== 'search');
+    // 豆瓣内容和非搜索页面需要检查收藏状态
+    const shouldCheckFavorite = from !== 'search';
 
     if (!shouldCheckFavorite || !actualSource || !actualId) return;
 
@@ -187,8 +187,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       e.preventDefault();
       e.stopPropagation();
 
-      // 即将上映的内容允许收藏
-      if ((from === 'douban' && !isUpcoming) || !actualSource || !actualId) return;
+      // 所有豆瓣内容都允许收藏
+      if (!actualSource || !actualId) return;
 
       try {
         // 确定当前收藏状态
@@ -444,7 +444,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
         showSourceName: false,
         showProgress: false,
         showPlayButton: true,
-        showHeart: isUpcoming, // 即将上映的内容显示收藏按钮
+        showHeart: true, // 所有豆瓣内容都显示收藏按钮
         showCheckCircle: false,
         showDoubanLink: true,
         showRating: !!rate,
@@ -492,8 +492,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
 
     // 聚合源信息 - 直接在菜单中展示，不需要单独的操作项
 
-    // 收藏/取消收藏操作（即将上映的内容也显示收藏选项）
-    if (config.showHeart && (isUpcoming || from !== 'douban') && actualSource && actualId) {
+    // 收藏/取消收藏操作
+    if (config.showHeart && actualSource && actualId) {
       const currentFavorited = from === 'search' ? searchFavorited : favorited;
 
       if (from === 'search') {
