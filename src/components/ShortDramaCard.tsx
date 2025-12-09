@@ -101,17 +101,19 @@ function ShortDramaCard({
           await setCache(cacheKey, result.totalEpisodes, SHORTDRAMA_CACHE_EXPIRE.episodes);
         } else {
           // 如果解析失败，缓存失败结果避免重复请求
-          await setCache(cacheKey, drama.episode_count, SHORTDRAMA_CACHE_EXPIRE.episodes / 24); // 1小时后重试
+          await setCache(cacheKey, 1, SHORTDRAMA_CACHE_EXPIRE.episodes / 24); // 1小时后重试
         }
       } catch (error) {
         console.error('获取集数失败:', error);
         // 网络错误时也缓存失败结果
-        await setCache(cacheKey, drama.episode_count, SHORTDRAMA_CACHE_EXPIRE.episodes / 24); // 1小时后重试
+        await setCache(cacheKey, 1, SHORTDRAMA_CACHE_EXPIRE.episodes / 24); // 1小时后重试
       }
     };
 
-    // 总是尝试获取真实集数
-    fetchEpisodeCount();
+    // 只有当前集数为1（默认值）时才尝试获取真实集数
+    if (drama.episode_count === 1) {
+      fetchEpisodeCount();
+    }
   }, [drama.id, drama.episode_count]);
 
   // 处理收藏切换
