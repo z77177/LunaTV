@@ -372,8 +372,17 @@ async function parseWithAlternativeApi(
       };
     }
 
-    // 注意：episode 参数是从1开始的，但数组索引从0开始
-    const episodeIndex = episode - 1;
+    // 注意：episode 参数可能是 0（主API的第一集索引）或 1（从1开始计数）
+    // 备用API的数组索引是从0开始的
+    let episodeIndex: number;
+    if (episode === 0 || episode === 1) {
+      // 主API的episode=0 或 episode=1 都对应第一集
+      episodeIndex = 0;
+    } else {
+      // episode >= 2 时，映射到数组索引 episode-1
+      episodeIndex = episode - 1;
+    }
+
     if (episodeIndex < 0 || episodeIndex >= episodesData.data.length) {
       return {
         code: 1,
