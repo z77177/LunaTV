@@ -417,6 +417,9 @@ async function parseWithAlternativeApi(
       throw new Error('备用API未返回播放链接');
     }
 
+    // 将 http:// 转换为 https:// 避免 Mixed Content 错误
+    const videoUrl = (directData.url || '').replace(/^http:\/\//i, 'https://');
+
     return {
       code: 0,
       data: {
@@ -424,15 +427,15 @@ async function parseWithAlternativeApi(
         videoName: firstDrama.name,
         currentEpisode: episode,
         totalEpisodes: episodesData.data.length,
-        parsedUrl: directData.url || '',
-        proxyUrl: directData.url || '',
+        parsedUrl: videoUrl,
+        proxyUrl: videoUrl,
         cover: directData.pic || firstDrama.pic || '',
         description: firstDrama.overview || '',
         episode: {
           index: episode,
           label: `第${episode}集`,
-          parsedUrl: directData.url || '',
-          proxyUrl: directData.url || '',
+          parsedUrl: videoUrl,
+          proxyUrl: videoUrl,
           title: directData.title || `第${episode}集`,
         },
       },
