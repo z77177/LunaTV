@@ -4788,6 +4788,31 @@ function PlayPageClient() {
                 </div>
               )}
 
+              {/* 短剧元数据（备用API提供） */}
+              {shortdramaDetails?.metadata && (
+                <div className='mt-4 space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4'>
+                  {/* 评分 */}
+                  {shortdramaDetails.metadata.vote_average > 0 && (
+                    <div className='flex items-center gap-2'>
+                      <span className='text-yellow-500'>⭐</span>
+                      <span className='font-semibold text-gray-800 dark:text-gray-200'>
+                        {shortdramaDetails.metadata.vote_average.toFixed(1)}
+                      </span>
+                      <span className='text-sm text-gray-500 dark:text-gray-400'>/ 10</span>
+                    </div>
+                  )}
+                  {/* 演员 */}
+                  {shortdramaDetails.metadata.author && (
+                    <div className='flex items-start gap-2'>
+                      <span className='text-gray-600 dark:text-gray-400 flex-shrink-0'>🎭 演员:</span>
+                      <span className='text-gray-800 dark:text-gray-200'>
+                        {shortdramaDetails.metadata.author}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 演员阵容 */}
               {movieDetails?.celebrities && movieDetails.celebrities.length > 0 && (
                 <div className='mt-6 border-t border-gray-200 dark:border-gray-700 pt-6'>
