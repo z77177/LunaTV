@@ -1667,8 +1667,10 @@ function PlayPageClient() {
 
         // 判断是否为短剧源
         if (source === 'shortdrama') {
+          // 传递 title 参数以支持备用API fallback
+          const titleParam = videoTitleRef.current ? `&name=${encodeURIComponent(videoTitleRef.current)}` : '';
           detailResponse = await fetch(
-            `/api/shortdrama/detail?id=${id}&episode=1`
+            `/api/shortdrama/detail?id=${id}&episode=1${titleParam}`
           );
         } else {
           detailResponse = await fetch(
