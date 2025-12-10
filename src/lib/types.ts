@@ -46,6 +46,10 @@ export interface ShortDramaItem {
   score: number;
   episode_count: number;
   description?: string;
+  author?: string;        // 演员/导演信息
+  backdrop?: string;      // 高清背景图
+  vote_average?: number;  // 用户评分 (0-10)
+  tmdb_id?: number;       // TMDB ID
 }
 
 // 短剧解析结果数据结构
