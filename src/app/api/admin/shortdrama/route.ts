@@ -4,16 +4,29 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/lib/db';
 import { clearConfigCache, getConfig } from '@/lib/config';
-import { verifyAdmin } from '@/lib/admin-auth';
+import { getAuthInfoFromCookie } from '@/lib/auth';
+
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
-  try {
-    // 验证管理员权限
-    const authResult = await verifyAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json({ error: authResult.error }, { status: 401 });
-    }
+  const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
+  if (storageType === 'localstorage') {
+    return NextResponse.json(
+      {
+        error: '不支持本地存储进行管理员配置',
+      },
+      { status: 400 }
+    );
+  }
 
+  const authInfo = getAuthInfoFromCookie(request);
+
+  // 检查用户权限
+  if (!authInfo || !authInfo.username) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
     const body = await request.json();
     const { primaryApiUrl, alternativeApiUrl, enableAlternative } = body;
 
@@ -62,13 +75,24 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    // 验证管理员权限
-    const authResult = await verifyAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json({ error: authResult.error }, { status: 401 });
-    }
+  const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
+  if (storageType === 'localstorage') {
+    return NextResponse.json(
+      {
+        error: '不支持本地存储进行管理员配置',
+      },
+      { status: 400 }
+    );
+  }
 
+  const authInfo = getAuthInfoFromCookie(request);
+
+  // 检查用户权限
+  if (!authInfo || !authInfo.username) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
     const config = await getConfig();
 
     return NextResponse.json({
