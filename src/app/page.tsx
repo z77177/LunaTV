@@ -1223,7 +1223,7 @@ function HomeClient() {
                           douban_id={Number(show.id)}
                           rate={show.rate}
                           year={show.year}
-                          type='variety'
+                          type='tv'
                         />
                       </div>
                     ))}
