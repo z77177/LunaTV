@@ -402,9 +402,11 @@ async function parseWithAlternativeApi(
     };
   } catch (error) {
     console.error('备用API解析失败:', error);
+    // 返回更详细的错误信息
+    const errorMsg = error instanceof Error ? error.message : '备用API请求失败';
     return {
       code: -1,
-      msg: '备用API请求失败',
+      msg: `备用API错误: ${errorMsg}`,
     };
   }
 }
