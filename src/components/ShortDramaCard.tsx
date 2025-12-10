@@ -33,7 +33,7 @@ function ShortDramaCard({
   className = '',
 }: ShortDramaCardProps) {
   const [realEpisodeCount, setRealEpisodeCount] = useState<number>(drama.episode_count);
-  const [showEpisodeCount, setShowEpisodeCount] = useState(false); // 是否显示集数标签
+  const [showEpisodeCount, setShowEpisodeCount] = useState(drama.episode_count > 1); // 如果初始集数>1就显示
   const [imageLoaded, setImageLoaded] = useState(false); // 图片加载状态
   const [favorited, setFavorited] = useState(false); // 收藏状态
 
