@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
       year: new Date().getFullYear().toString(),
       desc: result.data!.description,
       type_name: '短剧',
+      drama_name: result.data!.videoName, // 添加剧名，用于备用API fallback
     };
 
     // 设置与豆瓣一致的缓存策略

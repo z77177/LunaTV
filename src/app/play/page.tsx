@@ -1066,8 +1066,10 @@ function PlayPageClient() {
     if (episodeData && episodeData.startsWith('shortdrama:')) {
       try {
         const [, videoId, episode] = episodeData.split(':');
+        // 添加剧名参数以支持备用API fallback
+        const nameParam = detailData.drama_name ? `&name=${encodeURIComponent(detailData.drama_name)}` : '';
         const response = await fetch(
-          `/api/shortdrama/parse?id=${videoId}&episode=${episode}`
+          `/api/shortdrama/parse?id=${videoId}&episode=${episode}${nameParam}`
         );
 
         if (response.ok) {
