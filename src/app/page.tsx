@@ -761,7 +761,7 @@ function HomeClient() {
                   total: favoriteItems.length,
                   movie: favoriteItems.filter(item => item.origin === 'vod' && item.episodes === 1 && item.type !== 'variety').length,
                   tv: favoriteItems.filter(item => item.origin === 'vod' && item.episodes > 1 && item.type !== 'variety').length,
-                  shortdrama: favoriteItems.filter(item => item.origin === 'shortdrama' || item.source === 'shortdrama').length,
+                  shortdrama: favoriteItems.filter(item => item.source === 'shortdrama').length,
                   live: favoriteItems.filter(item => item.origin === 'live').length,
                   variety: favoriteItems.filter(item => item.type === 'variety').length,
                 };
@@ -860,7 +860,7 @@ function HomeClient() {
                   } else if (favoriteFilter === 'tv') {
                     filtered = favoriteItems.filter(item => item.origin === 'vod' && item.episodes > 1 && item.type !== 'variety');
                   } else if (favoriteFilter === 'shortdrama') {
-                    filtered = favoriteItems.filter(item => item.origin === 'shortdrama' || item.source === 'shortdrama');
+                    filtered = favoriteItems.filter(item => item.source === 'shortdrama');
                   } else if (favoriteFilter === 'live') {
                     filtered = favoriteItems.filter(item => item.origin === 'live');
                   } else if (favoriteFilter === 'variety') {
