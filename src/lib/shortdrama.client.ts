@@ -408,6 +408,7 @@ async function parseWithAlternativeApi(
         description: searchData.data[0].overview || '',
         episode: {
           index: episode,
+          label: `第${episode}集`,
           parsedUrl: directData.url || '',
           proxyUrl: directData.url || '',
           title: directData.title || `第${episode}集`,

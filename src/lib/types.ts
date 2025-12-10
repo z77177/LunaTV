@@ -69,7 +69,15 @@ export interface ShortDramaParseResult {
       index: number;
       label: string;
       parsedUrl: string;
+      proxyUrl?: string;
+      title?: string;
     };
+  };
+  metadata?: {
+    author?: string;
+    backdrop?: string;
+    vote_average?: number;
+    tmdb_id?: number;
   };
 }
 
