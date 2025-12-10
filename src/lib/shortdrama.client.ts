@@ -11,29 +11,8 @@ import {
   getCache,
   setCache,
 } from './shortdrama-cache';
-import { getConfig } from './config';
 
 const SHORTDRAMA_API_BASE = 'https://api.r2afosne.dpdns.org';
-const ALTERNATIVE_API_BASE = 'https://001038.xyz'; // Alternative API for when primary is down
-
-// 获取短剧配置
-async function getShortDramaConfig() {
-  try {
-    const config = await getConfig();
-    return config.ShortDramaConfig || {
-      primaryApiUrl: SHORTDRAMA_API_BASE,
-      alternativeApiUrl: ALTERNATIVE_API_BASE,
-      enableAlternative: false,
-    };
-  } catch (error) {
-    console.error('获取短剧配置失败，使用默认值:', error);
-    return {
-      primaryApiUrl: SHORTDRAMA_API_BASE,
-      alternativeApiUrl: ALTERNATIVE_API_BASE,
-      enableAlternative: false,
-    };
-  }
-}
 
 // 检测是否为移动端环境
 const isMobile = () => {
@@ -318,9 +297,25 @@ async function parseWithAlternativeApi(
   episode: number
 ): Promise<ShortDramaParseResult> {
   try {
-    // 获取配置的备用API地址
-    const shortDramaConfig = await getShortDramaConfig();
-    const alternativeApiBase = shortDramaConfig.alternativeApiUrl || ALTERNATIVE_API_BASE;
+    // 从服务器API获取配置
+    let shortDramaConfig = {
+      alternativeApiUrl: '',
+      enableAlternative: false,
+    };
+
+    try {
+      const configResponse = await fetch('/api/admin/shortdrama');
+      if (configResponse.ok) {
+        const configData = await configResponse.json();
+        if (configData.success && configData.config) {
+          shortDramaConfig = configData.config;
+        }
+      }
+    } catch (e) {
+      console.log('无法获取短剧配置');
+    }
+
+    const alternativeApiBase = shortDramaConfig.alternativeApiUrl;
 
     // 检查是否启用备用API
     if (!shortDramaConfig.enableAlternative || !alternativeApiBase) {
