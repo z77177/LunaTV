@@ -311,6 +311,8 @@ async function parseWithAlternativeApi(
 
     // Step 1: Search for the drama by name to get drama ID
     const searchUrl = `${alternativeApiBase}/api/v1/drama/dl?dramaName=${encodeURIComponent(dramaName)}`;
+    console.log('[Alternative API] Step 1 - Search URL:', searchUrl);
+
     const searchResponse = await fetch(searchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -318,7 +320,11 @@ async function parseWithAlternativeApi(
       },
     });
 
+    console.log('[Alternative API] Step 1 - Response status:', searchResponse.status);
+
     if (!searchResponse.ok) {
+      const errorText = await searchResponse.text();
+      console.error('[Alternative API] Step 1 - Error response:', errorText);
       throw new Error(`Search failed: ${searchResponse.status}`);
     }
 
