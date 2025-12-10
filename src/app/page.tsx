@@ -951,7 +951,6 @@ function HomeClient() {
                         query={item.search_title}
                         {...item}
                         from='favorite'
-                        type={item.episodes > 1 ? 'tv' : ''}
                         remarks={calculatedRemarks}
                       />
                     </div>
