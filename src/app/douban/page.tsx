@@ -58,6 +58,7 @@ function DoubanPageClient() {
   });
 
   const type = searchParams.get('type') || 'movie';
+  console.log('🔍 Douban page init - URL type param:', JSON.stringify(searchParams.get('type')), 'final type:', JSON.stringify(type));
 
   // 获取 runtimeConfig 中的自定义分类数据
   const [customCategories, setCustomCategories] = useState<
@@ -931,7 +932,15 @@ function DoubanPageClient() {
                   : // 显示实际数据
                   doubanData.map((item, index) => {
                     const mappedType = type === 'movie' ? 'movie' : type === 'show' ? 'variety' : type === 'tv' ? 'tv' : type === 'anime' ? 'anime' : '';
-                    if (index === 0) console.log('🔍 Douban page - URL type:', type, 'mapped type:', mappedType, 'title:', item.title);
+                    if (index === 0) {
+                      console.log('🔍 Douban page - URL type:', JSON.stringify(type), 'type length:', type.length, 'mapped type:', JSON.stringify(mappedType), 'title:', item.title);
+                      console.log('🔍 Type comparisons:',
+                        'type === "movie":', type === 'movie',
+                        'type === "show":', type === 'show',
+                        'type === "tv":', type === 'tv',
+                        'type === "anime":', type === 'anime'
+                      );
+                    }
                     return (
                       <div key={`${item.title}-${index}`} className='w-full'>
                         <VideoCard
