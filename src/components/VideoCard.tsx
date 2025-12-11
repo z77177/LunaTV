@@ -205,6 +205,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           }
         } else {
           // 如果未收藏，添加收藏
+          console.log('🔍 VideoCard saveFavorite - type:', type, 'from:', from, 'title:', actualTitle);
           await saveFavorite(actualSource, actualId, {
             title: actualTitle,
             source_name: source_name || '即将上映',

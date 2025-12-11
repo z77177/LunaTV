@@ -929,25 +929,29 @@ function DoubanPageClient() {
                   ? // 显示骨架屏
                   skeletonData.map((index) => <DoubanCardSkeleton key={index} />)
                   : // 显示实际数据
-                  doubanData.map((item, index) => (
-                    <div key={`${item.title}-${index}`} className='w-full'>
-                      <VideoCard
-                        from='douban'
-                        source='douban'
-                        id={item.id}
-                        source_name='豆瓣'
-                        title={item.title}
-                        poster={item.poster}
-                        douban_id={Number(item.id)}
-                        rate={item.rate}
-                        year={item.year}
-                        type={type === 'movie' ? 'movie' : type === 'show' ? 'variety' : type === 'tv' ? 'tv' : type === 'anime' ? 'anime' : ''}
-                        isBangumi={
-                          type === 'anime' && primarySelection === '每日放送'
-                        }
-                      />
-                    </div>
-                  ))}
+                  doubanData.map((item, index) => {
+                    const mappedType = type === 'movie' ? 'movie' : type === 'show' ? 'variety' : type === 'tv' ? 'tv' : type === 'anime' ? 'anime' : '';
+                    if (index === 0) console.log('🔍 Douban page - URL type:', type, 'mapped type:', mappedType, 'title:', item.title);
+                    return (
+                      <div key={`${item.title}-${index}`} className='w-full'>
+                        <VideoCard
+                          from='douban'
+                          source='douban'
+                          id={item.id}
+                          source_name='豆瓣'
+                          title={item.title}
+                          poster={item.poster}
+                          douban_id={Number(item.id)}
+                          rate={item.rate}
+                          year={item.year}
+                          type={mappedType}
+                          isBangumi={
+                            type === 'anime' && primarySelection === '每日放送'
+                          }
+                        />
+                      </div>
+                    );
+                  })}
               </div>
 
               {/* 加载更多指示器 */}
