@@ -932,15 +932,8 @@ function DoubanPageClient() {
                   : // 显示实际数据
                   doubanData.map((item, index) => {
                     const mappedType = type === 'movie' ? 'movie' : type === 'show' ? 'variety' : type === 'tv' ? 'tv' : type === 'anime' ? 'anime' : '';
-                    if (index === 0) {
-                      console.log('🔍 Douban page - URL type:', JSON.stringify(type), 'type length:', type.length, 'mapped type:', JSON.stringify(mappedType), 'title:', item.title);
-                      console.log('🔍 Type comparisons:',
-                        'type === "movie":', type === 'movie',
-                        'type === "show":', type === 'show',
-                        'type === "tv":', type === 'tv',
-                        'type === "anime":', type === 'anime'
-                      );
-                    }
+                    // 每个卡片都打印映射结果，方便调试
+                    console.log(`🔍 [${index}] Douban card render - type: ${JSON.stringify(type)}, mappedType: ${JSON.stringify(mappedType)}, title: ${item.title}`);
                     return (
                       <div key={`${item.title}-${index}`} className='w-full'>
                         <VideoCard
