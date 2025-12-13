@@ -14,17 +14,8 @@ export default function artplayerPluginLiquidGlass(option = {}) {
     append($liquidGlass, $progress);
     append($liquidGlass, $controls);
 
-    art.on('control', (state) => {
-      if (state) {
-        $liquidGlass.style.width = option.width || '';
-        $liquidGlass.style['max-width'] = option['max-width'] || '';
-        $liquidGlass.style['min-width'] = option['min-width'] || '';
-      } else {
-        $liquidGlass.style.width = '';
-        $liquidGlass.style['max-width'] = '';
-        $liquidGlass.style['min-width'] = '';
-      }
-    });
+    // 移除control事件监听，完全由CSS控制宽度
+    // 避免与CSS的!important冲突，防止拖动进度条时布局错乱
 
     return {
       name: 'artplayerPluginLiquidGlass',
