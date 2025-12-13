@@ -3154,6 +3154,47 @@ function PlayPageClient() {
                   return item.html;
                 },
               },
+              {
+                html: '显示区域',
+                tooltip: '弹幕显示区域',
+                selector: [
+                  { html: '全屏显示', value: [10, 10] },
+                  { html: '顶部区域', value: [10, '75%'], default: true },
+                  { html: '上半部分', value: [10, '50%'] },
+                  { html: '下半部分', value: ['50%', 10] },
+                  { html: '底部区域', value: ['75%', 10] },
+                  { html: '仅中间', value: ['25%', '25%'] },
+                ],
+                onSelect: function (item: any) {
+                  localStorage.setItem('danmaku_margin', JSON.stringify(item.value));
+                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                      margin: item.value,
+                    });
+                  }
+                  return item.html;
+                },
+              },
+              {
+                html: '弹幕类型',
+                tooltip: '选择显示的弹幕类型',
+                selector: [
+                  { html: '全部显示', value: [0, 1, 2], default: true },
+                  { html: '仅滚动', value: [0] },
+                  { html: '滚动+顶部', value: [0, 1] },
+                  { html: '滚动+底部', value: [0, 2] },
+                  { html: '仅固定', value: [1, 2] },
+                ],
+                onSelect: function (item: any) {
+                  localStorage.setItem('danmaku_modes', JSON.stringify(item.value));
+                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                      modes: item.value,
+                    });
+                  }
+                  return item.html;
+                },
+              },
             ],
           },
         ],
