@@ -3078,15 +3078,83 @@ function PlayPageClient() {
             switch: externalDanmuEnabled,
             onSwitch: function (item: any) {
               const nextState = !item.switch;
-              
+
               // 🚀 使用优化后的弹幕操作处理函数
               handleDanmuOperationOptimized(nextState);
-              
+
               // 更新tooltip显示
               item.tooltip = nextState ? '外部弹幕已开启' : '外部弹幕已关闭';
-              
+
               return nextState; // 立即返回新状态
             },
+          },
+          {
+            name: '弹幕设置',
+            html: '弹幕设置',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
+            selector: [
+              {
+                html: '字号',
+                tooltip: '弹幕字号大小',
+                selector: [
+                  { html: '12px', value: 12 },
+                  { html: '16px', value: 16 },
+                  { html: '20px', value: 20 },
+                  { html: '25px', value: 25, default: true },
+                  { html: '30px', value: 30 },
+                  { html: '36px', value: 36 },
+                ],
+                onSelect: function (item: any) {
+                  localStorage.setItem('danmaku_fontSize', String(item.value));
+                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                      fontSize: item.value,
+                    });
+                  }
+                  return item.html;
+                },
+              },
+              {
+                html: '速度',
+                tooltip: '弹幕滚动速度',
+                selector: [
+                  { html: '极慢', value: 10 },
+                  { html: '较慢', value: 8 },
+                  { html: '正常', value: 6, default: true },
+                  { html: '较快', value: 4 },
+                  { html: '极快', value: 2 },
+                ],
+                onSelect: function (item: any) {
+                  localStorage.setItem('danmaku_speed', String(item.value));
+                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                      speed: item.value,
+                    });
+                  }
+                  return item.html;
+                },
+              },
+              {
+                html: '透明度',
+                tooltip: '弹幕透明度',
+                selector: [
+                  { html: '30%', value: 0.3 },
+                  { html: '50%', value: 0.5 },
+                  { html: '70%', value: 0.7 },
+                  { html: '80%', value: 0.8, default: true },
+                  { html: '100%', value: 1.0 },
+                ],
+                onSelect: function (item: any) {
+                  localStorage.setItem('danmaku_opacity', String(item.value));
+                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                      opacity: item.value,
+                    });
+                  }
+                  return item.html;
+                },
+              },
+            ],
           },
         ],
         // 控制栏配置
