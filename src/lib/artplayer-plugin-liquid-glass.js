@@ -69,6 +69,16 @@ if (typeof document !== 'undefined') {
 .artplayer-plugin-liquid-glass .art-liquid-glass {
     width: 98% !important;
     max-width: 100% !important;
+    margin: 0 auto !important;     /* 居中对齐，防止偏移 */
+    box-sizing: border-box !important; /* 确保padding不影响总宽度 */
+    position: relative !important; /* 固定定位上下文 */
+}
+
+/* 确保bottom容器对齐居中 */
+.artplayer-plugin-liquid-glass .art-bottom {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important; /* 子元素水平居中 */
 }
 
 /* 移动端进一步优化 */
