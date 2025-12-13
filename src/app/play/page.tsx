@@ -3092,110 +3092,119 @@ function PlayPageClient() {
             name: '弹幕设置',
             html: '弹幕设置',
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
-            selector: [
-              {
-                html: '字号',
-                tooltip: '弹幕字号大小',
-                selector: [
-                  { html: '12px', value: 12 },
-                  { html: '16px', value: 16 },
-                  { html: '20px', value: 20 },
-                  { html: '25px', value: 25, default: true },
-                  { html: '30px', value: 30 },
-                  { html: '36px', value: 36 },
-                ],
-                onSelect: function (item: any) {
-                  localStorage.setItem('danmaku_fontSize', String(item.value));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                      fontSize: item.value,
-                    });
-                  }
-                  return item.html;
+            selector: (() => {
+              // 从 localStorage 读取保存的值
+              const savedFontSize = parseInt(localStorage.getItem('danmaku_fontSize') || '25');
+              const savedSpeed = parseInt(localStorage.getItem('danmaku_speed') || '6');
+              const savedOpacity = parseFloat(localStorage.getItem('danmaku_opacity') || '0.8');
+              const savedMargin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
+              const savedModes = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
+
+              return [
+                {
+                  html: '字号',
+                  tooltip: '弹幕字号大小',
+                  selector: [
+                    { html: '12px', value: 12, default: savedFontSize === 12 },
+                    { html: '16px', value: 16, default: savedFontSize === 16 },
+                    { html: '20px', value: 20, default: savedFontSize === 20 },
+                    { html: '25px', value: 25, default: savedFontSize === 25 },
+                    { html: '30px', value: 30, default: savedFontSize === 30 },
+                    { html: '36px', value: 36, default: savedFontSize === 36 },
+                  ],
+                  onSelect: function (item: any) {
+                    localStorage.setItem('danmaku_fontSize', String(item.value));
+                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                        fontSize: item.value,
+                      });
+                    }
+                    return item.html;
+                  },
                 },
-              },
-              {
-                html: '速度',
-                tooltip: '弹幕滚动速度',
-                selector: [
-                  { html: '极慢', value: 10 },
-                  { html: '较慢', value: 8 },
-                  { html: '正常', value: 6, default: true },
-                  { html: '较快', value: 4 },
-                  { html: '极快', value: 2 },
-                ],
-                onSelect: function (item: any) {
-                  localStorage.setItem('danmaku_speed', String(item.value));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                      speed: item.value,
-                    });
-                  }
-                  return item.html;
+                {
+                  html: '速度',
+                  tooltip: '弹幕滚动速度',
+                  selector: [
+                    { html: '极慢', value: 10, default: savedSpeed === 10 },
+                    { html: '较慢', value: 8, default: savedSpeed === 8 },
+                    { html: '正常', value: 6, default: savedSpeed === 6 },
+                    { html: '较快', value: 4, default: savedSpeed === 4 },
+                    { html: '极快', value: 2, default: savedSpeed === 2 },
+                  ],
+                  onSelect: function (item: any) {
+                    localStorage.setItem('danmaku_speed', String(item.value));
+                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                        speed: item.value,
+                      });
+                    }
+                    return item.html;
+                  },
                 },
-              },
-              {
-                html: '透明度',
-                tooltip: '弹幕透明度',
-                selector: [
-                  { html: '30%', value: 0.3 },
-                  { html: '50%', value: 0.5 },
-                  { html: '70%', value: 0.7 },
-                  { html: '80%', value: 0.8, default: true },
-                  { html: '100%', value: 1.0 },
-                ],
-                onSelect: function (item: any) {
-                  localStorage.setItem('danmaku_opacity', String(item.value));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                      opacity: item.value,
-                    });
-                  }
-                  return item.html;
+                {
+                  html: '透明度',
+                  tooltip: '弹幕透明度',
+                  selector: [
+                    { html: '30%', value: 0.3, default: savedOpacity === 0.3 },
+                    { html: '50%', value: 0.5, default: savedOpacity === 0.5 },
+                    { html: '70%', value: 0.7, default: savedOpacity === 0.7 },
+                    { html: '80%', value: 0.8, default: savedOpacity === 0.8 },
+                    { html: '100%', value: 1.0, default: savedOpacity === 1.0 },
+                  ],
+                  onSelect: function (item: any) {
+                    localStorage.setItem('danmaku_opacity', String(item.value));
+                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                        opacity: item.value,
+                      });
+                    }
+                    return item.html;
+                  },
                 },
-              },
-              {
-                html: '显示区域',
-                tooltip: '弹幕显示区域',
-                selector: [
-                  { html: '全屏显示', value: [10, 10] },
-                  { html: '顶部区域', value: [10, '75%'], default: true },
-                  { html: '上半部分', value: [10, '50%'] },
-                  { html: '下半部分', value: ['50%', 10] },
-                  { html: '底部区域', value: ['75%', 10] },
-                  { html: '仅中间', value: ['25%', '25%'] },
-                ],
-                onSelect: function (item: any) {
-                  localStorage.setItem('danmaku_margin', JSON.stringify(item.value));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                      margin: item.value,
-                    });
-                  }
-                  return item.html;
+                {
+                  html: '显示区域',
+                  tooltip: '弹幕显示区域',
+                  selector: [
+                    { html: '全屏显示', value: [10, 10], default: JSON.stringify(savedMargin) === JSON.stringify([10, 10]) },
+                    { html: '顶部区域', value: [10, '75%'], default: JSON.stringify(savedMargin) === JSON.stringify([10, '75%']) },
+                    { html: '上半部分', value: [10, '50%'], default: JSON.stringify(savedMargin) === JSON.stringify([10, '50%']) },
+                    { html: '下半部分', value: ['50%', 10], default: JSON.stringify(savedMargin) === JSON.stringify(['50%', 10]) },
+                    { html: '底部区域', value: ['75%', 10], default: JSON.stringify(savedMargin) === JSON.stringify(['75%', 10]) },
+                    { html: '仅中间', value: ['25%', '25%'], default: JSON.stringify(savedMargin) === JSON.stringify(['25%', '25%']) },
+                  ],
+                  onSelect: function (item: any) {
+                    localStorage.setItem('danmaku_margin', JSON.stringify(item.value));
+                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                        margin: item.value,
+                      });
+                    }
+                    return item.html;
+                  },
                 },
-              },
-              {
-                html: '弹幕类型',
-                tooltip: '选择显示的弹幕类型',
-                selector: [
-                  { html: '全部显示', value: [0, 1, 2], default: true },
-                  { html: '仅滚动', value: [0] },
-                  { html: '滚动+顶部', value: [0, 1] },
-                  { html: '滚动+底部', value: [0, 2] },
-                  { html: '仅固定', value: [1, 2] },
-                ],
-                onSelect: function (item: any) {
-                  localStorage.setItem('danmaku_modes', JSON.stringify(item.value));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                      modes: item.value,
-                    });
-                  }
-                  return item.html;
+                {
+                  html: '弹幕类型',
+                  tooltip: '选择显示的弹幕类型',
+                  selector: [
+                    { html: '全部显示', value: [0, 1, 2], default: JSON.stringify(savedModes) === JSON.stringify([0, 1, 2]) },
+                    { html: '仅滚动', value: [0], default: JSON.stringify(savedModes) === JSON.stringify([0]) },
+                    { html: '滚动+顶部', value: [0, 1], default: JSON.stringify(savedModes) === JSON.stringify([0, 1]) },
+                    { html: '滚动+底部', value: [0, 2], default: JSON.stringify(savedModes) === JSON.stringify([0, 2]) },
+                    { html: '仅固定', value: [1, 2], default: JSON.stringify(savedModes) === JSON.stringify([1, 2]) },
+                  ],
+                  onSelect: function (item: any) {
+                    localStorage.setItem('danmaku_modes', JSON.stringify(item.value));
+                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                        modes: item.value,
+                      });
+                    }
+                    return item.html;
+                  },
                 },
-              },
-            ],
+              ];
+            })(),
           },
         ],
         // 控制栏配置
