@@ -65,28 +65,29 @@ if (typeof document !== 'undefined') {
     padding: 0 6px !important;  /* 减小内边距节省空间 */
 }
 
-/* 关键修复：锁定controls宽度，防止space-between导致的位置变化 */
+/* 关键发现：progress和controls在同一个容器内可能互相影响 */
 .artplayer-plugin-liquid-glass .art-controls,
 .artplayer-plugin-liquid-glass .art-progress {
     width: 100% !important;     /* 强制100%宽度 */
-    flex-shrink: 0 !important;  /* 不允许缩小 */
-    flex-grow: 0 !important;    /* 不允许扩展 */
 }
 
 /* 增大容器宽度，给按钮更多空间 */
 .artplayer-plugin-liquid-glass .art-liquid-glass {
     width: 98% !important;
     max-width: 100% !important;
-    margin: 0 auto !important;     /* 居中对齐，防止偏移 */
-    box-sizing: border-box !important; /* 确保padding不影响总宽度 */
-    position: relative !important; /* 固定定位上下文 */
+    box-sizing: border-box !important;
+
+    /* 🔒 使用绝对定位+transform强制居中，不受宽度计算影响 */
+    position: relative !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
 }
 
-/* 确保bottom容器对齐居中 */
+/* 确保bottom容器不干扰居中 */
 .artplayer-plugin-liquid-glass .art-bottom {
     display: flex !important;
     flex-direction: column !important;
-    align-items: center !important; /* 子元素水平居中 */
+    align-items: flex-start !important; /* 左对齐，让transform接管居中 */
 }
 
 /* 移动端进一步优化 */
