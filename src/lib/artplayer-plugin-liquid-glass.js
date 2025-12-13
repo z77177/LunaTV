@@ -66,6 +66,31 @@ if (typeof document !== 'undefined') {
 .artplayer-plugin-liquid-glass.art-control-show .art-layer-auto-playback {
     bottom: calc(var(--art-control-height) + var(--art-bottom-gap) + var(--art-padding) * 4 + 10px);
 }
+
+/* 方案A + C：让按钮可自动缩小以适应所有按钮 */
+.artplayer-plugin-liquid-glass .art-control {
+    flex-shrink: 1 !important;  /* 覆盖ArtPlayer的flex-shrink: 0，允许按钮缩小 */
+    min-width: 32px !important; /* 降低最小宽度，允许更小 */
+    padding: 0 6px !important;  /* 减小内边距节省空间 */
+}
+
+/* 增大容器宽度，给按钮更多空间 */
+.artplayer-plugin-liquid-glass .art-liquid-glass {
+    width: 98% !important;
+    max-width: 100% !important;
+}
+
+/* 移动端进一步优化 */
+@media (max-width: 768px) {
+    .artplayer-plugin-liquid-glass .art-control {
+        padding: 0 4px !important;  /* 移动端更紧凑 */
+        min-width: 28px !important;
+    }
+
+    .artplayer-plugin-liquid-glass .art-liquid-glass {
+        width: 100% !important; /* 移动端使用全宽 */
+    }
+}
 `;
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
