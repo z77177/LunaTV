@@ -341,12 +341,12 @@ div[data-media-provider] video {
   transition: all 0.3s ease-in-out;
 }
 
-/* 移动端启用弹幕配置按钮 - liquid-glass 已修复控制栏移动问题 */
-/* @media (max-width: 1080px), (hover: none) {
+/* 移动端隐藏弹幕配置按钮 */
+@media (max-width: 1080px), (hover: none) {
   .artplayer-plugin-danmuku .apd-config {
     display: none !important;
   }
-} */
+}
 
 /* 修复桌面端弹幕配置弹窗hover不稳定问题 */
 @media (min-width: 1081px) and (hover: hover) {
