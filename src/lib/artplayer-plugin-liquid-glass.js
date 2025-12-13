@@ -11,9 +11,9 @@ export default function artplayerPluginLiquidGlass(option = {}) {
     addClass($player, 'artplayer-plugin-liquid-glass');
     addClass($liquidGlass, 'art-liquid-glass');
 
-    // 🔧 关键修复：只包裹controls，不包裹progress！
-    // progress保持在bottom中，避免与controls互相影响
+    // 恢复官方实现：progress和controls一起包裹
     append($bottom, $liquidGlass);
+    append($liquidGlass, $progress);
     append($liquidGlass, $controls);
 
     // 移除control事件监听，完全由CSS控制宽度
@@ -60,42 +60,23 @@ if (typeof document !== 'undefined') {
     bottom: calc(var(--art-control-height) + var(--art-bottom-gap) + var(--art-padding) * 4 + 10px);
 }
 
-/* 方案A + C：让按钮可自动缩小以适应所有按钮 */
+/* 让按钮可自动缩小，防止溢出 */
 .artplayer-plugin-liquid-glass .art-control {
-    flex-shrink: 1 !important;  /* 覆盖ArtPlayer的flex-shrink: 0，允许按钮缩小 */
-    min-width: 32px !important; /* 降低最小宽度，允许更小 */
-    padding: 0 6px !important;  /* 减小内边距节省空间 */
+    flex-shrink: 1 !important;
+    min-width: 32px !important;
+    padding: 0 6px !important;
 }
 
-/* 🔧 新方案：只包裹controls，progress独立 */
-.artplayer-plugin-liquid-glass .art-controls {
-    width: 100% !important;
-}
-
-/* 液态玻璃容器：居中且固定宽度 */
-.artplayer-plugin-liquid-glass .art-liquid-glass {
-    width: 98% !important;
-    max-width: 100% !important;
-    margin: 0 auto !important;
-    box-sizing: border-box !important;
-}
-
-/* bottom容器确保子元素居中 */
+/* 🔑 关键：完全按照官方CSS，不设置width让容器自适应 */
 .artplayer-plugin-liquid-glass .art-bottom {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
+    align-items: center;  /* 官方唯一的对齐设置 */
 }
 
-/* 移动端进一步优化 */
+/* 移动端优化 */
 @media (max-width: 768px) {
     .artplayer-plugin-liquid-glass .art-control {
-        padding: 0 4px !important;  /* 移动端更紧凑 */
+        padding: 0 4px !important;
         min-width: 28px !important;
-    }
-
-    .artplayer-plugin-liquid-glass .art-liquid-glass {
-        width: 100% !important; /* 移动端使用全宽 */
     }
 }
 `;
