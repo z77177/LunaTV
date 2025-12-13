@@ -65,6 +65,14 @@ if (typeof document !== 'undefined') {
     padding: 0 6px !important;  /* 减小内边距节省空间 */
 }
 
+/* 关键修复：锁定controls宽度，防止space-between导致的位置变化 */
+.artplayer-plugin-liquid-glass .art-controls,
+.artplayer-plugin-liquid-glass .art-progress {
+    width: 100% !important;     /* 强制100%宽度 */
+    flex-shrink: 0 !important;  /* 不允许缩小 */
+    flex-grow: 0 !important;    /* 不允许扩展 */
+}
+
 /* 增大容器宽度，给按钮更多空间 */
 .artplayer-plugin-liquid-glass .art-liquid-glass {
     width: 98% !important;
