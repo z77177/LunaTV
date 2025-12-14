@@ -47,8 +47,8 @@ if (typeof document !== 'undefined') {
 
 .artplayer-plugin-liquid-glass.art-control-show .art-bottom .art-liquid-glass {
     border-radius: 8px;
-    backdrop-filter: blur(8px);
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.1));
+    backdrop-filter: blur(12px);
+    background-color: rgba(0, 0, 0, 0.25);
     padding: var(--art-padding) calc(var(--art-padding) * 1.5) 5px;
 }
 
