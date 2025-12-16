@@ -765,6 +765,17 @@ function PlayPageClient() {
     setCelebrityWorks([]);
 
     try {
+      // 检查缓存
+      const cacheKey = `celebrity-works-${celebrityName}`;
+      const cached = await ClientCache.get(cacheKey);
+
+      if (cached) {
+        console.log(`演员作品缓存命中: ${celebrityName}`);
+        setCelebrityWorks(cached);
+        setLoadingCelebrityWorks(false);
+        return;
+      }
+
       console.log('搜索演员作品:', celebrityName);
 
       // 使用豆瓣搜索API（通过cmliussss CDN）
@@ -782,8 +793,11 @@ function PlayPageClient() {
           year: item.url?.match(/\/subject\/(\d+)\//)?.[1] || ''
         }));
 
+        // 保存到缓存（2小时）
+        await ClientCache.set(cacheKey, works, 2 * 60 * 60);
+
         setCelebrityWorks(works);
-        console.log(`找到 ${works.length} 部 ${celebrityName} 的作品`);
+        console.log(`找到 ${works.length} 部 ${celebrityName} 的作品（已缓存）`);
       } else {
         console.log('未找到相关作品');
         setCelebrityWorks([]);
@@ -5102,18 +5116,92 @@ function PlayPageClient() {
                         找到 {celebrityWorks.length} 部相关作品
                       </p>
                       <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
-                        {celebrityWorks.map((work: any) => (
-                          <VideoCard
-                            key={work.id}
-                            id={work.id}
-                            title={work.title}
-                            poster={work.poster}
-                            rate={work.rate}
-                            year={work.year}
-                            from='douban'
-                            douban_id={parseInt(work.id)}
-                          />
-                        ))}
+                        {celebrityWorks.map((work: any) => {
+                          const playUrl = `/play?title=${encodeURIComponent(work.title)}&douban_id=${work.id}&prefer=true`;
+                          return (
+                            <div
+                              key={work.id}
+                              ref={(node) => {
+                                if (node) {
+                                  // 移除旧的监听器
+                                  const oldClick = (node as any)._clickHandler;
+                                  const oldTouchStart = (node as any)._touchStartHandler;
+                                  const oldTouchEnd = (node as any)._touchEndHandler;
+                                  if (oldClick) node.removeEventListener('click', oldClick, true);
+                                  if (oldTouchStart) node.removeEventListener('touchstart', oldTouchStart, true);
+                                  if (oldTouchEnd) node.removeEventListener('touchend', oldTouchEnd, true);
+
+                                  // 长按检测
+                                  let touchStartTime = 0;
+                                  let isLongPress = false;
+                                  let longPressTimer: NodeJS.Timeout | null = null;
+
+                                  const touchStartHandler = (e: Event) => {
+                                    touchStartTime = Date.now();
+                                    isLongPress = false;
+
+                                    // 设置长按定时器（500ms）
+                                    longPressTimer = setTimeout(() => {
+                                      isLongPress = true;
+                                    }, 500);
+                                  };
+
+                                  const touchEndHandler = (e: Event) => {
+                                    // 清除长按定时器
+                                    if (longPressTimer) {
+                                      clearTimeout(longPressTimer);
+                                      longPressTimer = null;
+                                    }
+
+                                    const touchDuration = Date.now() - touchStartTime;
+
+                                    // 如果是长按（超过500ms）或已标记为长按，不跳转
+                                    if (isLongPress || touchDuration >= 500) {
+                                      // 让 VideoCard 的长按菜单正常工作
+                                      return;
+                                    }
+
+                                    // 否则是短按，执行跳转
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.stopImmediatePropagation();
+                                    window.location.href = playUrl;
+                                  };
+
+                                  const clickHandler = (e: Event) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.stopImmediatePropagation();
+                                    window.location.href = playUrl;
+                                  };
+
+                                  node.addEventListener('touchstart', touchStartHandler, true);
+                                  node.addEventListener('touchend', touchEndHandler, true);
+                                  node.addEventListener('click', clickHandler, true);
+
+                                  // 保存引用以便清理
+                                  (node as any)._touchStartHandler = touchStartHandler;
+                                  (node as any)._touchEndHandler = touchEndHandler;
+                                  (node as any)._clickHandler = clickHandler;
+                                }
+                              }}
+                              style={{
+                                WebkitTapHighlightColor: 'transparent',
+                                touchAction: 'manipulation'
+                              }}
+                            >
+                              <VideoCard
+                                id={work.id}
+                                title={work.title}
+                                poster={work.poster}
+                                rate={work.rate}
+                                year={work.year}
+                                from='douban'
+                                douban_id={parseInt(work.id)}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
                     </>
                   ) : (
