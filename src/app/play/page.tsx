@@ -766,7 +766,7 @@ function PlayPageClient() {
 
     try {
       // 检查缓存
-      const cacheKey = `celebrity-works-${celebrityName}`;
+      const cacheKey = `douban-celebrity-${celebrityName}`;
       const cached = await ClientCache.get(cacheKey);
 
       if (cached) {
