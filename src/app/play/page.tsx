@@ -27,6 +27,7 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import { getDoubanDetails, getDoubanComments, getDoubanActorMovies } from '@/lib/douban.client';
+import { searchTMDBActorWorks } from '@/lib/tmdb.client';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 
@@ -797,10 +798,30 @@ function PlayPageClient() {
         await ClientCache.set(cacheKey, works, 2 * 60 * 60);
 
         setCelebrityWorks(works);
-        console.log(`找到 ${works.length} 部 ${celebrityName} 的作品（已缓存）`);
+        console.log(`找到 ${works.length} 部 ${celebrityName} 的作品（豆瓣，已缓存）`);
       } else {
-        console.log('未找到相关作品');
-        setCelebrityWorks([]);
+        // 豆瓣没有结果，尝试TMDB fallback
+        console.log('豆瓣未找到相关作品，尝试TMDB...');
+        try {
+          const tmdbResult = await searchTMDBActorWorks(celebrityName, 'movie', {
+            limit: 20,
+            sortBy: 'date',
+            sortOrder: 'desc'
+          });
+
+          if (tmdbResult.code === 200 && tmdbResult.list && tmdbResult.list.length > 0) {
+            // 保存到缓存（2小时）
+            await ClientCache.set(cacheKey, tmdbResult.list, 2 * 60 * 60);
+            setCelebrityWorks(tmdbResult.list);
+            console.log(`找到 ${tmdbResult.list.length} 部 ${celebrityName} 的作品（TMDB，已缓存）`);
+          } else {
+            console.log('TMDB也未找到相关作品');
+            setCelebrityWorks([]);
+          }
+        } catch (tmdbError) {
+          console.error('TMDB搜索失败:', tmdbError);
+          setCelebrityWorks([]);
+        }
       }
     } catch (error) {
       console.error('获取演员作品出错:', error);
