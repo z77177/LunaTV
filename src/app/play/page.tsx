@@ -27,7 +27,6 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import { getDoubanDetails, getDoubanComments, getDoubanActorMovies } from '@/lib/douban.client';
-import { searchTMDBActorWorks } from '@/lib/tmdb.client';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 
@@ -803,11 +802,8 @@ function PlayPageClient() {
         // 豆瓣没有结果，尝试TMDB fallback
         console.log('豆瓣未找到相关作品，尝试TMDB...');
         try {
-          const tmdbResult = await searchTMDBActorWorks(celebrityName, 'movie', {
-            limit: 20,
-            sortBy: 'date',
-            sortOrder: 'desc'
-          });
+          const tmdbResponse = await fetch(`/api/tmdb/actor?actor=${encodeURIComponent(celebrityName)}&type=movie&limit=20`);
+          const tmdbResult = await tmdbResponse.json();
 
           if (tmdbResult.code === 200 && tmdbResult.list && tmdbResult.list.length > 0) {
             // 保存到缓存（2小时）
