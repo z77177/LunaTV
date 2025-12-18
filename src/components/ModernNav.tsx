@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Cat, Clover, Film, Globe, Home, MoreHorizontal, PlaySquare, Radio, Search, Star, Tv, X } from 'lucide-react';
+import { Cat, Clover, Film, Globe, Home, MoreHorizontal, PlayCircle, PlaySquare, Radio, Search, Star, Tv, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -41,6 +41,13 @@ export default function ModernNav() {
       href: '/search',
       color: 'text-blue-500',
       gradient: 'from-blue-500 to-cyan-500',
+    },
+    {
+      icon: PlayCircle,
+      label: '解析',
+      href: '/parse',
+      color: 'text-purple-500',
+      gradient: 'from-purple-500 to-violet-500', 
     },
     {
       icon: Globe,
