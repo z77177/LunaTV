@@ -132,7 +132,7 @@ export default function VideoParser() {
         <p className="text-xs md:text-sm text-blue-800 dark:text-blue-200">
           💡 <strong>使用提示：</strong>
           {isMobile ? '视频解析成功后会自动尝试全屏播放。' : ''}
-          解析过程中可能出现广告，如遇到过多广告，请尝试切换其他解析接口。
+          解析过程中可能出现广告，广告来自播放器，并非来自本站。如遇到过多广告，请尝试切换其他解析接口。请勿相信任何广告，可使用广告拦截软件进行屏蔽。
         </p>
       </div>
 
