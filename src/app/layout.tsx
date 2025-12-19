@@ -12,6 +12,8 @@ import { SessionTracker } from '../components/SessionTracker';
 import { SiteProvider } from '../components/SiteProvider';
 import { ThemeProvider } from '../components/ThemeProvider';
 
+import ModernNav from '@/components/ModernNav';
+
 const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
 
@@ -118,6 +120,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <SiteProvider siteName={siteName} announcement={announcement}>
+            <ModernNav />
             <SessionTracker />
             {children}
             <GlobalErrorIndicator />
