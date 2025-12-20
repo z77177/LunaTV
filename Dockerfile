@@ -28,8 +28,8 @@ RUN pnpm install --frozen-lockfile --offline || pnpm install --frozen-lockfile
 # 复制全部源代码
 COPY . .
 
-# 在构建阶段也显式设置 DOCKER_ENV，
-ENV DOCKER_ENV=true
+# 在构建阶段设置 DOCKER_BUILD，启用 standalone 输出
+ENV DOCKER_BUILD=true
 
 # 生成生产构建
 RUN pnpm run build
@@ -44,7 +44,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
-ENV DOCKER_ENV=true
+ENV DOCKER_BUILD=true
 
 # 从构建器中复制 standalone 输出
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
