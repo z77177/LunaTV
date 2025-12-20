@@ -1,6 +1,5 @@
-import { type Config } from 'tailwindcss';
-
-const config: Config = {
+/** @type {import('tailwindcss').Config} */
+const config = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,6 +8,6 @@ const config: Config = {
   // Tailwind 4 使用 CSS @theme 和 @custom-variant 定义主题
   // 大部分配置已迁移到 src/app/globals.css
   plugins: [],
-} satisfies Config;
+};
 
 export default config;
