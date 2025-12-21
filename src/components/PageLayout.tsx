@@ -1,3 +1,5 @@
+import { Sparkles } from 'lucide-react';
+
 import { BackButton } from './BackButton';
 import MobileBottomNav from './MobileBottomNav';
 import MobileHeader from './MobileHeader';
@@ -11,9 +13,18 @@ interface PageLayoutProps {
   children: React.ReactNode;
   activePath?: string;
   useModernNav?: boolean; // 新增：是否使用2025现代化导航
+  // ✨ AI 推荐按钮相关 props
+  showAIButton?: boolean;
+  onAIButtonClick?: () => void;
 }
 
-const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLayoutProps) => {
+const PageLayout = ({
+  children,
+  activePath = '/',
+  useModernNav = true,
+  showAIButton = false,
+  onAIButtonClick
+}: PageLayoutProps) => {
   const { siteName } = useSite();
 
   if (useModernNav) {
@@ -31,8 +42,17 @@ const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLay
               {siteName}
             </div>
 
-            {/* User Menu & Theme Toggle */}
-            <div className='flex items-center gap-2'>
+            {/* ✨ AI Button, Theme Toggle & User Menu */}
+            <div className='flex items-center gap-1.5'>
+              {showAIButton && onAIButtonClick && (
+                <button
+                  onClick={onAIButtonClick}
+                  className='relative p-1.5 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group'
+                  aria-label='AI 推荐'
+                >
+                  <Sparkles className='h-4 w-4 group-hover:scale-110 transition-transform duration-300' />
+                </button>
+              )}
               <ThemeToggle />
               <UserMenu />
             </div>
@@ -71,8 +91,18 @@ const PageLayout = ({ children, activePath = '/', useModernNav = true }: PageLay
             </div>
           )}
 
-          {/* 桌面端顶部按钮 */}
+          {/* ✨ 桌面端顶部按钮 - AI, Theme Toggle & User Menu */}
           <div className='absolute top-2 right-4 z-20 hidden md:flex items-center gap-2'>
+            {showAIButton && onAIButtonClick && (
+              <button
+                onClick={onAIButtonClick}
+                className='relative px-3 py-1.5 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 active:scale-95 transition-all duration-200 shadow-lg shadow-blue-500/30 group flex items-center gap-1.5'
+                aria-label='AI 推荐'
+              >
+                <Sparkles className='h-4 w-4 group-hover:scale-110 transition-transform duration-300' />
+                <span className='text-sm font-medium'>AI 推荐</span>
+              </button>
+            )}
             <ThemeToggle />
             <UserMenu />
           </div>

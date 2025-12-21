@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Brain, ChevronRight, Film, Tv, Calendar, Sparkles, Play } from 'lucide-react';
+import { ChevronRight, Film, Tv, Calendar, Sparkles, Play } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -659,7 +659,10 @@ function HomeClient() {
   };
 
   return (
-    <PageLayout>
+    <PageLayout
+      showAIButton={aiEnabled ?? false}
+      onAIButtonClick={() => setShowAIRecommendModal(true)}
+    >
       {/* Telegram 新用户欢迎弹窗 */}
       <TelegramWelcomeModal />
 
@@ -702,8 +705,8 @@ function HomeClient() {
           </div>
         </div>
 
-        {/* 顶部 Tab 切换 */}
-        <div className='mb-8 flex flex-col sm:flex-row items-center justify-center gap-4'>
+        {/* 顶部 Tab 切换 - AI 按钮已移至右上角导航栏 */}
+        <div className='mb-8 flex items-center justify-center'>
           <CapsuleSwitch
             options={[
               { label: '首页', value: 'home' },
@@ -712,24 +715,6 @@ function HomeClient() {
             active={activeTab}
             onChange={(value) => setActiveTab(value as 'home' | 'favorites')}
           />
-
-          {/* AI推荐按钮 - 只在功能启用时显示，添加脉冲动画 */}
-          {aiEnabled && (
-            <button
-              onClick={() => setShowAIRecommendModal(true)}
-              className='relative flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full font-medium transition-all transform hover:scale-105 shadow-lg hover:shadow-xl group overflow-hidden'
-              title='AI影视推荐'
-            >
-              {/* 脉冲光环 */}
-              <div className='absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-100 animate-ping'></div>
-
-              {/* 闪烁背景 */}
-              <div className='absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 opacity-20 animate-pulse'></div>
-
-              <Brain className='h-4 w-4 relative z-10 group-hover:rotate-12 transition-transform duration-300' />
-              <span className='relative z-10'>AI推荐</span>
-            </button>
-          )}
         </div>
 
         <div className='w-full mx-auto'>
