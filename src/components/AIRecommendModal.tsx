@@ -282,7 +282,7 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="w-full max-w-4xl h-[80vh] p-0 bg-transparent backdrop:bg-black/60 backdrop:backdrop-blur-md rounded-2xl shadow-2xl border-0 open:animate-in open:fade-in open:zoom-in-95 open:duration-300"
+      className="w-full max-w-4xl h-[80vh] mx-auto p-0 bg-transparent backdrop:bg-black/60 backdrop:backdrop-blur-md rounded-2xl shadow-2xl border-0 open:animate-in open:fade-in open:zoom-in-95 open:duration-300"
     >
       {/* 对话框内容容器 - 使用 @container 查询 */}
       <div className="@container relative w-full h-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden">

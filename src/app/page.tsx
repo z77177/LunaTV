@@ -24,7 +24,6 @@ import { getDoubanCategories, getDoubanDetails } from '@/lib/douban.client';
 import { DoubanItem } from '@/lib/types';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 
-import AIRecommendModal from '@/components/AIRecommendModal';
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import ContinueWatching from '@/components/ContinueWatching';
 import HeroBanner from '@/components/HeroBanner';
@@ -52,9 +51,6 @@ function HomeClient() {
   const [username, setUsername] = useState<string>('');
 
   const [showAnnouncement, setShowAnnouncement] = useState(false);
-  const [showAIRecommendModal, setShowAIRecommendModal] = useState(false);
-  const [aiEnabled, setAiEnabled] = useState<boolean | null>(true); // 默认显示，检查后再决定
-  const [aiCheckTriggered, setAiCheckTriggered] = useState(false); // 标记是否已检查AI状态
 
   // 合并初始化逻辑 - 优化性能，减少重渲染
   useEffect(() => {
@@ -74,68 +70,6 @@ function HomeClient() {
       }
     }
   }, [announcement]);
-
-  // 延迟检查AI功能状态，避免阻塞页面初始渲染
-  useEffect(() => {
-    if (aiCheckTriggered || typeof window === 'undefined') return;
-
-    let idleCallbackId: number | undefined;
-    let timeoutId: number | undefined;
-    let cancelled = false;
-
-    const checkAIStatus = async () => {
-      if (cancelled) return;
-      try {
-        const response = await fetch('/api/ai-recommend', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [{ role: 'user', content: 'test' }],
-          }),
-        });
-        if (!cancelled) {
-          setAiEnabled(response.status !== 403);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setAiEnabled(true);
-        }
-      } finally {
-        if (!cancelled) {
-          setAiCheckTriggered(true);
-        }
-      }
-    };
-
-    const win = window as typeof window & {
-      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-
-    if (typeof win.requestIdleCallback === 'function') {
-      idleCallbackId = win.requestIdleCallback(() => {
-        checkAIStatus().catch(() => {
-          // 错误已在内部处理
-        });
-      }, { timeout: 1500 });
-    } else {
-      timeoutId = window.setTimeout(() => {
-        checkAIStatus().catch(() => {
-          // 错误已在内部处理
-        });
-      }, 800);
-    }
-
-    return () => {
-      cancelled = true;
-      if (idleCallbackId !== undefined && typeof win.cancelIdleCallback === 'function') {
-        win.cancelIdleCallback(idleCallbackId);
-      }
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [aiCheckTriggered]);
 
   // 收藏夹数据
   type FavoriteItem = {
@@ -659,10 +593,7 @@ function HomeClient() {
   };
 
   return (
-    <PageLayout
-      showAIButton={aiEnabled ?? false}
-      onAIButtonClick={() => setShowAIRecommendModal(true)}
-    >
+    <PageLayout>
       {/* Telegram 新用户欢迎弹窗 */}
       <TelegramWelcomeModal />
 
@@ -1429,12 +1360,6 @@ function HomeClient() {
           </div>
         </div>
       )}
-
-      {/* AI推荐模态框 */}
-      <AIRecommendModal
-        isOpen={showAIRecommendModal}
-        onClose={() => setShowAIRecommendModal(false)}
-      />
     </PageLayout>
   );
 }
