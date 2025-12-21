@@ -454,38 +454,21 @@ html:not(.dark) .art-icon {
   /* 将图标转为黑色 */
 }
 
-/* 🔧 亮色模式下的弹幕按钮图标 - 使用 apd-icon 类名 */
-html:not(.dark) .artplayer-plugin-danmuku .apd-icon,
-html:not(.dark) .artplayer-plugin-danmuku .apd-toggle svg,
-html:not(.dark) .artplayer-plugin-danmuku .apd-config > svg,
-html:not(.dark) .artplayer-plugin-danmuku .apd-toggle-off,
-html:not(.dark) .artplayer-plugin-danmuku .apd-toggle-on,
-html:not(.dark) .artplayer-plugin-danmuku .apd-config-icon {
-  fill: #000 !important;
-  color: #000 !important;
-}
-
 /* 🔧 亮色模式下的播放/暂停状态图标 */
 html:not(.dark) .art-state {
   filter: brightness(0) saturate(100%) !important;
 }
 
-/* 🔧🔧🔧 亮色模式下的通知提示（播放/暂停提示）- 最强优先级 🔧🔧🔧 */
-html:not(.dark) .art-video-player .art-notice .art-notice-inner,
-html:not(.dark) .art-video-player.art-notice-show .art-notice .art-notice-inner,
-html:not(.dark) .art-notice .art-notice-inner,
-html:not(.dark) .art-notice-inner {
+/* 🔧 亮色模式下的通知提示（播放/暂停提示） */
+html:not(.dark) .art-video-player .art-notice .art-notice-inner {
   background-color: rgba(255, 255, 255, 0.95) !important;
-  background: rgba(255, 255, 255, 0.95) !important;
   color: #000 !important;
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* 确保通知文字是黑色 - 多层选择器确保生效 */
-html:not(.dark) .art-video-player .art-notice .art-notice-inner *,
-html:not(.dark) .art-notice .art-notice-inner *,
-html:not(.dark) .art-notice-inner * {
+/* 确保通知文字是黑色 */
+html:not(.dark) .art-video-player .art-notice .art-notice-inner * {
   color: #000 !important;
 }
 
@@ -497,25 +480,13 @@ html:not(.dark) .art-progress-tip {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* 🔧 亮色模式下的弹幕面板滑块（进度条）- 修复看不见的问题 */
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-line {
-  background-color: rgba(0, 0, 0, 0.2) !important; /* 深色背景轨道 */
-}
-
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-progress {
-  background-color: #00a1d6 !important; /* 蓝色进度条 */
-}
-
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-dot {
-  background-color: #00a1d6 !important; /* 蓝色滑块 */
-}
-
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-point {
-  background-color: rgba(0, 0, 0, 0.4) !important; /* 深色刻度点 */
-}
-
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-steps {
-  color: #666 !important; /* 深色刻度文字 */
+/* 🔧 亮色模式下的弹幕按钮图标 */
+html:not(.dark) .art-video-player .artplayer-plugin-danmuku .apd-icon,
+html:not(.dark) .art-video-player .artplayer-plugin-danmuku svg,
+html:not(.dark) .art-video-player .artplayer-plugin-danmuku path {
+  fill: #000 !important;
+  color: #000 !important;
+  stroke: #000 !important;
 }
 
 /* 🔧 亮色模式下的弹幕面板 - 使用更强的选择器 */
