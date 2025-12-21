@@ -368,6 +368,86 @@ html:not(.dark) .art-video-player {
   --art-font-color: #000;
 }
 
+/* 🔧 修复亮色模式下 liquid-glass 插件的对比度问题 */
+html:not(.dark) .artplayer-plugin-liquid-glass.art-control-show .art-bottom .art-liquid-glass {
+  /* 使用半透明白色背景，提高对比度 */
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  /* 添加边框以增强视觉层次 */
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  /* 增强模糊效果以提高可读性 */
+  backdrop-filter: blur(16px);
+}
+
+/* 🔧 亮色模式下的控制按钮文字颜色 */
+html:not(.dark) .art-video-player .art-control,
+html:not(.dark) .art-video-player .art-control-time {
+  color: #000 !important;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+/* 🔧 亮色模式下的音量面板 */
+html:not(.dark) .art-volume-panel {
+  color: #000 !important;
+}
+
+html:not(.dark) .art-volume-panel .art-volume-inner {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* 🔧 亮色模式下的设置面板、字幕选择等 */
+html:not(.dark) .art-settings,
+html:not(.dark) .art-selector {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #000 !important;
+}
+
+html:not(.dark) .art-setting-item:hover,
+html:not(.dark) .art-selector-item:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 🔧 亮色模式下的图标颜色 */
+html:not(.dark) .art-icon {
+  filter: brightness(0) saturate(100%);
+  /* 将图标转为黑色 */
+}
+
+/* 🔧 亮色模式下的进度条提示（时间预览） */
+html:not(.dark) .art-progress-tip {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 🔧 亮色模式下的弹幕面板 */
+html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel,
+html:not(.dark) .artplayer-plugin-danmuku .apd-style-panel {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #000 !important;
+}
+
+/* 🔧 亮色模式下的上下文菜单 */
+html:not(.dark) .art-contextmenu {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #000 !important;
+}
+
+html:not(.dark) .art-contextmenu-item:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 🔧 亮色模式下的信息面板 */
+html:not(.dark) .art-info {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #000 !important;
+}
+
 /* 暗色模式下的 ArtPlayer 样式 (默认) */
 .dark .art-video-player {
   --art-widget-background: rgba(0, 0, 0, 0.85);
