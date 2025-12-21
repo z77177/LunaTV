@@ -360,22 +360,12 @@
 
 /* 亮色模式下的 ArtPlayer 样式 */
 html:not(.dark) .art-video-player {
-  --art-widget-background: rgba(255, 255, 255, 0.95) !important;
-  --art-surface-hover-color: rgba(0, 0, 0, 0.05) !important;
-  --art-surface-border-color: rgba(0, 0, 0, 0.1) !important;
-  --art-surface-muted-color: rgba(0, 0, 0, 0.5) !important;
-  --art-tip-background: rgba(255, 255, 255, 0.95) !important;
-  --art-font-color: #000 !important;
-
-  /* 额外的变量覆盖 */
-  --art-background-color: #fff !important;
-  color: #000 !important;
-}
-
-/* 强制 body 和 html 也使用亮色模式（如果需要） */
-html:not(.dark) .artplayer,
-html:not(.dark) .artplayer * {
-  color: inherit;
+  --art-widget-background: rgba(255, 255, 255, 0.95);
+  --art-surface-hover-color: rgba(0, 0, 0, 0.05);
+  --art-surface-border-color: rgba(0, 0, 0, 0.1);
+  --art-surface-muted-color: rgba(0, 0, 0, 0.5);
+  --art-tip-background: rgba(255, 255, 255, 0.9);
+  --art-font-color: #000;
 }
 
 /* 🔧 修复亮色模式下 liquid-glass 插件的对比度问题 */
@@ -406,21 +396,17 @@ html:not(.dark) .art-volume-panel .art-volume-inner {
 }
 
 /* 🔧 亮色模式下的设置面板、字幕选择等 */
-html:not(.dark) .art-video-player .art-settings,
-html:not(.dark) .art-video-player .art-selector {
+html:not(.dark) .art-settings,
+html:not(.dark) .art-selector {
   background-color: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   color: #000 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* 🔧 亮色模式下的设置面板内部所有文字 - 使用更强的选择器 */
-html:not(.dark) .art-video-player .art-settings *,
-html:not(.dark) .art-video-player .art-selector *,
-html:not(.dark) .art-video-player .art-setting-item,
-html:not(.dark) .art-video-player .art-setting-item *,
-html:not(.dark) .art-video-player .art-selector-item,
-html:not(.dark) .art-video-player .art-selector-item * {
+/* 🔧 亮色模式下的设置面板内部所有文字 */
+html:not(.dark) .art-settings *,
+html:not(.dark) .art-selector * {
   color: #000 !important;
 }
 
@@ -460,16 +446,11 @@ html:not(.dark) .art-state {
 }
 
 /* 🔧 亮色模式下的通知提示（播放/暂停提示） */
-html:not(.dark) .art-video-player .art-notice .art-notice-inner {
+html:not(.dark) .art-notice-inner {
   background-color: rgba(255, 255, 255, 0.95) !important;
   color: #000 !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* 确保通知文字是黑色 */
-html:not(.dark) .art-video-player .art-notice .art-notice-inner * {
-  color: #000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* 🔧 亮色模式下的进度条提示（时间预览） */
@@ -481,39 +462,26 @@ html:not(.dark) .art-progress-tip {
 }
 
 /* 🔧 亮色模式下的弹幕按钮图标 */
-html:not(.dark) .art-video-player .artplayer-plugin-danmuku .apd-icon,
-html:not(.dark) .art-video-player .artplayer-plugin-danmuku svg,
-html:not(.dark) .art-video-player .artplayer-plugin-danmuku path {
+html:not(.dark) .artplayer-plugin-danmuku .apd-icon,
+html:not(.dark) .artplayer-plugin-danmuku svg,
+html:not(.dark) .artplayer-plugin-danmuku path {
   fill: #000 !important;
   color: #000 !important;
-  stroke: #000 !important;
 }
 
-/* 🔧 亮色模式下的弹幕面板 - 使用更强的选择器 */
-html:not(.dark) .art-video-player .artplayer-plugin-danmuku .apd-config-panel,
-html:not(.dark) .art-video-player .artplayer-plugin-danmuku .apd-style-panel,
+/* 🔧 亮色模式下的弹幕面板 */
 html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel,
 html:not(.dark) .artplayer-plugin-danmuku .apd-style-panel {
   background-color: rgba(255, 255, 255, 0.95) !important;
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   color: #000 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* 🔧 亮色模式下的弹幕面板内部所有元素 - 强制黑色文字 */
-html:not(.dark) .art-video-player .artplayer-plugin-danmuku .apd-config-panel *,
-html:not(.dark) .art-video-player .artplayer-plugin-danmuku .apd-style-panel *,
+/* 🔧 亮色模式下的弹幕面板内部元素 */
 html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel *,
-html:not(.dark) .artplayer-plugin-danmuku .apd-style-panel *,
-html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel div,
-html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel span,
-html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel label,
-html:not(.dark) .artplayer-plugin-danmuku .apd-style-panel div,
-html:not(.dark) .artplayer-plugin-danmuku .apd-style-panel span,
-html:not(.dark) .artplayer-plugin-danmuku .apd-style-panel label {
+html:not(.dark) .artplayer-plugin-danmuku .apd-style-panel * {
   color: #000 !important;
-  background-color: transparent !important;
 }
 
 /* 🔧 亮色模式下的弹幕面板输入框 */
@@ -571,33 +539,6 @@ html:not(.dark) .art-control-thumbnails {
   background-color: rgba(255, 255, 255, 0.95) !important;
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* 🔧🔧🔧 最强力的亮色模式修复 - 兜底样式 🔧🔧🔧 */
-/* 如果上面的样式都不生效，这些会强制生效 */
-
-html:not(.dark) .art-video-player {
-  /* 强制覆盖所有可能的变量 */
-  --art-widget-background: rgba(255, 255, 255, 0.95) !important;
-  --art-tip-background: rgba(255, 255, 255, 0.95) !important;
-  --art-font-color: #000 !important;
-}
-
-/* 强制所有弹窗和面板为白色背景 */
-html:not(.dark) [class*="art-"][class*="panel"],
-html:not(.dark) [class*="apd-"][class*="panel"],
-html:not(.dark) .art-notice,
-html:not(.dark) .art-settings {
-  background: rgba(255, 255, 255, 0.95) !important;
-  background-color: rgba(255, 255, 255, 0.95) !important;
-}
-
-/* 强制所有文字为黑色 */
-html:not(.dark) [class*="art-"][class*="panel"] *,
-html:not(.dark) [class*="apd-"][class*="panel"] *,
-html:not(.dark) .art-notice *,
-html:not(.dark) .art-settings * {
-  color: #000 !important;
 }
 
 /* 暗色模式下的 ArtPlayer 样式 (默认) */
