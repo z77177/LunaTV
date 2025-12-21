@@ -401,56 +401,17 @@ html:not(.dark) .art-selector {
   background-color: rgba(255, 255, 255, 0.95) !important;
   border: 1px solid rgba(0, 0, 0, 0.1);
   color: #000 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* 🔧 亮色模式下的设置面板内部所有文字 */
-html:not(.dark) .art-settings *,
-html:not(.dark) .art-selector * {
-  color: #000 !important;
-}
-
-/* 🔧 亮色模式下的设置项 hover 效果 */
 html:not(.dark) .art-setting-item:hover,
 html:not(.dark) .art-selector-item:hover {
   background-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-/* 🔧 亮色模式下的设置项边框 */
-html:not(.dark) .art-setting-item-back {
-  border-bottom-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-/* 🔧 亮色模式下的滑块和范围选择器 */
-html:not(.dark) .art-setting-range {
-  background-color: rgba(0, 0, 0, 0.2) !important;
-}
-
-html:not(.dark) .art-setting-range::-webkit-slider-thumb {
-  background-color: #000 !important;
-}
-
-html:not(.dark) .art-setting-range::-moz-range-thumb {
-  background-color: #000 !important;
 }
 
 /* 🔧 亮色模式下的图标颜色 */
 html:not(.dark) .art-icon {
   filter: brightness(0) saturate(100%);
   /* 将图标转为黑色 */
-}
-
-/* 🔧 亮色模式下的播放/暂停状态图标 */
-html:not(.dark) .art-state {
-  filter: brightness(0) saturate(100%) !important;
-}
-
-/* 🔧 亮色模式下的通知提示（播放/暂停提示） */
-html:not(.dark) .art-notice-inner {
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  color: #000 !important;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* 🔧 亮色模式下的进度条提示（时间预览） */
@@ -461,35 +422,11 @@ html:not(.dark) .art-progress-tip {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* 🔧 亮色模式下的弹幕按钮图标 */
-html:not(.dark) .artplayer-plugin-danmuku .apd-icon,
-html:not(.dark) .artplayer-plugin-danmuku svg,
-html:not(.dark) .artplayer-plugin-danmuku path {
-  fill: #000 !important;
-  color: #000 !important;
-}
-
 /* 🔧 亮色模式下的弹幕面板 */
 html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel,
 html:not(.dark) .artplayer-plugin-danmuku .apd-style-panel {
   background-color: rgba(255, 255, 255, 0.95) !important;
   border: 1px solid rgba(0, 0, 0, 0.1);
-  color: #000 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* 🔧 亮色模式下的弹幕面板内部元素 */
-html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel *,
-html:not(.dark) .artplayer-plugin-danmuku .apd-style-panel * {
-  color: #000 !important;
-}
-
-/* 🔧 亮色模式下的弹幕面板输入框 */
-html:not(.dark) .artplayer-plugin-danmuku input,
-html:not(.dark) .artplayer-plugin-danmuku select,
-html:not(.dark) .artplayer-plugin-danmuku textarea {
-  background-color: rgba(0, 0, 0, 0.05) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
   color: #000 !important;
 }
 
@@ -509,36 +446,6 @@ html:not(.dark) .art-info {
   background-color: rgba(255, 255, 255, 0.95) !important;
   border: 1px solid rgba(0, 0, 0, 0.1);
   color: #000 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-html:not(.dark) .art-info * {
-  color: #000 !important;
-}
-
-/* 🔧 亮色模式下的字幕 */
-html:not(.dark) .art-subtitle {
-  text-shadow:
-    0 1px 2px rgba(255, 255, 255, 0.8),
-    0 0 6px rgba(255, 255, 255, 0.6) !important;
-}
-
-/* 🔧 亮色模式下的加载动画 */
-html:not(.dark) .art-loading {
-  filter: brightness(0) saturate(100%);
-}
-
-/* 🔧 亮色模式下的层叠元素 */
-html:not(.dark) .art-layer,
-html:not(.dark) .art-layers * {
-  color: #000 !important;
-}
-
-/* 🔧 亮色模式下的缩略图预览 */
-html:not(.dark) .art-control-thumbnails {
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* 暗色模式下的 ArtPlayer 样式 (默认) */
