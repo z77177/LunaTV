@@ -339,7 +339,7 @@ export default function AIRecommendModal({ isOpen, onClose }: AIRecommendModalPr
                     key={index}
                     onClick={() => handlePresetClick(preset)}
                     className="p-3 text-left bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md transition-all group"
-                    disabled={isLoading}
+                    disabled={isPending}
                   >
                     <div className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       {preset.title}
