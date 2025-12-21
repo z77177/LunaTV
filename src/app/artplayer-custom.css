@@ -471,10 +471,13 @@ html:not(.dark) .art-state {
 }
 
 /* 🔧🔧🔧 亮色模式下的通知提示（播放/暂停提示）- 最强优先级 🔧🔧🔧 */
+/* 覆盖所有可能的选择器组合 */
 html:not(.dark) .art-video-player .art-notice .art-notice-inner,
 html:not(.dark) .art-video-player.art-notice-show .art-notice .art-notice-inner,
+html:not(.dark) .art-video-player .art-notice-inner,
 html:not(.dark) .art-notice .art-notice-inner,
-html:not(.dark) .art-notice-inner {
+html:not(.dark) .art-notice-inner,
+html:not(.dark) [class*="art-notice-inner"] {
   background-color: rgba(255, 255, 255, 0.95) !important;
   background: rgba(255, 255, 255, 0.95) !important;
   color: #000 !important;
@@ -484,8 +487,10 @@ html:not(.dark) .art-notice-inner {
 
 /* 确保通知文字是黑色 - 多层选择器确保生效 */
 html:not(.dark) .art-video-player .art-notice .art-notice-inner *,
+html:not(.dark) .art-video-player .art-notice-inner *,
 html:not(.dark) .art-notice .art-notice-inner *,
-html:not(.dark) .art-notice-inner * {
+html:not(.dark) .art-notice-inner *,
+html:not(.dark) [class*="art-notice-inner"] * {
   color: #000 !important;
 }
 
@@ -497,25 +502,45 @@ html:not(.dark) .art-progress-tip {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* 🔧 亮色模式下的弹幕面板滑块（进度条）- 修复看不见的问题 */
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-line {
-  background-color: rgba(0, 0, 0, 0.2) !important; /* 深色背景轨道 */
+/* 🔧🔧🔧 亮色模式下的弹幕面板滑块（进度条）- 修复看不见的问题 🔧🔧🔧 */
+/* 使用多层选择器确保优先级 */
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider-line,
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider .apd-slider-line,
+html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel .apd-slider-line,
+html:not(.dark) [class*="apd-slider-line"] {
+  background-color: rgba(0, 0, 0, 0.3) !important; /* 深色背景轨道 */
 }
 
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-progress {
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider-progress,
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider .apd-slider-progress,
+html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel .apd-slider-progress,
+html:not(.dark) [class*="apd-slider-progress"] {
   background-color: #00a1d6 !important; /* 蓝色进度条 */
 }
 
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-dot {
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider-dot,
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider .apd-slider-dot,
+html:not(.dark) .artplayer-plugin-danmuku .apd-config-panel .apd-slider-dot,
+html:not(.dark) [class*="apd-slider-dot"] {
   background-color: #00a1d6 !important; /* 蓝色滑块 */
+  border: 2px solid #fff !important; /* 白色边框增强可见性 */
 }
 
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-point {
-  background-color: rgba(0, 0, 0, 0.4) !important; /* 深色刻度点 */
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider-point,
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider .apd-slider-point,
+html:not(.dark) [class*="apd-slider-point"] {
+  background-color: rgba(0, 0, 0, 0.5) !important; /* 深色刻度点 */
 }
 
-html:not(.dark) .artplayer-plugin-danmuku .apd-slider-steps {
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider-steps,
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider .apd-slider-steps,
+html:not(.dark) [class*="apd-slider-steps"] {
   color: #666 !important; /* 深色刻度文字 */
+}
+
+html:not(.dark) .artplayer-plugin-danmuku .apd-slider-step,
+html:not(.dark) [class*="apd-slider-step"] {
+  color: #666 !important; /* 深色单个刻度文字 */
 }
 
 /* 🔧 亮色模式下的弹幕面板 - 使用更强的选择器 */
