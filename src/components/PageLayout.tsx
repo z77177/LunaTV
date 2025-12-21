@@ -32,7 +32,7 @@ const PageLayout = ({
     return (
       <div className='w-full min-h-screen'>
         {/* Modern Navigation - Top (Desktop) & Bottom (Mobile) */}
-        <ModernNav />
+        <ModernNav showAIButton={showAIButton} onAIButtonClick={onAIButtonClick} />
 
         {/* 移动端头部 - Logo和用户菜单 */}
         <div className='md:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm'>
