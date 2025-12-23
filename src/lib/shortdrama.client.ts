@@ -360,9 +360,26 @@ async function parseWithAlternativeApi(
 
     const episodesData = await episodesResponse.json();
 
+    // 检查API是否返回错误消息（字符串格式）
+    if (typeof episodesData === 'string') {
+      if (episodesData.includes('未查询到该剧集')) {
+        return {
+          code: 1,
+          msg: `备用API未收录该剧的集数数据`,
+        };
+      }
+      return {
+        code: 1,
+        msg: `备用API错误: ${episodesData}`,
+      };
+    }
+
     // 验证集数数据
     if (!episodesData || !episodesData.data || !Array.isArray(episodesData.data)) {
-      throw new Error('备用API返回的集数列表格式错误');
+      return {
+        code: 1,
+        msg: '备用API返回的集数列表格式错误',
+      };
     }
 
     if (episodesData.data.length === 0) {
