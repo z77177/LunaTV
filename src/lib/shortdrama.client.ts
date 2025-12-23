@@ -365,12 +365,12 @@ async function parseWithAlternativeApi(
       if (episodesData.includes('未查询到该剧集')) {
         return {
           code: 1,
-          msg: `备用API未收录该剧的集数数据`,
+          msg: `该短剧暂时无法播放，请稍后再试`,
         };
       }
       return {
         code: 1,
-        msg: `备用API错误: ${episodesData}`,
+        msg: `视频源暂时不可用`,
       };
     }
 
@@ -378,7 +378,7 @@ async function parseWithAlternativeApi(
     if (!episodesData || !episodesData.data || !Array.isArray(episodesData.data)) {
       return {
         code: 1,
-        msg: '备用API返回的集数列表格式错误',
+        msg: '视频源暂时不可用',
       };
     }
 
@@ -420,7 +420,7 @@ async function parseWithAlternativeApi(
       if (currentIndex >= episodesData.data.length) {
         return {
           code: 1,
-          msg: `第${episode}集及后续集数都不可用`,
+          msg: `该集暂时无法播放，请尝试其他集数`,
         };
       }
 
@@ -476,7 +476,10 @@ async function parseWithAlternativeApi(
 
     // 如果所有尝试都失败
     if (!directData || !directData.url) {
-      throw new Error(`第${episode}集及后续${maxRetries - 1}集都无法获取播放链接`);
+      return {
+        code: 1,
+        msg: `该集暂时无法播放，请尝试其他集数`,
+      };
     }
 
     // 将 http:// 转换为 https:// 避免 Mixed Content 错误
@@ -521,7 +524,7 @@ async function parseWithAlternativeApi(
     const errorMsg = error instanceof Error ? error.message : '备用API请求失败';
     return {
       code: -1,
-      msg: `备用API错误: ${errorMsg}`,
+      msg: `视频源暂时不可用，请稍后再试`,
     };
   }
 }
@@ -595,7 +598,7 @@ export async function parseShortDramaEpisode(
       }
       return {
         code: data.code,
-        msg: data.msg || '解析失败',
+        msg: data.msg || '该集暂时无法播放，请稍后再试',
       };
     }
 
@@ -632,7 +635,7 @@ export async function parseShortDramaEpisode(
     }
     return {
       code: -1,
-      msg: '网络请求失败',
+      msg: '网络连接失败，请检查网络后重试',
     };
   }
 }
