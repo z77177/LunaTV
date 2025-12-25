@@ -30,6 +30,9 @@ import {
 import { getDoubanDetails, getDoubanComments, getDoubanActorMovies } from '@/lib/douban.client';
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
+import { useWatchRoomContextSafe } from '@/components/WatchRoomProvider';
+import ChatFloatingWindow from '@/components/watch-room/ChatFloatingWindow';
+import { useWatchRoomSync } from './hooks/useWatchRoomSync';
 
 // 扩展 HTMLVideoElement 类型以支持 hls 属性
 declare global {
@@ -50,6 +53,7 @@ function PlayPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { createTask, setShowDownloadPanel } = useDownload();
+  const watchRoom = useWatchRoomContextSafe();
 
   // -----------------------------------------------------------------------------
   // 状态变量（State）
@@ -117,6 +121,11 @@ function PlayPageClient() {
     return true;
   });
   const blockAdEnabledRef = useRef(blockAdEnabled);
+
+  // 自定义去广告代码
+  const [customAdFilterCode, setCustomAdFilterCode] = useState<string>('');
+  const [customAdFilterVersion, setCustomAdFilterVersion] = useState<number>(1);
+  const customAdFilterCodeRef = useRef(customAdFilterCode);
 
   // 外部弹幕开关（从 localStorage 继承，默认全部关闭）
   const [externalDanmuEnabled, setExternalDanmuEnabled] = useState<boolean>(() => {
@@ -231,6 +240,7 @@ function PlayPageClient() {
   // ✅ 合并所有 ref 同步的 useEffect - 减少不必要的渲染
   useEffect(() => {
     blockAdEnabledRef.current = blockAdEnabled;
+    customAdFilterCodeRef.current = customAdFilterCode;
     externalDanmuEnabledRef.current = externalDanmuEnabled;
     needPreferRef.current = needPrefer;
     currentSourceRef.current = currentSource;
@@ -243,6 +253,7 @@ function PlayPageClient() {
     availableSourcesRef.current = availableSources;
   }, [
     blockAdEnabled,
+    customAdFilterCode,
     externalDanmuEnabled,
     needPrefer,
     currentSource,
@@ -254,6 +265,32 @@ function PlayPageClient() {
     videoDoubanId,
     availableSources,
   ]);
+
+  // 观影室同步
+  useWatchRoomSync({
+    watchRoom,
+    artPlayerRef,
+    detail,
+    episodeIndex: currentEpisodeIndex,
+  });
+
+  // 获取自定义去广告代码
+  useEffect(() => {
+    const fetchAdFilterCode = async () => {
+      try {
+        const response = await fetch('/api/ad-filter');
+        if (response.ok) {
+          const data = await response.json();
+          setCustomAdFilterCode(data.code || '');
+          setCustomAdFilterVersion(data.version || 1);
+        }
+      } catch (error) {
+        console.error('获取自定义去广告代码失败:', error);
+      }
+    };
+
+    fetchAdFilterCode();
+  }, []);
 
   // WebGPU支持检测
   useEffect(() => {
@@ -1709,6 +1746,31 @@ function PlayPageClient() {
   function filterAdsFromM3U8(m3u8Content: string): string {
     if (!m3u8Content) return '';
 
+    // 如果有自定义去广告代码，优先使用
+    const customCode = customAdFilterCodeRef.current;
+    if (customCode && customCode.trim()) {
+      try {
+        // 移除 TypeScript 类型注解,转换为纯 JavaScript
+        const jsCode = customCode
+          .replace(/(\w+)\s*:\s*(string|number|boolean|any|void|never|unknown|object)\s*([,)])/g, '$1$3')
+          .replace(/\)\s*:\s*(string|number|boolean|any|void|never|unknown|object)\s*\{/g, ') {')
+          .replace(/(const|let|var)\s+(\w+)\s*:\s*(string|number|boolean|any|void|never|unknown|object)\s*=/g, '$1 $2 =');
+
+        // 创建并执行自定义函数
+        // eslint-disable-next-line no-new-func
+        const customFunction = new Function('type', 'm3u8Content',
+          jsCode + '\nreturn filterAdsFromM3U8(type, m3u8Content);'
+        );
+        const result = customFunction(currentSourceRef.current, m3u8Content);
+        console.log('✅ 使用自定义去广告代码');
+        return result;
+      } catch (err) {
+        console.error('执行自定义去广告代码失败,降级使用默认规则:', err);
+        // 继续使用默认规则
+      }
+    }
+
+    // 默认去广告逻辑
     // 按行分割M3U8内容
     const lines = m3u8Content.split('\n');
     const filteredLines = [];
@@ -6065,8 +6127,11 @@ const FavoriteIcon = ({ filled }: { filled: boolean }) => {
 
 export default function PlayPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <PlayPageClient />
-    </Suspense>
+    <>
+      <Suspense fallback={<div>Loading...</div>}>
+        <PlayPageClient />
+      </Suspense>
+      <ChatFloatingWindow />
+    </>
   );
 }
