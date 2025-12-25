@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { checkAdminAuth } from '@/lib/admin-auth';
+import { ensureAdmin } from '@/lib/admin-auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
@@ -10,9 +10,13 @@ export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   // 权限检查
-  const authCheck = await checkAdminAuth(request);
-  if (!authCheck.authorized) {
-    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status });
+  try {
+    await ensureAdmin(request);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : '无权限' },
+      { status: 403 }
+    );
   }
 
   try {
