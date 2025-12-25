@@ -4828,7 +4828,7 @@ function PlayPageClient() {
                       onClick={async (e) => {
                         e.stopPropagation();
                         // 获取当前播放URL
-                        const currentUrl = videoUrl || selectedEpisode?.url;
+                        const currentUrl = videoUrl;
                         if (!currentUrl) {
                           alert('无法获取视频地址');
                           return;
@@ -4841,12 +4841,11 @@ function PlayPageClient() {
                         }
 
                         try {
-                          // 生成下载标题
-                          const downloadTitle = `${videoTitle || '视频'}${
-                            selectedEpisode && selectedEpisode.name
-                              ? `_${selectedEpisode.name}`
-                              : ''
-                          }`;
+                          // 生成下载标题：视频名_第X集
+                          const episodeName = detail?.episodes && detail.episodes.length > 0
+                            ? `第${currentEpisodeIndex + 1}集`
+                            : '';
+                          const downloadTitle = `${videoTitle || '视频'}${episodeName ? `_${episodeName}` : ''}`;
 
                           // 创建下载任务
                           await createTask(currentUrl, downloadTitle, 'TS');
