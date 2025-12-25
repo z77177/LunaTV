@@ -1695,9 +1695,9 @@ function PlayPageClient() {
   };
 
   // 清理播放器资源的统一函数（添加更完善的清理逻辑）
-  const cleanupPlayer = () => {
+  const cleanupPlayer = async () => {
     // 先清理Anime4K，避免GPU纹理错误
-    cleanupAnime4K();
+    await cleanupAnime4K();
 
     // 🚀 新增：清理弹幕优化相关的定时器
     if (danmuOperationTimeoutRef.current) {
@@ -2945,7 +2945,10 @@ function PlayPageClient() {
     const handleBeforeUnload = () => {
       saveCurrentPlayProgress();
       releaseWakeLock();
-      cleanupPlayer();
+      // 异步清理，但不阻塞页面卸载
+      cleanupPlayer().catch(err => {
+        console.error('清理播放器失败:', err);
+      });
     };
 
     // 页面可见性变化时保存播放进度和释放 Wake Lock
@@ -3333,11 +3336,11 @@ function PlayPageClient() {
         // 重置集数切换标识
         isEpisodeChangingRef.current = false;
         // 如果switch失败，清理播放器并重新创建
-        cleanupPlayer();
+        await cleanupPlayer();
       }
     }
     if (artPlayerRef.current) {
-      cleanupPlayer();
+      await cleanupPlayer();
     }
 
     // 确保 DOM 容器完全清空，避免多实例冲突
@@ -4783,7 +4786,7 @@ function PlayPageClient() {
       if (seekResetTimeoutRef.current) {
         clearTimeout(seekResetTimeoutRef.current);
       }
-      
+
       // 清理resize防抖定时器
       if (resizeResetTimeoutRef.current) {
         clearTimeout(resizeResetTimeoutRef.current);
@@ -4792,8 +4795,10 @@ function PlayPageClient() {
       // 释放 Wake Lock
       releaseWakeLock();
 
-      // 销毁播放器实例
-      cleanupPlayer();
+      // 销毁播放器实例 - 异步清理，但不阻塞卸载
+      cleanupPlayer().catch(err => {
+        console.error('清理播放器失败:', err);
+      });
     };
   }, []);
 
