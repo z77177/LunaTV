@@ -595,6 +595,8 @@ function PlayPageClient() {
     detail,
     episodeIndex: currentEpisodeIndex,
     playerReady,
+    videoId: currentId,  // 传入URL参数的id
+    currentSource: currentSourceId,  // 传入当前播放源
   });
 
   // -----------------------------------------------------------------------------
