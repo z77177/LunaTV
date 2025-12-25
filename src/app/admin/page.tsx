@@ -5781,7 +5781,6 @@ function AdminPageClient() {
     shortDramaConfig: false,
     downloadConfig: false,
     customAdFilter: false,
-    watchRoomConfig: false,
     tvboxSecurityConfig: false,
     telegramAuthConfig: false,
     configFile: false,
@@ -6106,7 +6105,7 @@ function AdminPageClient() {
               <WatchRoomConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
 
-            {/* TVBox安全配置标签 */
+            {/* TVBox安全配置标签 */}
             <CollapsibleTab
               title='TVBox安全配置'
               icon={
