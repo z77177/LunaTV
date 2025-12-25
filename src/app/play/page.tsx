@@ -5268,7 +5268,7 @@ function PlayPageClient() {
                             const proxyUrl = externalPlayerAdBlock
                               ? `${window.location.origin}/api/proxy-m3u8?url=${encodeURIComponent(videoUrl)}&source=${currentSource}`
                               : videoUrl;
-                            window.open(`potplayer://${proxyUrl}`, '_blank');
+                            window.location.href = `potplayer://${proxyUrl}`;
                           }}
                           className='group relative flex-shrink-0 transition-all duration-300 hover:scale-105'
                           title='PotPlayer播放'
@@ -5284,11 +5284,10 @@ function PlayPageClient() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            e.preventDefault();
                             const proxyUrl = externalPlayerAdBlock
                               ? `${window.location.origin}/api/proxy-m3u8?url=${encodeURIComponent(videoUrl)}&source=${currentSource}`
                               : videoUrl;
-                            window.open(`vlc://${proxyUrl}`, '_blank');
+                            window.location.href = `vlc://${proxyUrl}`;
                           }}
                           className='group relative flex-shrink-0 transition-all duration-300 hover:scale-105'
                           title='VLC播放'
@@ -5304,11 +5303,10 @@ function PlayPageClient() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            e.preventDefault();
                             const proxyUrl = externalPlayerAdBlock
                               ? `${window.location.origin}/api/proxy-m3u8?url=${encodeURIComponent(videoUrl)}&source=${currentSource}`
                               : videoUrl;
-                            window.open(`mpv://${proxyUrl}`, '_blank');
+                            window.location.href = `mpv://${proxyUrl}`;
                           }}
                           className='group relative flex-shrink-0 transition-all duration-300 hover:scale-105'
                           title='MPV播放'
@@ -5324,12 +5322,11 @@ function PlayPageClient() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            e.preventDefault();
                             const proxyUrl = externalPlayerAdBlock
                               ? `${window.location.origin}/api/proxy-m3u8?url=${encodeURIComponent(videoUrl)}&source=${currentSource}`
                               : videoUrl;
                             const title = videoTitle || '视频';
-                            window.open(`intent://${proxyUrl}#Intent;package=com.mxtech.videoplayer.ad;S.title=${encodeURIComponent(title)};end`, '_blank');
+                            window.location.href = `intent://${proxyUrl}#Intent;package=com.mxtech.videoplayer.ad;S.title=${encodeURIComponent(title)};end`;
                           }}
                           className='group relative flex-shrink-0 transition-all duration-300 hover:scale-105'
                           title='MX Player播放'
@@ -5345,11 +5342,10 @@ function PlayPageClient() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            e.preventDefault();
                             const proxyUrl = externalPlayerAdBlock
                               ? `${window.location.origin}/api/proxy-m3u8?url=${encodeURIComponent(videoUrl)}&source=${currentSource}`
                               : videoUrl;
-                            window.open(`nplayer-${proxyUrl}`, '_blank');
+                            window.location.href = `nplayer-${proxyUrl}`;
                           }}
                           className='group relative flex-shrink-0 transition-all duration-300 hover:scale-105'
                           title='nPlayer播放'
@@ -5365,11 +5361,10 @@ function PlayPageClient() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            e.preventDefault();
                             const proxyUrl = externalPlayerAdBlock
                               ? `${window.location.origin}/api/proxy-m3u8?url=${encodeURIComponent(videoUrl)}&source=${currentSource}`
                               : videoUrl;
-                            window.open(`iina://weblink?url=${encodeURIComponent(proxyUrl)}`, '_blank');
+                            window.location.href = `iina://weblink?url=${encodeURIComponent(proxyUrl)}`;
                           }}
                           className='group relative flex-shrink-0 transition-all duration-300 hover:scale-105'
                           title='IINA播放'
