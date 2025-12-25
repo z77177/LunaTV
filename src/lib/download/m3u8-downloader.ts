@@ -581,7 +581,9 @@ export class M3U8Downloader {
     }
 
     try {
-      return task.aesConf.decryption.decrypt(data, 0, iv.buffer, true);
+      // 将 ArrayBufferLike 转换为 ArrayBuffer
+      const ivBuffer = iv.buffer.slice(0) as ArrayBuffer;
+      return task.aesConf.decryption.decrypt(data, 0, ivBuffer, true);
     } catch (error) {
       console.error('AES 解密失败:', error);
       return data;
