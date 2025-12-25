@@ -31,7 +31,6 @@ import { getDoubanDetails, getDoubanComments, getDoubanActorMovies } from '@/lib
 import { SearchResult } from '@/lib/types';
 import { getVideoResolutionFromM3u8, processImageUrl } from '@/lib/utils';
 import { useWatchRoomContextSafe } from '@/components/WatchRoomProvider';
-import ChatFloatingWindow from '@/components/watch-room/ChatFloatingWindow';
 import { useWatchRoomSync } from './hooks/useWatchRoomSync';
 
 // 扩展 HTMLVideoElement 类型以支持 hls 属性
@@ -6154,7 +6153,6 @@ export default function PlayPage() {
       <Suspense fallback={<div>Loading...</div>}>
         <PlayPageClient />
       </Suspense>
-      <ChatFloatingWindow />
     </>
   );
 }
