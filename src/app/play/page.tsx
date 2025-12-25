@@ -266,14 +266,6 @@ function PlayPageClient() {
     availableSources,
   ]);
 
-  // 观影室同步
-  useWatchRoomSync({
-    watchRoom,
-    artPlayerRef,
-    detail,
-    episodeIndex: currentEpisodeIndex,
-  });
-
   // 获取自定义去广告代码
   useEffect(() => {
     const fetchAdFilterCode = async () => {
@@ -592,6 +584,14 @@ function PlayPageClient() {
 
   // Wake Lock 相关
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  // 观影室同步
+  useWatchRoomSync({
+    watchRoom,
+    artPlayerRef,
+    detail,
+    episodeIndex: currentEpisodeIndex,
+  });
 
   // -----------------------------------------------------------------------------
   // 工具函数（Utils）
