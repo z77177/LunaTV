@@ -15,6 +15,7 @@ export interface WatchRoomContextType {
   chatMessages: ChatMessage[];
   isOwner: boolean;
   isEnabled: boolean;
+  configLoading: boolean;
 
   // 房间操作
   createRoom: (data: {
@@ -64,6 +65,7 @@ interface WatchRoomProviderProps {
 export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
   const [config, setConfig] = useState<{ enabled: boolean; serverUrl: string } | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
   const [authKey, setAuthKey] = useState('');
   const [currentUserName, setCurrentUserName] = useState('游客');
 
@@ -116,6 +118,8 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
       } catch (error) {
         console.error('[WatchRoom] Error loading config:', error);
         setIsEnabled(false);
+      } finally {
+        setConfigLoading(false);
       }
     };
 
@@ -144,6 +148,7 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
     chatMessages: watchRoom.messages,
     isOwner: watchRoom.isOwner,
     isEnabled,
+    configLoading,
     createRoom: async (data) => {
       const result = await watchRoom.createRoom(data);
       if (!result.success || !result.room) {
