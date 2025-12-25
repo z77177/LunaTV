@@ -5781,6 +5781,7 @@ function AdminPageClient() {
     shortDramaConfig: false,
     downloadConfig: false,
     customAdFilter: false,
+    watchRoomConfig: false,
     tvboxSecurityConfig: false,
     telegramAuthConfig: false,
     configFile: false,
