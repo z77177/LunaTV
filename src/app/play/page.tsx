@@ -223,7 +223,21 @@ function PlayPageClient() {
   );
   const needPreferRef = useRef(needPrefer);
   // 集数相关
-  const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(0);
+  const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(() => {
+    // 从 URL 读取初始集数
+    const indexParam = searchParams.get('index');
+    return indexParam ? parseInt(indexParam, 10) : 0;
+  });
+
+  // 监听 URL index 参数变化（观影室切集同步）
+  useEffect(() => {
+    const indexParam = searchParams.get('index');
+    const newIndex = indexParam ? parseInt(indexParam, 10) : 0;
+    if (newIndex !== currentEpisodeIndex) {
+      console.log('[PlayPage] URL index changed, updating episode:', newIndex);
+      setCurrentEpisodeIndex(newIndex);
+    }
+  }, [searchParams]);
 
   // 换源相关状态
   const [availableSources, setAvailableSources] = useState<SearchResult[]>([]);

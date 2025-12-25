@@ -90,10 +90,13 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
   // 加载配置
   useEffect(() => {
     const loadConfig = async () => {
+      console.log('[WatchRoom] Loading config...');
       try {
         const response = await fetch('/api/watch-room/config');
+        console.log('[WatchRoom] Config response status:', response.status);
         if (response.ok) {
           const data = await response.json();
+          console.log('[WatchRoom] Config loaded:', data);
           setConfig(data);
           setIsEnabled(data.enabled === true);
 
@@ -106,6 +109,7 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
               if (authResponse.ok) {
                 const authData = await authResponse.json();
                 setAuthKey(authData.authKey || '');
+                console.log('[WatchRoom] Auth key loaded');
               }
             } catch (error) {
               console.error('[WatchRoom] Failed to load auth key:', error);
@@ -119,6 +123,7 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
         console.error('[WatchRoom] Error loading config:', error);
         setIsEnabled(false);
       } finally {
+        console.log('[WatchRoom] Config loading finished, isEnabled:', isEnabled);
         setConfigLoading(false);
       }
     };
