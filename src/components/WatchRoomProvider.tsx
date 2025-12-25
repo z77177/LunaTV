@@ -7,7 +7,8 @@ import { useWatchRoom } from '@/hooks/useWatchRoom';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import type { Room, Member, ChatMessage } from '@/types/watch-room.types';
 
-interface WatchRoomContextType {
+export interface WatchRoomContextType {
+  socket: any | null;
   isConnected: boolean;
   currentRoom: Room | null;
   members: Member[];
@@ -136,6 +137,7 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
   }, [isEnabled, config, authKey]);
 
   const contextValue: WatchRoomContextType = {
+    socket: watchRoom.socket,
     isConnected: watchRoom.connected,
     currentRoom: watchRoom.currentRoom,
     members: watchRoom.members,

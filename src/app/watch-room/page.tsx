@@ -195,15 +195,24 @@ export default function WatchRoomPage() {
       <div className="flex flex-col gap-4 py-4 px-5 lg:px-[3rem] 2xl:px-20">
         {/* 页面标题 */}
         <div className="py-1">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Users className="w-6 h-6 text-indigo-500" />
-            观影室
-            {currentRoom && (
-              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                ({isOwner ? '房主' : '房员'})
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Users className="w-6 h-6 text-indigo-500" />
+              观影室
+              {currentRoom && (
+                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                  ({isOwner ? '房主' : '房员'})
+                </span>
+              )}
+            </h1>
+            {/* 连接状态指示器 */}
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {isConnected ? '已连接' : '未连接'}
               </span>
-            )}
-          </h1>
+            </div>
+          </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             与好友一起看视频，实时同步播放
           </p>
