@@ -58,7 +58,7 @@ import TVBoxSecurityConfig from '@/components/TVBoxSecurityConfig';
 import { TVBoxTokenCell, TVBoxTokenModal } from '@/components/TVBoxTokenManager';
 import YouTubeConfig from '@/components/YouTubeConfig';
 import ShortDramaConfig from '@/components/ShortDramaConfig';
-import OfflineDownloadConfig from '@/components/OfflineDownloadConfig';
+import DownloadConfig from '@/components/OfflineDownloadConfig';
 import PageLayout from '@/components/PageLayout';
 
 // 统一按钮样式系统
@@ -6056,19 +6056,19 @@ function AdminPageClient() {
               <ShortDramaConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
 
-            {/* 离线下载配置标签 */}
+            {/* 下载配置标签 */}
             <CollapsibleTab
-              title='离线下载配置'
+              title='下载配置'
               icon={
                 <Download
                   size={20}
                   className='text-green-600 dark:text-green-400'
                 />
               }
-              isExpanded={expandedTabs.offlineDownloadConfig}
-              onToggle={() => toggleTab('offlineDownloadConfig')}
+              isExpanded={expandedTabs.downloadConfig}
+              onToggle={() => toggleTab('downloadConfig')}
             >
-              <OfflineDownloadConfig config={config} refreshConfig={fetchConfig} />
+              <DownloadConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
 
             {/* TVBox安全配置标签 */}
