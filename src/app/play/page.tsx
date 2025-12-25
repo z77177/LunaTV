@@ -4828,7 +4828,7 @@ function PlayPageClient() {
                       onClick={async (e) => {
                         e.stopPropagation();
                         // 获取当前播放URL
-                        const currentUrl = currentPlayUrl || selectedEpisode?.url;
+                        const currentUrl = videoUrl || selectedEpisode?.url;
                         if (!currentUrl) {
                           alert('无法获取视频地址');
                           return;
