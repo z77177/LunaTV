@@ -6,7 +6,6 @@ import { MessageCircle, X, Send, Smile, Info, Users, LogOut, Mic, MicOff, Volume
 import { useRouter } from 'next/navigation';
 import { useWatchRoomContextSafe } from '@/components/WatchRoomProvider';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
-import type { PlayState } from '@/types/watch-room.types';
 
 const EMOJI_LIST = ['😀', '😂', '😍', '🥰', '😎', '🤔', '👍', '👏', '🎉', '❤️', '🔥', '⭐'];
 
@@ -166,11 +165,6 @@ export default function ChatFloatingWindow() {
 
   // 房间信息面板
   if (showRoomInfo) {
-    // 调试日志
-    console.log('[ChatFloatingWindow] Room Info - currentRoom:', currentRoom);
-    console.log('[ChatFloatingWindow] Room Info - currentState:', currentRoom.currentState);
-    console.log('[ChatFloatingWindow] Room Info - currentState type:', currentRoom.currentState?.type);
-
     return (
       <div className="fixed bottom-36 right-6 z-[700] w-80 rounded-2xl bg-white dark:bg-gray-800 shadow-2xl md:bottom-24">
         {/* 头部 */}
@@ -207,52 +201,43 @@ export default function ChatFloatingWindow() {
           </div>
 
           {/* 正在观看 */}
-          {currentRoom.currentState && currentRoom.currentState.type === 'play' && (
+          {currentRoom.currentState?.type === 'play' && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
-                <Film className="h-4 w-4 text-green-500" />
-                正在观看
-              </p>
-              <div className="space-y-2">
-                <p className="font-medium text-gray-900 dark:text-gray-100">
-                  {(currentRoom.currentState as PlayState).videoName}
-                  {(currentRoom.currentState as PlayState).videoYear && (
-                    <span className="text-gray-500 dark:text-gray-400 font-normal ml-1">
-                      ({(currentRoom.currentState as PlayState).videoYear})
-                    </span>
-                  )}
-                </p>
-                {(currentRoom.currentState as PlayState).episode !== undefined && (currentRoom.currentState as PlayState).episode !== null && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    第 {(currentRoom.currentState as PlayState).episode! + 1} 集
-                  </p>
-                )}
-                {!isOwner && (
-                  <button
-                    onClick={() => {
-                      const state = currentRoom.currentState as PlayState;
-                      // 构建播放页面URL
-                      const params = new URLSearchParams();
-                      params.set('title', state.videoName);
-                      if (state.videoYear) params.set('year', state.videoYear);
-                      if (state.searchTitle) params.set('stitle', state.searchTitle);
-                      if (state.source) params.set('source', state.source);
-                      if (state.videoId) params.set('id', state.videoId);
-                      if (state.episode !== undefined && state.episode !== null) {
-                        params.set('index', state.episode.toString());
-                      }
-                      params.set('prefer', 'true');
-
-                      router.push(`/play?${params.toString()}`);
-                      setShowRoomInfo(false);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                  >
-                    <Play className="h-4 w-4" />
-                    一键跳转观看
-                  </button>
-                )}
+              <div className="flex items-center gap-2 mb-2">
+                <Film className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <p className="text-sm font-medium text-green-700 dark:text-green-300">正在观看</p>
               </div>
+              <p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+                {currentRoom.currentState.videoName}
+                {currentRoom.currentState.videoYear && ` (${currentRoom.currentState.videoYear})`}
+              </p>
+              {currentRoom.currentState.episode && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  第 {currentRoom.currentState.episode} 集
+                </p>
+              )}
+              {!isOwner && (
+                <button
+                  onClick={() => {
+                    const state = currentRoom.currentState;
+                    if (state?.type === 'play') {
+                      const params = new URLSearchParams({
+                        id: state.videoId,
+                        name: state.videoName,
+                        ...(state.videoYear && { year: state.videoYear }),
+                        ...(state.searchTitle && { searchTitle: state.searchTitle }),
+                        ...(state.episode && { episode: state.episode.toString() }),
+                        source: state.source,
+                      });
+                      router.push(`/play?${params.toString()}`);
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-3 rounded-lg transition-colors text-sm"
+                >
+                  <Play className="h-4 w-4" />
+                  一键跳转观看
+                </button>
+              )}
             </div>
           )}
 
