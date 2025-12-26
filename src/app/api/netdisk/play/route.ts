@@ -106,7 +106,7 @@ async function handleAliyundrive(shareUrl: string, sharePwd?: string) {
   // 从数据库获取配置
   const config = await getConfig();
 
-  const aliyunConfig = config?.NetDiskShareConfig?.aliyundrive;
+  const aliyunConfig = config.NetDiskShareConfig.aliyundrive;
 
   if (!aliyunConfig || !aliyunConfig.enabled || !aliyunConfig.refreshToken) {
     throw new Error('阿里云盘未配置或未启用，请在管理后台配置 RefreshToken');
@@ -155,7 +155,7 @@ async function handlePikPak(shareUrl: string, sharePwd?: string) {
  */
 async function handle123Pan(shareUrl: string, sharePwd?: string) {
   const config = await getConfig();
-  const pan123Config = config?.NetDiskShareConfig?.pan123;
+  const pan123Config = config.NetDiskShareConfig.pan123;
 
   if (pan123Config && !pan123Config.enabled) {
     throw new Error('123网盘分享解析未启用，请在管理后台启用');
@@ -184,7 +184,7 @@ async function handle123Pan(shareUrl: string, sharePwd?: string) {
  */
 async function handle115Cloud(shareUrl: string, sharePwd?: string) {
   const config = await getConfig();
-  const cloud115Config = config?.NetDiskShareConfig?.cloud115;
+  const cloud115Config = config.NetDiskShareConfig.cloud115;
 
   if (!cloud115Config || !cloud115Config.enabled || !cloud115Config.cookie) {
     throw new Error('115网盘未配置或未启用，请在管理后台配置 Cookie');
