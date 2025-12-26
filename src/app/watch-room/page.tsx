@@ -321,6 +321,7 @@ export default function WatchRoomPage() {
                           year={currentRoom.currentState.videoYear}
                           episode={currentRoom.currentState.episode}
                           poster={currentRoom.currentState.poster}
+                          totalEpisodes={currentRoom.currentState.totalEpisodes}
                           onClick={() => {
                             const state = currentRoom.currentState as PlayState;
                             const params = new URLSearchParams();
@@ -523,6 +524,7 @@ export default function WatchRoomPage() {
                           year={currentRoom.currentState.videoYear}
                           episode={currentRoom.currentState.episode}
                           poster={currentRoom.currentState.poster}
+                          totalEpisodes={currentRoom.currentState.totalEpisodes}
                           onClick={() => {
                             const state = currentRoom.currentState as PlayState;
                             const params = new URLSearchParams();
@@ -751,6 +753,7 @@ export default function WatchRoomPage() {
                               year={playState.videoYear}
                               episode={playState.episode}
                               poster={playState.poster}
+                              totalEpisodes={playState.totalEpisodes}
                               onClick={() => {
                                 // 房间列表：用户未加入房间，只跳转观看，不同步时间
                                 const params = new URLSearchParams();
