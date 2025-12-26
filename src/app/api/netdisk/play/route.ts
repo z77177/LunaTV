@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AliyundriveShareClient } from '@/lib/aliyundrive-share';
 import { PikPakShareClient } from '@/lib/pikpak-share';
-import { getConfig } from '@/lib/config';
+import { db } from '@/lib/db';
 
 /**
  * 网盘分享链接播放 API
@@ -83,7 +83,7 @@ function detectPlatform(shareUrl: string): string | null {
  */
 async function handleAliyundrive(shareUrl: string, sharePwd?: string) {
   // 从数据库获取配置
-  const config = await getConfig();
+  const config = await db.getAdminConfig();
 
   const aliyunConfig = config?.NetDiskShareConfig?.aliyundrive;
 
