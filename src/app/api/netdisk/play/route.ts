@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthInfoFromCookie } from '@/lib/auth';
 import { AliyundriveShareClient } from '@/lib/aliyundrive-share';
 import { PikPakShareClient } from '@/lib/pikpak-share';
 import { Pan123ShareClient } from '@/lib/123pan-share';
@@ -7,12 +8,19 @@ import { db } from '@/lib/db';
 import { Cloud115ShareClient } from '@/lib/115cloud-share';
 import { getConfig, clearConfigCache } from '@/lib/config';
 
+export const runtime = 'nodejs';
+
 /**
  * 网盘分享链接播放 API
  * POST /api/netdisk/play
  * Body: { shareUrl: string, sharePwd?: string }
  */
 export async function POST(request: NextRequest) {
+  const authInfo = getAuthInfoFromCookie(request);
+  if (!authInfo || !authInfo.username) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { shareUrl, sharePwd } = body;
