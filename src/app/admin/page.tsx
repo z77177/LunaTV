@@ -5779,13 +5779,6 @@ const NetDiskShareConfig = ({
     pikpak: {
       enabled: false,
     },
-    pan123: {
-      enabled: false,
-    },
-    cloud115: {
-      enabled: false,
-      cookie: '',
-    },
   });
 
   // 从config加载设置
@@ -5798,13 +5791,6 @@ const NetDiskShareConfig = ({
         },
         pikpak: {
           enabled: config.NetDiskShareConfig.pikpak?.enabled ?? false,
-        },
-        pan123: {
-          enabled: config.NetDiskShareConfig.pan123?.enabled ?? false,
-        },
-        cloud115: {
-          enabled: config.NetDiskShareConfig.cloud115?.enabled ?? false,
-          cookie: config.NetDiskShareConfig.cloud115?.cookie || '',
         },
       });
     }
@@ -5850,8 +5836,6 @@ const NetDiskShareConfig = ({
             <ul className='list-disc list-inside mt-1 space-y-1'>
               <li>阿里云盘 - 需要配置 RefreshToken</li>
               <li>PikPak - 免登录，无需配置</li>
-              <li>123网盘 - 免登录，无需配置</li>
-              <li>115网盘 - 需要配置 Cookie</li>
             </ul>
           </div>
         </div>
