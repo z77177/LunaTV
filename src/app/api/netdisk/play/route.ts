@@ -83,7 +83,7 @@ function detectPlatform(shareUrl: string): string | null {
  */
 async function handleAliyundrive(shareUrl: string, sharePwd?: string) {
   // 从数据库获取配置
-  const config = await db.getAdminConfig();
+  const config = await db.getConfig();
 
   const aliyunConfig = config?.NetDiskShareConfig?.aliyundrive;
 
@@ -101,7 +101,7 @@ async function handleAliyundrive(shareUrl: string, sharePwd?: string) {
   const newRefreshToken = client.getCurrentRefreshToken();
   if (newRefreshToken !== aliyunConfig.refreshToken) {
     aliyunConfig.refreshToken = newRefreshToken;
-    await db.saveAdminConfig(config);
+    await db.setConfig(config);
   }
 
   return {
