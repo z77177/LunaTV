@@ -42,23 +42,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 在 try 块里获取配置，只调用一次
-    const config = await getConfig();
-
     let result;
 
     switch (platform) {
       case 'aliyundrive':
-        result = await handleAliyundrive(config, shareUrl, sharePwd);
+        result = await handleAliyundrive(shareUrl, sharePwd);
         break;
       case 'pikpak':
-        result = await handlePikPak(config, shareUrl, sharePwd);
+        result = await handlePikPak(shareUrl, sharePwd);
         break;
       case '123pan':
-        result = await handle123Pan(config, shareUrl, sharePwd);
+        result = await handle123Pan(shareUrl, sharePwd);
         break;
       case '115cloud':
-        result = await handle115Cloud(config, shareUrl, sharePwd);
+        result = await handle115Cloud(shareUrl, sharePwd);
         break;
       default:
         return NextResponse.json(
@@ -105,7 +102,10 @@ function detectPlatform(shareUrl: string): string | null {
 /**
  * 处理阿里云盘分享链接
  */
-async function handleAliyundrive(config: any, shareUrl: string, sharePwd?: string) {
+async function handleAliyundrive(shareUrl: string, sharePwd?: string) {
+  // 从数据库获取配置
+  const config = await getConfig();
+
   const aliyunConfig = config.NetDiskShareConfig.aliyundrive;
 
   if (!aliyunConfig || !aliyunConfig.enabled || !aliyunConfig.refreshToken) {
@@ -136,13 +136,7 @@ async function handleAliyundrive(config: any, shareUrl: string, sharePwd?: strin
 /**
  * 处理 PikPak 分享链接
  */
-async function handlePikPak(config: any, shareUrl: string, sharePwd?: string) {
-  const pikpakConfig = config.NetDiskShareConfig.pikpak;
-
-  if (pikpakConfig && !pikpakConfig.enabled) {
-    throw new Error('PikPak分享解析未启用，请在管理后台启用');
-  }
-
+async function handlePikPak(shareUrl: string, sharePwd?: string) {
   // PikPak 免登录，直接创建客户端
   const client = new PikPakShareClient(shareUrl, sharePwd);
 
@@ -159,7 +153,8 @@ async function handlePikPak(config: any, shareUrl: string, sharePwd?: string) {
 /**
  * 处理 123网盘 分享链接
  */
-async function handle123Pan(config: any, shareUrl: string, sharePwd?: string) {
+async function handle123Pan(shareUrl: string, sharePwd?: string) {
+  const config = await getConfig();
   const pan123Config = config.NetDiskShareConfig.pan123;
 
   if (pan123Config && !pan123Config.enabled) {
@@ -187,7 +182,8 @@ async function handle123Pan(config: any, shareUrl: string, sharePwd?: string) {
 /**
  * 处理 115网盘 分享链接
  */
-async function handle115Cloud(config: any, shareUrl: string, sharePwd?: string) {
+async function handle115Cloud(shareUrl: string, sharePwd?: string) {
+  const config = await getConfig();
   const cloud115Config = config.NetDiskShareConfig.cloud115;
 
   if (!cloud115Config || !cloud115Config.enabled || !cloud115Config.cookie) {
