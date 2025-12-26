@@ -5039,7 +5039,8 @@ function PlayPageClient() {
   }
 
   return (
-    <PageLayout activePath='/play'>
+    <>
+      <PageLayout activePath='/play'>
       <div className='flex flex-col gap-3 py-4 px-5 lg:px-[3rem] 2xl:px-20'>
         {/* 第一行：影片标题 */}
         <div className='py-1'>
@@ -6181,10 +6182,10 @@ function PlayPageClient() {
           </div>
         </div>
       )}
-    </PageLayout>
+      </PageLayout>
 
-    {/* 下载选集面板 */}
-    <DownloadEpisodeSelector
+      {/* 下载选集面板 */}
+      <DownloadEpisodeSelector
       isOpen={showDownloadEpisodeSelector}
       onClose={() => setShowDownloadEpisodeSelector(false)}
       totalEpisodes={detail?.episodes?.length || 1}
@@ -6232,7 +6233,8 @@ function PlayPageClient() {
           }
         }
       }}
-    />
+      />
+    </>
   );
 }
 
