@@ -41,13 +41,13 @@ export async function POST(request: NextRequest) {
         result = await handleAliyundrive(shareUrl, sharePwd);
         break;
       case 'pikpak':
-        result = await handlePikPak(shareUrl, sharePwd);
-        break;
       case '123pan':
         result = await handle123Pan(shareUrl, sharePwd);
         break;
       case '115cloud':
         result = await handle115Cloud(shareUrl, sharePwd);
+        break;
+        result = await handlePikPak(shareUrl, sharePwd);
         break;
       default:
         return NextResponse.json(
