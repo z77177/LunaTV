@@ -2,7 +2,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AliyundriveShareClient } from '@/lib/aliyundrive-share';
 import { PikPakShareClient } from '@/lib/pikpak-share';
-import { getConfig } from '@/lib/config';
+import { Pan123ShareClient } from '@/lib/123pan-share';
+import { db } from '@/lib/db';
+import { Cloud115ShareClient } from '@/lib/115cloud-share';
+import { getConfig, clearConfigCache } from '@/lib/config';
 
 /**
  * 网盘分享链接播放 API
@@ -38,6 +41,12 @@ export async function POST(request: NextRequest) {
         result = await handleAliyundrive(shareUrl, sharePwd);
         break;
       case 'pikpak':
+      case '123pan':
+        result = await handle123Pan(shareUrl, sharePwd);
+        break;
+      case '115cloud':
+        result = await handle115Cloud(shareUrl, sharePwd);
+        break;
         result = await handlePikPak(shareUrl, sharePwd);
         break;
       default:
@@ -74,6 +83,10 @@ function detectPlatform(shareUrl: string): string | null {
   if (url.includes('123pan.com') || url.includes('123yunpan.com')) {
     return '123pan';
   }
+  
+  if (url.includes('115.com')) {
+    return '115cloud';
+  }
 
   return null;
 }
@@ -102,6 +115,7 @@ async function handleAliyundrive(shareUrl: string, sharePwd?: string) {
   if (newRefreshToken !== aliyunConfig.refreshToken) {
     aliyunConfig.refreshToken = newRefreshToken;
     await db.saveAdminConfig(config);
+    clearConfigCache();
   }
 
   return {
