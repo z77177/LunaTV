@@ -16,6 +16,8 @@ import { DownloadProvider } from '../contexts/DownloadContext';
 import { DownloadPanel } from '../components/download/DownloadPanel';
 import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
 
+import ModernNav from '@/components/ModernNav';
+
 const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
 

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Box, Cat, Clover, Film, Globe, Home, PlaySquare, Radio, Star, Tv } from 'lucide-react';
+import { Box, Cat, Clover, Film, Globe, Home, PlayCircle, PlaySquare, Radio, Star, Tv } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -22,6 +22,11 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
 
   const [navItems, setNavItems] = useState([
     { icon: Home, label: '首页', href: '/' },
+    {
+      icon: PlayCircle,
+      label: '解析',
+      href: '/parse',
+    },
     {
       icon: Globe,
       label: '源浏览',
