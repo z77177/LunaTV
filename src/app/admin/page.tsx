@@ -6197,6 +6197,7 @@ function AdminPageClient() {
                       minTrustLevel: 0,
                     }
                   }
+                  providers={config?.OIDCProviders || []}
                   onSave={async (newConfig) => {
                     if (!config) return;
                     await fetch('/api/admin/config', {
@@ -6205,6 +6206,18 @@ function AdminPageClient() {
                       body: JSON.stringify({
                         ...config,
                         OIDCAuthConfig: newConfig,
+                      }),
+                    });
+                    await fetchConfig();
+                  }}
+                  onSaveProviders={async (newProviders) => {
+                    if (!config) return;
+                    await fetch('/api/admin/config', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        ...config,
+                        OIDCProviders: newProviders,
                       }),
                     });
                     await fetchConfig();
