@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Cat, Clover, Film, Globe, Home, MoreHorizontal, PlayCircle, PlaySquare, Radio, Search, Star, Tv, X } from 'lucide-react';
+import { Cat, Clover, Film, Globe, Home, MoreHorizontal, PlayCircle, PlaySquare, Radio, Search, Sparkles, Star, Tv, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -142,18 +142,18 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
 
   return (
     <>
-      {/* Desktop Top Navigation - 2025 Disney+ Style */}
+      {/* Desktop Top Navigation - 2025 Disney+ Style [cite: 14, 19] */}
       <nav className='hidden md:block fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50'>
         <div className='max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
           <div className='flex items-center justify-between h-16 gap-4'>
-            {/* Logo */}
+            {/* Logo [cite: 14, 19] */}
             <Link href='/' className='flex-shrink-0'>
               <div className='text-xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
                 {siteName}
               </div>
             </Link>
 
-            {/* Navigation Items */}
+            {/* Navigation Items [cite: 14, 19] */}
             <div className='flex items-center justify-center gap-1 lg:gap-2 overflow-x-auto scrollbar-hide flex-1 px-4'>
               {menuItems.map((item) => {
               const Icon = item.icon;
@@ -166,14 +166,12 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                   onClick={() => setActive(item.href)}
                   className='group relative flex items-center gap-2 px-3 lg:px-4 py-2 rounded-full transition-all duration-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 whitespace-nowrap flex-shrink-0'
                 >
-                  {/* Active indicator */}
                   {active && (
                     <div
                       className={`absolute inset-0 bg-gradient-to-r ${item.gradient} opacity-10 rounded-full animate-pulse`}
                     />
                   )}
 
-                  {/* Icon */}
                   <div className='relative'>
                     <Icon
                       className={`w-5 h-5 transition-all duration-300 ${
@@ -184,7 +182,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                     />
                   </div>
 
-                  {/* Label */}
                   <span
                     className={`text-sm font-medium transition-all duration-300 ${
                       active
@@ -195,7 +192,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                     {item.label}
                   </span>
 
-                  {/* Bottom active border */}
                   {active && (
                     <div
                       className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${item.gradient} rounded-full`}
@@ -206,7 +202,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
             })}
             </div>
 
-            {/* Right Side Actions - ✨ AI Button, Theme Toggle & User Menu */}
+            {/* Right Side Actions - ✨ AI Button, Theme Toggle & User Menu [cite: 13, 18, 47] */}
             <div className='flex items-center gap-2 flex-shrink-0'>
               {showAIButton && onAIButtonClick && (
                 <button
@@ -224,7 +220,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         </div>
       </nav>
 
-      {/* More Menu Modal - Render outside nav to avoid z-index issues */}
+      {/* More Menu Modal [cite: 14, 19] */}
       {showMoreMenu && (
         <div
           className='md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm'
@@ -235,7 +231,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
             className='absolute bottom-20 left-2 right-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur-3xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-800/30 overflow-hidden'
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className='flex items-center justify-between px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50'>
               <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>全部分类</h3>
               <button
@@ -246,7 +241,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
               </button>
             </div>
 
-            {/* All menu items in grid */}
             <div className='grid grid-cols-4 gap-4 p-4'>
               {menuItems.map((item) => {
                 const Icon = item.icon;
@@ -294,20 +288,17 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         </div>
       )}
 
-      {/* Mobile Bottom Navigation - 2025 Liquid Glass Design */}
+      {/* Mobile Bottom Navigation - 2025 Liquid Glass Design [cite: 14, 19] */}
       <nav
         className='md:hidden fixed bottom-0 left-0 right-0 z-40'
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
-        {/* Liquid Glass Container - iOS WWDC25 Style */}
         <div className='mx-2 mb-2 rounded-[28px] bg-white/70 dark:bg-gray-900/70 backdrop-blur-3xl shadow-2xl border border-white/20 dark:border-gray-800/30 overflow-hidden'>
-          {/* Floating gradient accent line on top */}
           <div className='h-[2px] bg-gradient-to-r from-transparent via-green-500/50 to-transparent'></div>
 
           <div className='flex items-center justify-around px-2 py-2 h-16'>
-            {/* Show first 4 items + More button */}
             {menuItems.slice(0, 4).map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
@@ -319,14 +310,11 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                   onClick={() => setActive(item.href)}
                   className='relative flex flex-col items-center justify-center gap-0.5 min-w-[56px] transition-all duration-300 active:scale-95'
                 >
-                  {/* Icon with active state */}
                   <div className='relative'>
-                    {/* Active background pill */}
                     {active && (
                       <div className={`absolute -inset-2 bg-gradient-to-br ${item.gradient} opacity-15 rounded-2xl blur-sm`}></div>
                     )}
 
-                    {/* Icon container */}
                     <div
                       className={`relative flex items-center justify-center w-11 h-7 rounded-2xl transition-all duration-300 ${
                         active
@@ -345,7 +333,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                     </div>
                   </div>
 
-                  {/* Label - only show on active */}
                   {active && (
                     <span
                       className={`text-[10px] font-semibold ${item.color} transition-all duration-300 animate-in fade-in slide-in-from-bottom-1`}
@@ -354,7 +341,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                     </span>
                   )}
 
-                  {/* Active indicator dot */}
                   {active && (
                     <div
                       className={`absolute -bottom-0.5 w-1 h-1 bg-gradient-to-r ${item.gradient} rounded-full shadow-lg`}
@@ -364,7 +350,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
               );
             })}
 
-            {/* More button */}
             <button
               onClick={() => setShowMoreMenu(true)}
               className='relative flex flex-col items-center justify-center gap-0.5 min-w-[56px] transition-all duration-300 active:scale-95'
@@ -377,7 +362,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         </div>
       </nav>
 
-      {/* Spacer for fixed navigation */}
       <div className='hidden md:block h-16' />
       <div className='md:hidden h-20' />
     </>
