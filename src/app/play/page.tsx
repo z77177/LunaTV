@@ -5069,11 +5069,14 @@ function PlayPageClient() {
                 // 打开网盘模态框
                 setShowNetdiskModal(true);
               }}
-              className='flex group relative items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 min-h-[40px] sm:min-h-[44px] rounded-full bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200'
+              className='flex group relative items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 min-h-[40px] sm:min-h-[44px] rounded-2xl bg-gradient-to-br from-white/90 via-white/80 to-white/70 hover:from-white hover:via-white/95 hover:to-white/90 dark:from-gray-800/90 dark:via-gray-800/80 dark:to-gray-800/70 dark:hover:from-gray-800 dark:hover:via-gray-800/95 dark:hover:to-gray-800/90 backdrop-blur-md border border-white/60 dark:border-gray-700/60 shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.25)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden'
               title='网盘资源'
             >
-              <span className='text-sm sm:text-base'>📁</span>
-              <span className='hidden sm:inline text-xs font-medium text-gray-600 dark:text-gray-300'>
+              {/* 悬停光效 */}
+              <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/0 to-transparent group-hover:via-white/30 dark:group-hover:via-white/10 transition-all duration-500'></div>
+
+              <span className='text-sm sm:text-base relative z-10'>📁</span>
+              <span className='hidden sm:inline text-xs font-medium text-gray-700 dark:text-gray-200 relative z-10'>
                 {netdiskLoading ? (
                   <span className='flex items-center gap-1'>
                     <span className='inline-block h-3 w-3 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin'></span>
@@ -5086,9 +5089,14 @@ function PlayPageClient() {
                 )}
               </span>
 
-              {/* 状态指示点 */}
+              {/* 状态指示点 - 增强版 */}
               {netdiskTotal > 0 && (
-                <div className='absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-blue-400 animate-pulse'></div>
+                <div className='absolute -top-0.5 -right-0.5 z-20'>
+                  <div className='relative'>
+                    <div className='absolute inset-0 bg-blue-400 rounded-full blur-sm opacity-75 animate-pulse'></div>
+                    <div className='relative w-2 h-2 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 shadow-lg'></div>
+                  </div>
+                </div>
               )}
             </button>
 
@@ -5098,11 +5106,14 @@ function PlayPageClient() {
                 e.stopPropagation();
                 setShowDownloadEpisodeSelector(true);
               }}
-              className='flex group relative items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 min-h-[40px] sm:min-h-[44px] rounded-full bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200'
+              className='flex group relative items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 min-h-[40px] sm:min-h-[44px] rounded-2xl bg-gradient-to-br from-white/90 via-white/80 to-white/70 hover:from-white hover:via-white/95 hover:to-white/90 dark:from-gray-800/90 dark:via-gray-800/80 dark:to-gray-800/70 dark:hover:from-gray-800 dark:hover:via-gray-800/95 dark:hover:to-gray-800/90 backdrop-blur-md border border-white/60 dark:border-gray-700/60 shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.25)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden'
               title='下载视频'
             >
-              <Download className='w-3.5 sm:w-4 h-3.5 sm:h-4 text-gray-600 dark:text-gray-400' />
-              <span className='hidden sm:inline text-xs font-medium text-gray-600 dark:text-gray-300'>
+              {/* 悬停光扫效果 */}
+              <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/0 to-transparent group-hover:via-white/30 dark:group-hover:via-white/10 transition-all duration-500'></div>
+
+              <Download className='relative z-10 w-3.5 sm:w-4 h-3.5 sm:h-4 text-gray-600 dark:text-gray-400' />
+              <span className='relative z-10 hidden sm:inline text-xs font-medium text-gray-600 dark:text-gray-300'>
                 下载
               </span>
             </button>
@@ -5113,11 +5124,14 @@ function PlayPageClient() {
                 e.stopPropagation();
                 setShowDownloadPanel(true);
               }}
-              className='flex group relative items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 min-h-[40px] sm:min-h-[44px] rounded-full bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200'
+              className='flex group relative items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 min-h-[40px] sm:min-h-[44px] rounded-2xl bg-gradient-to-br from-white/90 via-white/80 to-white/70 hover:from-white hover:via-white/95 hover:to-white/90 dark:from-gray-800/90 dark:via-gray-800/80 dark:to-gray-800/70 dark:hover:from-gray-800 dark:hover:via-gray-800/95 dark:hover:to-gray-800/90 backdrop-blur-md border border-white/60 dark:border-gray-700/60 shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.25)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden'
               title='下载管理'
             >
-              <span className='text-sm sm:text-base'>📥</span>
-              <span className='hidden sm:inline text-xs font-medium text-gray-600 dark:text-gray-300'>
+              {/* 悬停光扫效果 */}
+              <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/0 to-transparent group-hover:via-white/30 dark:group-hover:via-white/10 transition-all duration-500'></div>
+
+              <span className='relative z-10 text-sm sm:text-base'>📥</span>
+              <span className='relative z-10 hidden sm:inline text-xs font-medium text-gray-600 dark:text-gray-300'>
                 管理
               </span>
             </button>
@@ -5127,13 +5141,16 @@ function PlayPageClient() {
               onClick={() =>
                 setIsEpisodeSelectorCollapsed(!isEpisodeSelectorCollapsed)
               }
-              className='hidden lg:flex group relative items-center gap-2 px-4 py-2 min-h-[44px] rounded-full bg-white/80 hover:bg-white dark:bg-gray-800/80 dark:hover:bg-gray-800 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200'
+              className='hidden lg:flex group relative items-center gap-2 px-4 py-2 min-h-[44px] rounded-2xl bg-gradient-to-br from-white/90 via-white/80 to-white/70 hover:from-white hover:via-white/95 hover:to-white/90 dark:from-gray-800/90 dark:via-gray-800/80 dark:to-gray-800/70 dark:hover:from-gray-800 dark:hover:via-gray-800/95 dark:hover:to-gray-800/90 backdrop-blur-md border border-white/60 dark:border-gray-700/60 shadow-[0_2px_8px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.25)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:scale-105 active:scale-95 transition-all duration-300 overflow-hidden'
               title={
                 isEpisodeSelectorCollapsed ? '显示选集面板' : '隐藏选集面板'
               }
             >
+              {/* 悬停光扫效果 */}
+              <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/0 to-transparent group-hover:via-white/30 dark:group-hover:via-white/10 transition-all duration-500'></div>
+
               <svg
-                className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isEpisodeSelectorCollapsed ? 'rotate-180' : 'rotate-0'
+                className={`relative z-10 w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isEpisodeSelectorCollapsed ? 'rotate-180' : 'rotate-0'
                   }`}
                 fill='none'
                 stroke='currentColor'
@@ -5146,17 +5163,17 @@ function PlayPageClient() {
                   d='M9 5l7 7-7 7'
                 />
               </svg>
-              <span className='text-xs font-medium text-gray-600 dark:text-gray-300'>
+              <span className='relative z-10 text-xs font-medium text-gray-600 dark:text-gray-300'>
                 {isEpisodeSelectorCollapsed ? '显示' : '隐藏'}
               </span>
 
-              {/* 精致的状态指示点 */}
-              <div
-                className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full transition-all duration-200 ${isEpisodeSelectorCollapsed
-                  ? 'bg-orange-400 animate-pulse'
-                  : 'bg-green-400'
-                  }`}
-              ></div>
+              {/* 增强的状态指示点 */}
+              <div className='absolute -top-0.5 -right-0.5 z-20'>
+                <div className='relative'>
+                  <div className={`absolute inset-0 rounded-full blur-sm opacity-75 ${isEpisodeSelectorCollapsed ? 'bg-orange-400 animate-pulse' : 'bg-green-400'}`}></div>
+                  <div className={`relative w-2 h-2 rounded-full shadow-lg ${isEpisodeSelectorCollapsed ? 'bg-gradient-to-br from-orange-400 to-orange-500' : 'bg-gradient-to-br from-green-400 to-green-500'}`}></div>
+                </div>
+              </div>
             </button>
           </div>
 
@@ -6150,14 +6167,19 @@ function PlayPageClient() {
 
       {/* 网盘资源模态框 */}
       {showNetdiskModal && (
-        <div
-          className='fixed inset-0 z-[9999] bg-black/50 flex items-end md:items-center justify-center p-0 md:p-4'
-          onClick={() => setShowNetdiskModal(false)}
-        >
-          <div
-            className='bg-white dark:bg-gray-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-4xl max-h-[85vh] md:max-h-[90vh] flex flex-col shadow-2xl'
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className='fixed inset-0 z-[9999] overflow-y-auto'>
+          <div className='flex items-end md:items-center justify-center min-h-screen md:min-h-full p-0 md:p-4'>
+            {/* 背景遮罩 */}
+            <div
+              className='fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity'
+              onClick={() => setShowNetdiskModal(false)}
+            />
+
+            {/* 模态框内容 */}
+            <div
+              className='relative bg-white dark:bg-gray-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-4xl h-fit max-h-[80vh] md:max-h-[85vh] flex flex-col shadow-2xl border-t md:border border-gray-200 dark:border-gray-700 overflow-hidden'
+              onClick={(e) => e.stopPropagation()}
+            >
             {/* 头部 - Fixed */}
             <div className='flex-shrink-0 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6'>
               <div className='flex items-center gap-2 sm:gap-3'>
@@ -6193,7 +6215,10 @@ function PlayPageClient() {
             </div>
 
             {/* 内容区 - Scrollable */}
-            <div className='flex-1 overflow-y-auto p-4 sm:p-6'>
+            <div
+              className='flex-1 overflow-y-auto p-4 sm:p-6'
+              id='netdisk-modal-content'
+            >
               {videoTitle && !netdiskLoading && !netdiskResults && !netdiskError && (
                 <div className='flex flex-col items-center justify-center py-12 sm:py-16 text-center'>
                   <div className='text-5xl sm:text-6xl mb-4'>📁</div>
