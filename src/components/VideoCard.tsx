@@ -907,14 +907,12 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             </div>
           )}
 
-          {/* 集数徽章 - 左上角第二位（如果有类型徽章，则向下偏移）*/}
+          {/* 集数角标 - Netflix/DecoTV 风格 - 右上角 */}
           {/* 即将上映的内容不显示集数徽章（因为是占位符数据）*/}
           {/* 收藏页面：过滤掉99集的占位符显示，只显示真实集数 */}
           {actualEpisodes && actualEpisodes > 1 && !isUpcoming && !(from === 'favorite' && actualEpisodes === 99) && (
             <div
-              className={`absolute left-2 bg-linear-to-br from-emerald-500/95 via-teal-500/95 to-cyan-600/95 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-emerald-500/60 group-hover:ring-emerald-300/50 z-30 ${
-                hasReleaseTag && type ? 'top-[48px]' : 'top-2'
-              }`}
+              className='absolute top-2 right-2 flex items-stretch overflow-hidden rounded-md shadow-lg transition-all duration-300 ease-out group-hover:scale-105 z-30'
               style={{
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
@@ -925,12 +923,23 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 return false;
               }}
             >
-              <span className="flex items-center gap-1">
-                <span className="text-[10px]">🎬</span>
-                {currentEpisode
-                  ? `${currentEpisode}/${actualEpisodes}`
-                  : `${actualEpisodes}集`}
-              </span>
+              {currentEpisode ? (
+                <>
+                  {/* 左侧：当前集 - 品牌色背景（红色） */}
+                  <span className='flex items-center bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white'>
+                    EP {String(currentEpisode).padStart(2, '0')}
+                  </span>
+                  {/* 右侧：总集数 - 半透明黑背景 */}
+                  <span className='flex items-center bg-black/70 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-medium text-white/60'>
+                    / {actualEpisodes}
+                  </span>
+                </>
+              ) : (
+                /* 仅显示总集数 */
+                <span className='flex items-center bg-black/70 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white/80'>
+                  {actualEpisodes} 集
+                </span>
+              )}
             </div>
           )}
 
@@ -938,18 +947,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           {config.showYear && actualYear && actualYear !== 'unknown' && actualYear.trim() !== '' && (
             <div
               className={`absolute left-2 bg-linear-to-br from-indigo-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 group-hover:shadow-purple-500/50 group-hover:ring-purple-300/50 ${
-                (() => {
-                  let offset = 2; // 默认 top-2
-                  // 如果有上映相关的类型徽章
-                  if (hasReleaseTag && type) {
-                    offset += 46; // top-[48px]
-                  }
-                  // 如果有集数徽章
-                  if (actualEpisodes && actualEpisodes > 1) {
-                    offset += 46; // 再加 46px
-                  }
-                  return `top-[${offset}px]`;
-                })()
+                hasReleaseTag && type ? 'top-[48px]' : 'top-2'
               }`}
               style={{
                 WebkitUserSelect: 'none',
