@@ -882,31 +882,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             </div>
           )}
 
-          {/* 类型徽章 - 左上角第一位（电影/电视剧）*/}
-          {hasReleaseTag && type && (
-            <div
-              className={`absolute top-2 left-2 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg ring-2 ring-white/30 transition-all duration-300 ease-out group-hover:scale-105 z-30 ${
-                type === 'movie'
-                  ? 'bg-linear-to-br from-red-500/95 via-rose-500/95 to-pink-600/95 group-hover:shadow-red-500/60 group-hover:ring-red-300/50'
-                  : 'bg-linear-to-br from-blue-500/95 via-indigo-500/95 to-purple-600/95 group-hover:shadow-blue-500/60 group-hover:ring-blue-300/50'
-              }`}
-              style={{
-                WebkitUserSelect: 'none',
-                userSelect: 'none',
-                WebkitTouchCallout: 'none',
-              } as React.CSSProperties}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                return false;
-              }}
-            >
-              <span className="flex items-center gap-1">
-                <span className="text-[10px]">{type === 'movie' ? '🎬' : '📺'}</span>
-                {type === 'movie' ? '电影' : '电视剧'}
-              </span>
-            </div>
-          )}
-
           {/* 集数角标 - Netflix/DecoTV 风格 - 左上角 */}
           {/* 即将上映的内容不显示集数徽章（因为是占位符数据）*/}
           {/* 收藏页面：过滤掉99集的占位符显示，只显示真实集数 */}
@@ -949,9 +924,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               className={`absolute left-2 flex items-center bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded-md shadow-lg text-white/80 text-[10px] font-medium transition-all duration-300 ease-out group-hover:scale-105 z-30 ${
                 actualEpisodes && actualEpisodes > 1 && !isUpcoming && !(from === 'favorite' && actualEpisodes === 99)
                   ? 'top-[38px]'  // 有集数徽章时向下偏移
-                  : hasReleaseTag && type
-                    ? 'top-[38px]'  // 有类型徽章时向下偏移
-                    : 'top-2'
+                  : 'top-2'
               }`}
               style={{
                 WebkitUserSelect: 'none',
