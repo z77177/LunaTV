@@ -2458,11 +2458,12 @@ function PlayPageClient() {
 
           console.log(`匹配结果: ${relevantMatches.length}/${allCandidates.length}`);
 
-          const maxResults = isEnglishQuery ? 5 : 20; // 英文更严格控制结果数
-          if (relevantMatches.length > 0 && relevantMatches.length <= maxResults) {
+          // 如果有匹配结果，直接返回（去重）
+          if (relevantMatches.length > 0) {
             finalResults = Array.from(
               new Map(relevantMatches.map(item => [`${item.source}-${item.id}`, item])).values()
             ) as SearchResult[];
+            console.log(`找到 ${finalResults.length} 个唯一匹配结果`);
           } else {
             console.log('没有找到合理的匹配，返回空结果');
             finalResults = [];
