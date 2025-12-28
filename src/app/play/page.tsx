@@ -6248,53 +6248,53 @@ function PlayPageClient() {
 
       {/* 下载选集面板 */}
       <DownloadEpisodeSelector
-      isOpen={showDownloadEpisodeSelector}
-      onClose={() => setShowDownloadEpisodeSelector(false)}
-      totalEpisodes={detail?.episodes?.length || 1}
-      episodesTitles={detail?.episodes_titles || []}
-      videoTitle={videoTitle || '视频'}
-      currentEpisodeIndex={currentEpisodeIndex}
-      onDownload={async (episodeIndexes) => {
-        if (!detail?.episodes || detail.episodes.length === 0) {
-          // 单集视频，直接下载当前
-          const currentUrl = videoUrl;
-          if (!currentUrl) {
-            alert('无法获取视频地址');
-            return;
-          }
-          if (!currentUrl.includes('.m3u8')) {
-            alert('仅支持M3U8格式视频下载');
-            return;
-          }
-          try {
-            await createTask(currentUrl, videoTitle || '视频', 'TS');
-          } catch (error) {
-            console.error('创建下载任务失败:', error);
-            alert('创建下载任务失败: ' + (error as Error).message);
-          }
-          return;
-        }
-
-        // 批量下载多集
-        for (const episodeIndex of episodeIndexes) {
-          try {
-            const episodeUrl = detail.episodes[episodeIndex];
-            if (!episodeUrl) continue;
-
-            // 检查是否是M3U8
-            if (!episodeUrl.includes('.m3u8')) {
-              console.warn(`第${episodeIndex + 1}集不是M3U8格式，跳过`);
-              continue;
+        isOpen={showDownloadEpisodeSelector}
+        onClose={() => setShowDownloadEpisodeSelector(false)}
+        totalEpisodes={detail?.episodes?.length || 1}
+        episodesTitles={detail?.episodes_titles || []}
+        videoTitle={videoTitle || '视频'}
+        currentEpisodeIndex={currentEpisodeIndex}
+        onDownload={async (episodeIndexes) => {
+          if (!detail?.episodes || detail.episodes.length === 0) {
+            // 单集视频，直接下载当前
+            const currentUrl = videoUrl;
+            if (!currentUrl) {
+              alert('无法获取视频地址');
+              return;
             }
-
-            const episodeName = `第${episodeIndex + 1}集`;
-            const downloadTitle = `${videoTitle || '视频'}_${episodeName}`;
-            await createTask(episodeUrl, downloadTitle, 'TS');
-          } catch (error) {
-            console.error(`创建第${episodeIndex + 1}集下载任务失败:`, error);
+            if (!currentUrl.includes('.m3u8')) {
+              alert('仅支持M3U8格式视频下载');
+              return;
+            }
+            try {
+              await createTask(currentUrl, videoTitle || '视频', 'TS');
+            } catch (error) {
+              console.error('创建下载任务失败:', error);
+              alert('创建下载任务失败: ' + (error as Error).message);
+            }
+            return;
           }
-        }
-      }}
+
+          // 批量下载多集
+          for (const episodeIndex of episodeIndexes) {
+            try {
+              const episodeUrl = detail.episodes[episodeIndex];
+              if (!episodeUrl) continue;
+
+              // 检查是否是M3U8
+              if (!episodeUrl.includes('.m3u8')) {
+                console.warn(`第${episodeIndex + 1}集不是M3U8格式，跳过`);
+                continue;
+              }
+
+              const episodeName = `第${episodeIndex + 1}集`;
+              const downloadTitle = `${videoTitle || '视频'}_${episodeName}`;
+              await createTask(episodeUrl, downloadTitle, 'TS');
+            } catch (error) {
+              console.error(`创建第${episodeIndex + 1}集下载任务失败:`, error);
+            }
+          }
+        }}
       />
     </>
   );
