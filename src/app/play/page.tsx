@@ -162,6 +162,7 @@ function PlayPageClient() {
   const anime4kEnabledRef = useRef(anime4kEnabled);
   const anime4kModeRef = useRef(anime4kMode);
   const anime4kScaleRef = useRef(anime4kScale);
+  const netdiskModalContentRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     anime4kEnabledRef.current = anime4kEnabled;
     anime4kModeRef.current = anime4kMode;
@@ -6202,7 +6203,7 @@ function PlayPageClient() {
             </div>
 
             {/* 内容区 - Scrollable */}
-            <div className='flex-1 overflow-y-auto p-4 sm:p-6'>
+            <div ref={netdiskModalContentRef} className='flex-1 overflow-y-auto p-4 sm:p-6 relative'>
               {videoTitle && !netdiskLoading && !netdiskResults && !netdiskError && (
                 <div className='flex flex-col items-center justify-center py-12 sm:py-16 text-center'>
                   <div className='text-5xl sm:text-6xl mb-4'>📁</div>
@@ -6225,6 +6226,23 @@ function PlayPageClient() {
                 error={netdiskError}
                 total={netdiskTotal}
               />
+
+              {/* 返回顶部按钮 - 使用 sticky 定位 */}
+              {netdiskTotal > 10 && (
+                <button
+                  onClick={() => {
+                    if (netdiskModalContentRef.current) {
+                      netdiskModalContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                  }}
+                  className='sticky bottom-6 left-full -ml-14 sm:bottom-8 sm:-ml-16 w-11 h-11 sm:w-12 sm:h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center active:scale-95 z-50 group'
+                  aria-label='返回顶部'
+                >
+                  <svg className='w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-y-[-2px] transition-transform' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.5} d='M5 10l7-7m0 0l7 7m-7-7v18' />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
