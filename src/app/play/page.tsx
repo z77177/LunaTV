@@ -749,7 +749,13 @@ function PlayPageClient() {
       }
     });
 
-    // 3. 移除数字变体处理（优化性能，依赖downstream相关性评分处理数字差异）
+    // 3. 添加数字变体处理（处理"第X季" <-> "X" 的转换）
+    const numberVariants = generateNumberVariants(trimmed);
+    numberVariants.forEach(variant => {
+      if (!variants.includes(variant)) {
+        variants.push(variant);
+      }
+    });
 
     // 如果包含空格，生成额外变体
     if (trimmed.includes(' ')) {
@@ -804,6 +810,64 @@ function PlayPageClient() {
 
     // 去重并返回
     return Array.from(new Set(variants));
+  };
+
+  /**
+   * 生成数字变体的搜索变体（处理"第X季" <-> "X"的转换）
+   * 优化：只生成最有可能匹配的前2-3个变体
+   * @param query 原始查询
+   * @returns 数字变体数组（按优先级排序）
+   */
+  const generateNumberVariants = (query: string): string[] => {
+    const variants: string[] = [];
+
+    // 中文数字到阿拉伯数字的映射
+    const chineseNumbers: { [key: string]: string } = {
+      '一': '1', '二': '2', '三': '3', '四': '4', '五': '5',
+      '六': '6', '七': '7', '八': '8', '九': '9', '十': '10',
+    };
+
+    // 1. 处理"第X季/部/集"格式（最常见的情况）
+    const seasonPattern = /第([一二三四五六七八九十\d]+)(季|部|集|期)/;
+    const match = seasonPattern.exec(query);
+
+    if (match) {
+      const fullMatch = match[0];
+      const number = match[1];
+      const suffix = match[2];
+      const arabicNumber = chineseNumbers[number] || number;
+      const base = query.replace(fullMatch, '').trim();
+
+      if (base) {
+        // 优先级1: 基础名+数字（无空格）- 最常见格式，如"一拳超人3"
+        variants.push(`${base}${arabicNumber}`);
+        // 优先级2: 基础名+空格+数字 - 次常见，如"一拳超人 3"
+        variants.push(`${base} ${arabicNumber}`);
+
+        // 仅对"季"添加S格式（美剧常用）
+        if (suffix === '季') {
+          variants.push(`${base}S${arabicNumber}`);
+        }
+      }
+    }
+
+    // 2. 处理末尾纯数字（如"牧神记3"）
+    const endNumberMatch = query.match(/^(.+?)\s*(\d+)$/);
+    if (endNumberMatch) {
+      const base = endNumberMatch[1].trim();
+      const number = endNumberMatch[2];
+      const chineseNum = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][parseInt(number)];
+
+      if (chineseNum && parseInt(number) <= 10) {
+        // 优先级1: 无空格带"第X季" - 如"牧神记第三季"
+        variants.push(`${base}第${chineseNum}季`);
+        // 优先级2: 带空格 - 如"牧神记 第三季"
+        variants.push(`${base} 第${chineseNum}季`);
+      }
+    }
+
+    // 限制返回前3个最有可能的变体
+    return variants.slice(0, 3);
   };
 
   // 移除数字变体生成函数（优化性能，依赖相关性评分处理）
