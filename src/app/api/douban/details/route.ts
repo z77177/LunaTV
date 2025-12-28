@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
 import { getCacheTime } from '@/lib/config';
@@ -24,6 +25,78 @@ function randomDelay(min = 1000, max = 3000): Promise<void> {
 
 export const runtime = 'nodejs';
 
+// ============================================================================
+// 核心爬虫函数（带缓存）
+// ============================================================================
+
+/**
+ * 爬取豆瓣详情页面（内部函数）
+ */
+async function _scrapeDoubanDetails(id: string) {
+  const target = `https://movie.douban.com/subject/${id}/`;
+
+  // 请求限流：确保请求间隔
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    await new Promise(resolve =>
+      setTimeout(resolve, MIN_REQUEST_INTERVAL - timeSinceLastRequest)
+    );
+  }
+  lastRequestTime = Date.now();
+
+  // 添加随机延时
+  await randomDelay(500, 1500);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  const fetchOptions = {
+    signal: controller.signal,
+    headers: {
+      'User-Agent': getRandomUserAgent(),
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Cache-Control': 'max-age=0',
+      // 随机添加Referer
+      ...(Math.random() > 0.5 ? { 'Referer': 'https://www.douban.com/' } : {}),
+    },
+  };
+
+  const response = await fetch(target, fetchOptions);
+  clearTimeout(timeoutId);
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! Status: ${response.status}`);
+  }
+
+  const html = await response.text();
+
+  // 解析详细信息
+  return parseDoubanDetails(html, id);
+}
+
+/**
+ * 使用 unstable_cache 包裹爬虫函数
+ * - 24小时缓存
+ * - 自动重新验证
+ */
+const scrapeDoubanDetails = unstable_cache(
+  _scrapeDoubanDetails,
+  ['douban-details'],
+  {
+    revalidate: 86400, // 24小时缓存
+    tags: ['douban'],
+  }
+);
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
@@ -35,64 +108,17 @@ export async function GET(request: Request) {
     );
   }
 
-  const target = `https://movie.douban.com/subject/${id}/`;
-
   try {
-
-    // 请求限流：确保请求间隔
-    const now = Date.now();
-    const timeSinceLastRequest = now - lastRequestTime;
-    if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
-      await new Promise(resolve => 
-        setTimeout(resolve, MIN_REQUEST_INTERVAL - timeSinceLastRequest)
-      );
-    }
-    lastRequestTime = Date.now();
-
-    // 添加随机延时
-    await randomDelay(500, 1500);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    const fetchOptions = {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': getRandomUserAgent(),
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Cache-Control': 'max-age=0',
-        // 随机添加Referer
-        ...(Math.random() > 0.5 ? { 'Referer': 'https://www.douban.com/' } : {}),
-      },
-    };
-
-    const response = await fetch(target, fetchOptions);
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const html = await response.text();
-    
-    // 解析详细信息
-    const details = parseDoubanDetails(html, id);
+    const details = await scrapeDoubanDetails(id);
 
     const cacheTime = await getCacheTime();
     return NextResponse.json(details, {
       headers: {
-        'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
-        'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
-        'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
+        'Cache-Control': `public, max-age=${cacheTime}, s-maxage=86400, stale-while-revalidate=43200`,
+        'CDN-Cache-Control': `public, s-maxage=86400`,
+        'Vercel-CDN-Cache-Control': `public, s-maxage=86400`,
         'Netlify-Vary': 'query',
+        'X-Data-Source': 'scraper-cached',
       },
     });
   } catch (error) {
@@ -162,12 +188,17 @@ function parseDoubanDetails(html: string, id: string) {
       }
     }
 
-    // 提取演员照片（从 celebrities 区域）
+    // 提取演员照片（从 celebrities 区域）- 增强版
     const celebrities: Array<{
       id: string;
       name: string;
       avatar: string;
       role: string;
+      avatars?: {
+        small: string;
+        medium: string;
+        large: string;
+      };
     }> = [];
 
     const celebritiesSection = html.match(/<div id="celebrities"[\s\S]*?<ul class="celebrities-list[^"]*">([\s\S]*?)<\/ul>/);
@@ -177,19 +208,49 @@ function parseDoubanDetails(html: string, id: string) {
         celebrityItems.forEach(item => {
           // 提取演员ID和名字 - 支持 personage 和 celebrity 两种URL格式
           const linkMatch = item.match(/<a href="https:\/\/www\.douban\.com\/(personage|celebrity)\/(\d+)\/[^"]*"\s+title="([^"]+)"/);
-          // 提取头像 - 注意URL可能没有引号
-          const avatarMatch = item.match(/background-image:\s*url\(([^)]+)\)/);
+
+          // 🎯 三种方法提取头像 URL
+          let avatarUrl = '';
+
+          // 方法 1: CSS 背景图（最常见）
+          const bgMatch = item.match(/background-image:\s*url\(([^)]+)\)/);
+          if (bgMatch) {
+            avatarUrl = bgMatch[1].replace(/^['"]|['"]$/g, ''); // 去掉引号
+          }
+
+          // 方法 2: IMG 标签 (fallback)
+          if (!avatarUrl) {
+            const imgMatch = item.match(/<img[^>]*src="([^"]+)"/);
+            if (imgMatch) {
+              avatarUrl = imgMatch[1];
+            }
+          }
+
+          // 方法 3: data-src 属性
+          if (!avatarUrl) {
+            const dataSrcMatch = item.match(/data-src="([^"]+)"/);
+            if (dataSrcMatch) {
+              avatarUrl = dataSrcMatch[1];
+            }
+          }
+
           // 提取角色
           const roleMatch = item.match(/<span class="role"[^>]*>([^<]+)<\/span>/);
 
+          if (linkMatch && avatarUrl) {
+            // 清理URL
+            avatarUrl = avatarUrl.trim().replace(/^http:/, 'https:');
 
-          if (linkMatch && avatarMatch) {
-            // 清理URL（去掉可能的引号）
-            let avatarUrl = avatarMatch[1].trim();
-            avatarUrl = avatarUrl.replace(/^['"]|['"]$/g, ''); // 去掉首尾引号
-            avatarUrl = avatarUrl.replace(/^http:/, 'https:'); // 转换为 https
+            // 🎨 高清图替换：/s/ → /l/, /m/ → /l/
+            const largeUrl = avatarUrl
+              .replace(/\/s\//, '/l/')
+              .replace(/\/m\//, '/l/')
+              .replace('/s_ratio/', '/l_ratio/')
+              .replace('/m_ratio/', '/l_ratio/')
+              .replace('/small/', '/large/')
+              .replace('/medium/', '/large/');
 
-            // 过滤掉默认头像和无效图片
+            // 过滤掉默认头像
             const isDefaultAvatar = avatarUrl.includes('personage-default') ||
                                    avatarUrl.includes('celebrity-default') ||
                                    avatarUrl.includes('has_douban');
@@ -199,7 +260,19 @@ function parseDoubanDetails(html: string, id: string) {
                 id: linkMatch[2],  // 第二个捕获组是ID
                 name: linkMatch[3].split(' ')[0], // 第三个捕获组是名字，只取中文名
                 avatar: avatarUrl,
-                role: roleMatch ? roleMatch[1].trim() : ''
+                role: roleMatch ? roleMatch[1].trim() : '',
+                // 🎯 新增：返回三种尺寸的头像
+                avatars: {
+                  small: largeUrl
+                    .replace('/l/', '/s/')
+                    .replace('/l_ratio/', '/s_ratio/')
+                    .replace('/large/', '/small/'),
+                  medium: largeUrl
+                    .replace('/l/', '/m/')
+                    .replace('/l_ratio/', '/m_ratio/')
+                    .replace('/large/', '/medium/'),
+                  large: largeUrl,
+                },
               });
             }
           }
@@ -325,7 +398,9 @@ function parseDoubanDetails(html: string, id: string) {
         first_aired,
         plot_summary,
         celebrities,
-        recommendations
+        recommendations,
+        // 🎯 新增：将 celebrities 中的演员单独提取为 actors 字段
+        actors: celebrities.filter(c => !c.role.includes('导演')),
       }
     };
   } catch (error) {
