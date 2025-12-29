@@ -399,7 +399,13 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
   const scrollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isSyncingRef = useRef(false); // 🔥 防止循环更新的标志
 
-  // ✨ React 19: useTransition for non-urgent updates (不使用useOptimistic以避免流式更新顺序问题)
+  // ✨ React 19: useOptimistic for optimistic UI updates
+  const [optimisticMessages, addOptimisticMessage] = useOptimistic(
+    messages,
+    (state, newMessage: ExtendedAIMessage) => [...state, newMessage]
+  );
+
+  // ✨ React 19: useTransition for non-urgent updates
   const [isPending, startTransition] = useTransition();
 
   // ⚡ 优化：防抖滚动到底部
@@ -641,7 +647,7 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
     }
   }, []);
 
-  // ✨ Optimized sendMessage with useTransition (直接setState，不用useOptimistic避免流式更新时的顺序问题)
+  // ✨ Optimized sendMessage with useOptimistic and useTransition
   const sendMessage = async (content: string) => {
     if (!content.trim() || isPending) return;
 
@@ -651,6 +657,11 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
       timestamp: new Date().toISOString(),
     };
 
+    // Optimistically add user message
+    addOptimisticMessage(userMessage);
+    setInputMessage('');
+    setError(null);
+
     // Add a temporary "AI is thinking" message
     const thinkingMessage: ExtendedAIMessage = {
       role: 'assistant',
@@ -658,13 +669,12 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
       timestamp: new Date().toISOString(),
     };
 
-    setInputMessage('');
-    setError(null);
-
     startTransition(async () => {
       try {
-        // 🔥 直接添加用户消息和"思考中..."到真实state（流式更新用真实数据，不需要optimistic）
+        // Actually add user message to state
         const updatedMessages = [...messages, userMessage];
+
+        // 🔥 直接添加用户消息和"思考中..."到真实state（不使用optimistic避免重复）
         const messagesWithThinking = [...updatedMessages, thinkingMessage];
         setMessages(messagesWithThinking);
 
@@ -879,13 +889,13 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
           </div>
         </div>
 
-        {/* 消息区域 - 直接使用 messages state */}
+        {/* 消息区域 - 使用 optimisticMessages */}
         <div
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto p-4 space-y-4 bg-linear-to-b from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-900/50"
         >
           {/* 🎯 显示预设问题：当只有欢迎消息时（没有用户对话） */}
-          {messages.length === 1 && messages[0].role === 'assistant' && (messages[0].content.includes('AI智能助手') || messages[0].content.includes('AI 智能助手')) && (
+          {optimisticMessages.length === 1 && optimisticMessages[0].role === 'assistant' && (optimisticMessages[0].content.includes('AI智能助手') || optimisticMessages[0].content.includes('AI 智能助手')) && (
             <div className="text-center py-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-500 to-purple-600 rounded-full mb-4">
                 <Sparkles className="h-8 w-8 text-white" />
@@ -916,7 +926,7 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
           )}
 
           {/* ⚡ 优化：使用记忆化的消息组件 */}
-          {messages.map((message, index) => (
+          {optimisticMessages.map((message, index) => (
             <MessageItem
               key={index}
               message={message}
@@ -931,7 +941,7 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
           ))}
 
           {/* 加载状态 - 使用 isPending */}
-          {isPending && messages[messages.length - 1]?.content !== '思考中...' && (
+          {isPending && optimisticMessages[optimisticMessages.length - 1]?.content !== '思考中...' && (
             <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="bg-white dark:bg-gray-700 p-3 rounded-xl border border-gray-200/50 dark:border-gray-600/50 shadow-sm">
                 <div className="flex space-x-1.5">
