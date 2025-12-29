@@ -314,6 +314,7 @@ async function parseWithAlternativeApi(
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'application/json',
       },
+      signal: AbortSignal.timeout(15000), // 15秒超时
     });
 
     console.log('[Alternative API] Step 1 - Response status:', searchResponse.status);
@@ -352,6 +353,7 @@ async function parseWithAlternativeApi(
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'application/json',
       },
+      signal: AbortSignal.timeout(15000), // 15秒超时
     });
 
     if (!episodesResponse.ok) {
@@ -439,6 +441,7 @@ async function parseWithAlternativeApi(
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'application/json',
           },
+          signal: AbortSignal.timeout(15000), // 15秒超时
         });
 
         if (!directResponse.ok) {
