@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
         {
           enableWebSearch: aiConfig.enableWebSearch || false,
           tavilyApiKeys: aiConfig.tavilyApiKeys,
+          siteName: adminConfig.SiteConfig?.SiteName || 'LunaTV',
         }
       );
       console.log('📊 意图分析完成:', {
@@ -189,7 +190,8 @@ ${youtubeSearchStatus}
 `;
     } else {
       // 使用原有的 systemPrompt（兼容旧逻辑）
-      systemPrompt = `你是LunaTV的智能推荐助手，支持：${capabilities.join('、')}。当前日期：${currentDate}
+      const siteName = adminConfig.SiteConfig?.SiteName || 'LunaTV';
+      systemPrompt = `你是${siteName}的智能推荐助手，支持：${capabilities.join('、')}。当前日期：${currentDate}
 
 ## 功能状态：
 1. **影视剧推荐** ✅ 始终可用
@@ -252,6 +254,28 @@ ${youtubeEnabled && youtubeConfig.apiKey ? `### YouTube推荐格式：
           systemPrompt += `，当前第 ${context.currentEpisode} 集`;
         }
         systemPrompt += '\n';
+      }
+    }
+
+    // 🎥 如果检测到YouTube链接，先解析视频信息并加入系统提示词
+    if (hasVideoLinks) {
+      try {
+        console.log('🔍 检测到YouTube链接，开始预解析视频信息...');
+        const parsedVideos = await handleVideoLinkParsing(videoLinks);
+
+        if (parsedVideos.length > 0) {
+          systemPrompt += `\n\n## 【用户发送的YouTube视频信息】\n`;
+          parsedVideos.forEach((video, index) => {
+            systemPrompt += `\n视频 ${index + 1}:\n`;
+            systemPrompt += `- 标题: ${video.title}\n`;
+            systemPrompt += `- 频道: ${video.channelName}\n`;
+            systemPrompt += `- 链接: ${video.originalUrl}\n`;
+          });
+          systemPrompt += `\n**重要**: 请根据上述真实的视频标题和频道信息回复用户，不要猜测或编造视频内容。\n`;
+          console.log(`✅ 已将 ${parsedVideos.length} 个视频信息加入系统提示词`);
+        }
+      } catch (error) {
+        console.error('预解析YouTube视频失败:', error);
       }
     }
 
@@ -365,6 +389,9 @@ ${youtubeEnabled && youtubeConfig.apiKey ? `### YouTube推荐格式：
     if (stream) {
       console.log('📡 返回SSE流式响应');
 
+      // 累积完整内容用于后处理
+      let fullContent = '';
+
       // 创建转换流处理OpenAI的SSE格式
       const transformStream = new TransformStream({
         async transform(chunk, controller) {
@@ -376,6 +403,46 @@ ${youtubeEnabled && youtubeConfig.apiKey ? `### YouTube推荐格式：
               const data = line.slice(6);
 
               if (data === '[DONE]') {
+                // 流式结束，处理YouTube功能
+                console.log('📡 流式响应完成，处理YouTube相关功能');
+
+                try {
+                  // 检测YouTube推荐
+                  const isYouTubeRecommendation = youtubeEnabled && youtubeConfig.apiKey &&
+                    fullContent.includes('【') && fullContent.includes('】');
+
+                  if (isYouTubeRecommendation) {
+                    const searchKeywords = extractYouTubeSearchKeywords(fullContent);
+                    const youtubeVideos = await searchYouTubeVideos(searchKeywords, youtubeConfig);
+
+                    if (youtubeVideos.length > 0) {
+                      // 发送YouTube数据
+                      controller.enqueue(
+                        new TextEncoder().encode(`data: ${JSON.stringify({
+                          youtubeVideos,
+                          type: 'youtube_data'
+                        })}\n\n`)
+                      );
+                    }
+                  }
+
+                  // 检测视频链接解析
+                  if (hasVideoLinks) {
+                    const parsedVideos = await handleVideoLinkParsing(videoLinks);
+                    if (parsedVideos.length > 0) {
+                      // 发送视频链接数据
+                      controller.enqueue(
+                        new TextEncoder().encode(`data: ${JSON.stringify({
+                          videoLinks: parsedVideos,
+                          type: 'video_links'
+                        })}\n\n`)
+                      );
+                    }
+                  }
+                } catch (error) {
+                  console.error('流式后处理失败:', error);
+                }
+
                 controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
                 continue;
               }
@@ -385,6 +452,9 @@ ${youtubeEnabled && youtubeConfig.apiKey ? `### YouTube推荐格式：
                 const content = json.choices?.[0]?.delta?.content || '';
 
                 if (content) {
+                  // 累积内容
+                  fullContent += content;
+
                   // 转换为统一的SSE格式
                   controller.enqueue(
                     new TextEncoder().encode(`data: ${JSON.stringify({ text: content })}\n\n`)
