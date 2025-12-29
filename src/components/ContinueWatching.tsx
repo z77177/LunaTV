@@ -21,6 +21,7 @@ import {
 import ScrollableRow from '@/components/ScrollableRow';
 import SectionTitle from '@/components/SectionTitle';
 import VideoCard from '@/components/VideoCard';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 interface ContinueWatchingProps {
   className?: string;
@@ -33,6 +34,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
   const [loading, setLoading] = useState(true);
   const [watchingUpdates, setWatchingUpdates] = useState<WatchingUpdate | null>(null);
   const [requireClearConfirmation, setRequireClearConfirmation] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // 读取清空确认设置
   useEffect(() => {
@@ -198,6 +200,12 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
       : record.total_episodes;
   };
 
+  // 处理清空所有记录
+  const handleClearAll = async () => {
+    await clearAllPlayRecords();
+    setPlayRecords([]);
+  };
+
   return (
     <section className={`mb-8 ${className || ''}`}>
       <div className='mb-4 flex items-center justify-between'>
@@ -205,17 +213,13 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
         {!loading && playRecords.length > 0 && (
           <button
             className='flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:text-white dark:hover:bg-red-500 border border-red-300 dark:border-red-700 hover:border-red-600 dark:hover:border-red-500 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md'
-            onClick={async () => {
+            onClick={() => {
               // 根据用户设置决定是否显示确认对话框
               if (requireClearConfirmation) {
-                const confirmed = window.confirm(
-                  `确定要清空所有继续观看记录吗？\n\n这将删除 ${playRecords.length} 条播放记录，此操作无法撤销。`
-                );
-                if (!confirmed) return;
+                setShowConfirmDialog(true);
+              } else {
+                handleClearAll();
               }
-
-              await clearAllPlayRecords();
-              setPlayRecords([]);
             }}
           >
             <Trash2 className='w-4 h-4' />
@@ -223,6 +227,18 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
           </button>
         )}
       </div>
+
+      {/* 确认对话框 */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        title="确认清空"
+        message={`确定要清空所有继续观看记录吗？\n\n这将删除 ${playRecords.length} 条播放记录，此操作无法撤销。`}
+        confirmText="确认清空"
+        cancelText="取消"
+        variant="danger"
+        onConfirm={handleClearAll}
+        onCancel={() => setShowConfirmDialog(false)}
+      />
       <ScrollableRow>
         {loading
           ? // 加载状态显示灰色占位数据
