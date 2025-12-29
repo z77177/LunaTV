@@ -668,13 +668,14 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
       content: '思考中...',
       timestamp: new Date().toISOString(),
     };
+    addOptimisticMessage(thinkingMessage);
 
     startTransition(async () => {
       try {
         // Actually add user message to state
         const updatedMessages = [...messages, userMessage];
 
-        // 🔥 直接添加用户消息和"思考中..."到真实state（不使用optimistic避免重复）
+        // 🔥 添加助手消息占位符到真实state（而不是optimistic）
         const messagesWithThinking = [...updatedMessages, thinkingMessage];
         setMessages(messagesWithThinking);
 
@@ -894,8 +895,7 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto p-4 space-y-4 bg-linear-to-b from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-900/50"
         >
-          {/* 🎯 显示预设问题：当只有欢迎消息时（没有用户对话） */}
-          {optimisticMessages.length === 1 && optimisticMessages[0].role === 'assistant' && (optimisticMessages[0].content.includes('AI智能助手') || optimisticMessages[0].content.includes('AI 智能助手')) && (
+          {optimisticMessages.length <= 1 && optimisticMessages.every(msg => msg.role === 'assistant' && msg.content.includes('AI智能助手')) && (
             <div className="text-center py-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-500 to-purple-600 rounded-full mb-4">
                 <Sparkles className="h-8 w-8 text-white" />
