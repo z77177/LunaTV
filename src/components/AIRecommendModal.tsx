@@ -674,7 +674,10 @@ export default function AIRecommendModal({ isOpen, onClose, context, welcomeMess
       try {
         // Actually add user message to state
         const updatedMessages = [...messages, userMessage];
-        setMessages(updatedMessages);
+
+        // 🔥 添加助手消息占位符到真实state（而不是optimistic）
+        const messagesWithThinking = [...updatedMessages, thinkingMessage];
+        setMessages(messagesWithThinking);
 
         // 智能上下文管理：只发送最近8条消息（4轮对话）
         const conversationHistory = updatedMessages.slice(-8);
