@@ -6559,8 +6559,17 @@ export default function PlayPage() {
   return (
     <>
       <Suspense fallback={<div>Loading...</div>}>
-        <PlayPageClient />
+        <PlayPageClientWrapper />
       </Suspense>
     </>
   );
+}
+
+function PlayPageClientWrapper() {
+  const searchParams = useSearchParams();
+  // 使用 source + id 作为 key，强制在切换源时重新挂载组件
+  // 参考：https://github.com/vercel/next.js/issues/2819
+  const key = `${searchParams.get('source')}-${searchParams.get('id')}-${searchParams.get('_reload') || ''}`;
+
+  return <PlayPageClient key={key} />;
 }
