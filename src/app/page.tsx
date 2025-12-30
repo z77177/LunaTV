@@ -122,7 +122,7 @@ function HomeClient() {
             }),
             getDoubanCategories({ kind: 'tv', category: 'tv', type: 'tv' }),
             getDoubanCategories({ kind: 'tv', category: 'show', type: 'show' }),
-            getDoubanCategories({ kind: 'tv', category: '动画', type: '动画' }),
+            getDoubanCategories({ kind: 'tv', category: 'tv', type: 'tv_animation' }),
             getRecommendedShortDramas(undefined, 8),
             GetBangumiCalendarData(),
             fetch('/api/release-calendar?limit=100').then(res => {
@@ -1090,9 +1090,10 @@ function HomeClient() {
                         type: 'anime',
                       }))
                     ]}
-                    autoPlayInterval={5000}
+                    autoPlayInterval={8000}
                     showControls={true}
                     showIndicators={true}
+                    enableVideo={true}
                   />
                 </section>
               )}

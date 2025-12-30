@@ -182,8 +182,9 @@ export default function HeroBanner({
                 fill
                 className="object-cover object-center"
                 priority={index === 0}
-                quality={85}
+                quality={100}
                 sizes="100vw"
+                unoptimized={item.backdrop?.includes('/raw/') || false}
               />
             )}
           </div>

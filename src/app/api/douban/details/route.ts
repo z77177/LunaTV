@@ -56,11 +56,23 @@ async function fetchMobileApiData(id: string): Promise<{
     // 提取预告片URL（取第一个预告片）
     const trailerUrl = data.trailers?.[0]?.video_url || undefined;
 
-    // 提取高清封面作为backdrop（优先使用large尺寸）
-    const backdrop = data.cover?.image?.large?.url ||
-                    data.cover?.image?.normal?.url ||
-                    data.pic?.large ||
-                    undefined;
+    // 提取高清图片：优先使用raw原图，转换URL到最高清晰度
+    let backdrop = data.cover?.image?.raw?.url ||
+                  data.cover?.image?.large?.url ||
+                  data.cover?.image?.normal?.url ||
+                  data.pic?.large ||
+                  undefined;
+
+    // 将图片URL转换为最高清晰度版本
+    if (backdrop) {
+      backdrop = backdrop
+        .replace('/view/photo/s/', '/view/photo/raw/')
+        .replace('/view/photo/m/', '/view/photo/raw/')
+        .replace('/view/photo/l/', '/view/photo/raw/')
+        .replace('/s_ratio_poster/', '/raw/')
+        .replace('/m_ratio_poster/', '/raw/')
+        .replace('/l_ratio_poster/', '/raw/');
+    }
 
     return { trailerUrl, backdrop };
   } catch (error) {
@@ -228,10 +240,14 @@ export async function GET(request: Request) {
       fetchMobileApiData(id),
     ]);
 
-    // 合并数据：移动端API数据优先级高于爬虫数据
+    // 合并数据：混合使用爬虫和移动端API的优势
     if (details.code === 200 && details.data && mobileData) {
+      // 预告片来自移动端API
       details.data.trailerUrl = mobileData.trailerUrl;
-      details.data.backdrop = mobileData.backdrop;
+      // Backdrop优先使用爬虫的剧照（横版高清），否则用移动端API的海报
+      if (!details.data.backdrop && mobileData.backdrop) {
+        details.data.backdrop = mobileData.backdrop;
+      }
     }
 
     const cacheTime = await getCacheTime();
@@ -547,6 +563,23 @@ function parseDoubanDetails(html: string, id: string) {
         .replace(/\n{3,}/g, '\n\n');     // 将多个换行合并为最多两个
     }
 
+    // 🎬 提取剧照作为backdrop（横版高清图，比竖版海报更适合做背景）
+    let scenePhoto: string | undefined;
+    const photosSection = html.match(/<div[^>]*id="related-pic"[\s\S]*?<ul[^>]*>([\s\S]*?)<\/ul>/);
+    if (photosSection) {
+      // 查找第一张剧照图片URL
+      const photoMatch = photosSection[1].match(/https:\/\/img[0-9]\.doubanio\.com\/view\/photo\/[a-z_]*\/public\/p[0-9]+\.jpg/);
+      if (photoMatch) {
+        // 转换为最高清版本 (raw)
+        scenePhoto = photoMatch[0]
+          .replace(/^http:/, 'https:')
+          .replace('/view/photo/s/', '/view/photo/raw/')
+          .replace('/view/photo/m/', '/view/photo/raw/')
+          .replace('/view/photo/l/', '/view/photo/raw/')
+          .replace('/view/photo/sqxs/', '/view/photo/raw/');
+      }
+    }
+
     return {
       code: 200,
       message: '获取成功',
@@ -571,9 +604,10 @@ function parseDoubanDetails(html: string, id: string) {
         recommendations,
         // 🎯 新增：将 celebrities 中的演员单独提取为 actors 字段
         actors: celebrities.filter(c => !c.role.includes('导演')),
-        // 🎬 预留字段：预告片和背景图（由移动端API填充）
+        // 🎬 剧照作为backdrop（横版高清图）
+        backdrop: scenePhoto,
+        // 🎬 预告片URL（由移动端API填充）
         trailerUrl: undefined,
-        backdrop: undefined,
       }
     };
   } catch (error) {
