@@ -125,24 +125,6 @@ export default function HeroBanner({
     });
   }, [items, currentIndex]);
 
-  // 视频自动播放（延迟3秒，Netflix风格）
-  useEffect(() => {
-    if (!enableVideo) return;
-
-    const timer = setTimeout(() => {
-      // 在 setTimeout 内部检查 videoRef，而不是在 useEffect 开头
-      // 这样即使初始时 video 元素还没渲染，3秒后也能播放
-      if (videoRef.current) {
-        videoRef.current.play().catch((error) => {
-          // 自动播放失败时静默处理
-          console.log('[HeroBanner] Video autoplay blocked:', error);
-        });
-      }
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [currentIndex, enableVideo]);
-
   if (!items || items.length === 0) {
     return null;
   }
@@ -161,7 +143,7 @@ export default function HeroBanner({
 
   return (
     <div
-      className="relative w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-[85vh] xl:h-[90vh] overflow-hidden group"
+      className="relative w-full h-[50vh] sm:h-[55vh] md:h-[60vh] overflow-hidden group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       {...swipeHandlers}
@@ -203,6 +185,7 @@ export default function HeroBanner({
                   className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
                     videoLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
+                  autoPlay
                   muted={isMuted}
                   loop
                   playsInline
@@ -214,9 +197,14 @@ export default function HeroBanner({
                       error: e,
                     });
                   }}
-                  onLoadedData={() => {
+                  onLoadedData={(e) => {
                     console.log('[HeroBanner] 视频加载成功:', item.title);
                     setVideoLoaded(true); // 视频加载完成，淡入显示
+                    // 确保视频开始播放
+                    const video = e.currentTarget;
+                    video.play().catch((error) => {
+                      console.error('[HeroBanner] 视频自动播放失败:', error);
+                    });
                   }}
                 >
                   <source src={getProxiedVideoUrl(item.trailerUrl)} type="video/mp4" />
