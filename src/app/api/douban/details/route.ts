@@ -63,15 +63,14 @@ async function fetchMobileApiData(id: string): Promise<{
                   data.pic?.large ||
                   undefined;
 
-    // 将图片URL转换为最高清晰度版本
+    // 将图片URL转换为高清版本（使用l而不是raw，避免重定向）
     if (backdrop) {
       backdrop = backdrop
-        .replace('/view/photo/s/', '/view/photo/raw/')
-        .replace('/view/photo/m/', '/view/photo/raw/')
-        .replace('/view/photo/l/', '/view/photo/raw/')
-        .replace('/s_ratio_poster/', '/raw/')
-        .replace('/m_ratio_poster/', '/raw/')
-        .replace('/l_ratio_poster/', '/raw/');
+        .replace('/view/photo/s/', '/view/photo/l/')
+        .replace('/view/photo/m/', '/view/photo/l/')
+        .replace('/view/photo/sqxs/', '/view/photo/l/')
+        .replace('/s_ratio_poster/', '/l_ratio_poster/')
+        .replace('/m_ratio_poster/', '/l_ratio_poster/');
     }
 
     return { trailerUrl, backdrop };
@@ -578,13 +577,12 @@ function parseDoubanDetails(html: string, id: string) {
       // 查找第一张剧照图片URL
       const photoMatch = photosSection[1].match(/https:\/\/img[0-9]\.doubanio\.com\/view\/photo\/[a-z_]*\/public\/p[0-9]+\.jpg/);
       if (photoMatch) {
-        // 转换为最高清版本 (raw)
+        // 转换为高清版本（使用l而不是raw，避免重定向）
         scenePhoto = photoMatch[0]
           .replace(/^http:/, 'https:')
-          .replace('/view/photo/s/', '/view/photo/raw/')
-          .replace('/view/photo/m/', '/view/photo/raw/')
-          .replace('/view/photo/l/', '/view/photo/raw/')
-          .replace('/view/photo/sqxs/', '/view/photo/raw/');
+          .replace('/view/photo/s/', '/view/photo/l/')
+          .replace('/view/photo/m/', '/view/photo/l/')
+          .replace('/view/photo/sqxs/', '/view/photo/l/');
       }
     }
 

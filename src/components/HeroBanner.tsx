@@ -50,6 +50,14 @@ export default function HeroBanner({
     return url;
   };
 
+  // 处理视频 URL，使用代理绕过防盗链
+  const getProxiedVideoUrl = (url: string) => {
+    if (url?.includes('douban') || url?.includes('doubanio')) {
+      return `/api/video-proxy?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
   // 预加载背景图片
   useEffect(() => {
     items.forEach((item) => {
@@ -144,6 +152,15 @@ export default function HeroBanner({
   const currentItem = items[currentIndex];
   const backgroundImage = currentItem.backdrop || currentItem.poster;
 
+  // 🔍 调试日志
+  console.log('[HeroBanner] 当前项目:', {
+    title: currentItem.title,
+    hasBackdrop: !!currentItem.backdrop,
+    hasTrailer: !!currentItem.trailerUrl,
+    trailerUrl: currentItem.trailerUrl,
+    enableVideo,
+  });
+
   return (
     <div
       className="relative w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-[85vh] xl:h-[90vh] overflow-hidden group"
@@ -171,8 +188,18 @@ export default function HeroBanner({
                 loop
                 playsInline
                 preload="metadata"
+                onError={(e) => {
+                  console.error('[HeroBanner] 视频加载失败:', {
+                    title: item.title,
+                    trailerUrl: item.trailerUrl,
+                    error: e,
+                  });
+                }}
+                onLoadedData={() => {
+                  console.log('[HeroBanner] 视频加载成功:', item.title);
+                }}
               >
-                <source src={item.trailerUrl} type="video/mp4" />
+                <source src={getProxiedVideoUrl(item.trailerUrl)} type="video/mp4" />
               </video>
             ) : (
               /* 静态背景图片 */
@@ -184,7 +211,7 @@ export default function HeroBanner({
                 priority={index === 0}
                 quality={100}
                 sizes="100vw"
-                unoptimized={item.backdrop?.includes('/raw/') || false}
+                unoptimized={item.backdrop?.includes('/l/') || item.backdrop?.includes('/l_ratio_poster/') || false}
               />
             )}
           </div>

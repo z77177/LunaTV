@@ -146,6 +146,8 @@ function HomeClient() {
                 try {
                   const detailsRes = await getDoubanDetails(movie.id);
                   if (detailsRes.code === 200 && detailsRes.data) {
+                    console.log(`[HeroBanner] 电影 ${movie.title} - trailerUrl:`, detailsRes.data.trailerUrl);
+                    console.log(`[HeroBanner] 电影 ${movie.title} - backdrop:`, detailsRes.data.backdrop);
                     return {
                       id: movie.id,
                       plot_summary: detailsRes.data.plot_summary,
