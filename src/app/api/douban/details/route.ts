@@ -221,6 +221,7 @@ export const scrapeDoubanDetails = unstable_cache(
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
+  const noCache = searchParams.get('nocache') === '1' || searchParams.get('debug') === '1';
 
   if (!id) {
     return NextResponse.json(
@@ -251,15 +252,22 @@ export async function GET(request: Request) {
     }
 
     const cacheTime = await getCacheTime();
-    return NextResponse.json(details, {
-      headers: {
-        'Cache-Control': `public, max-age=${cacheTime}, s-maxage=86400, stale-while-revalidate=43200`,
-        'CDN-Cache-Control': `public, s-maxage=86400`,
-        'Vercel-CDN-Cache-Control': `public, s-maxage=86400`,
-        'Netlify-Vary': 'query',
-        'X-Data-Source': 'scraper-cached',
-      },
-    });
+
+    // 🔍 调试模式：绕过缓存
+    const cacheHeaders = noCache ? {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'X-Data-Source': 'no-cache-debug',
+    } : {
+      'Cache-Control': `public, max-age=${cacheTime}, s-maxage=86400, stale-while-revalidate=43200`,
+      'CDN-Cache-Control': `public, s-maxage=86400`,
+      'Vercel-CDN-Cache-Control': `public, s-maxage=86400`,
+      'Netlify-Vary': 'query',
+      'X-Data-Source': 'scraper-cached',
+    };
+
+    return NextResponse.json(details, { headers: cacheHeaders });
   } catch (error) {
     // 处理 DoubanError
     if (error instanceof DoubanError) {
