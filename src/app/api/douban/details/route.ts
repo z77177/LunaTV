@@ -30,9 +30,9 @@ export const runtime = 'nodejs';
 // ============================================================================
 
 /**
- * 从移动端API获取预告片和高清图片
+ * 从移动端API获取预告片和高清图片（内部函数）
  */
-async function fetchMobileApiData(id: string): Promise<{
+async function _fetchMobileApiData(id: string): Promise<{
   trailerUrl?: string;
   backdrop?: string;
 } | null> {
@@ -79,6 +79,20 @@ async function fetchMobileApiData(id: string): Promise<{
     return null;
   }
 }
+
+/**
+ * 使用 unstable_cache 包裹移动端API请求
+ * - 7天缓存（预告片和高清图片很少变化）
+ * - 与详情页缓存分开管理
+ */
+const fetchMobileApiData = unstable_cache(
+  _fetchMobileApiData,
+  ['douban-mobile-api'],
+  {
+    revalidate: 604800, // 7天缓存
+    tags: ['douban-mobile'],
+  }
+);
 
 // ============================================================================
 // 核心爬虫函数（带缓存）

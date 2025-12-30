@@ -268,11 +268,12 @@ function PlayPageClient() {
       // 标记此reload已处理
       reloadFlagRef.current = reloadFlag;
 
-      // 重置所有相关状态
+      // 重置所有相关状态（但保留 detail，让 initAll 重新加载后再更新）
       setCurrentSource(newSource);
       setCurrentId(newId);
       setCurrentEpisodeIndex(newIndex);
-      setDetail(null);
+      // 不清空 detail，避免触发 videoUrl 清空导致黑屏
+      // setDetail(null);
       setError(null);
       setLoading(true);
       setNeedPrefer(false);
