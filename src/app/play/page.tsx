@@ -623,6 +623,10 @@ function PlayPageClient() {
     pendingOwnerChange,
     confirmFollowOwner,
     rejectFollowOwner,
+    showSourceSwitchDialog,
+    pendingOwnerState,
+    handleConfirmSourceSwitch,
+    handleCancelSourceSwitch,
   } = useWatchRoomSync({
     watchRoom,
     artPlayerRef,
@@ -631,8 +635,9 @@ function PlayPageClient() {
     playerReady,
     videoId: currentId,  // 传入URL参数的id
     currentSource: currentSource,  // 传入当前播放源
-    videoTitle: detail?.title || '',  // 传入视频标题
-    videoYear: detail?.year || '',  // 传入视频年份
+    videoTitle: videoTitle,  // 传入视频标题（来自 state，初始值来自 URL）
+    videoYear: videoYear,  // 传入视频年份（来自 state，初始值来自 URL）
+    videoDoubanId: videoDoubanId,  // 传入豆瓣ID
     searchTitle: searchTitle,  // 传入搜索标题
     setCurrentEpisodeIndex,  // 传入切换集数的函数
   });
@@ -2716,22 +2721,31 @@ function PlayPageClient() {
         return;
       }
 
-      // 尝试跳转到当前正在播放的集数
+      // 🔥 换源时保持当前集数不变（除非新源集数不够）
       let targetIndex = currentEpisodeIndex;
 
-      // 如果当前集数超出新源的范围，则跳转到第一集
-      if (!newDetail.episodes || targetIndex >= newDetail.episodes.length) {
-        targetIndex = 0;
+      // 只有当新源的集数不够时才调整到最后一集或第一集
+      if (newDetail.episodes && newDetail.episodes.length > 0) {
+        if (targetIndex >= newDetail.episodes.length) {
+          // 当前集数超出新源范围，跳转到新源的最后一集
+          targetIndex = newDetail.episodes.length - 1;
+          console.log(`⚠️ 当前集数(${currentEpisodeIndex})超出新源范围(${newDetail.episodes.length}集)，跳转到第${targetIndex + 1}集`);
+        } else {
+          // 集数在范围内，保持不变
+          console.log(`✅ 换源保持当前集数: 第${targetIndex + 1}集`);
+        }
       }
 
       // 如果仍然是同一集数且播放进度有效，则在播放器就绪后恢复到原始进度
       if (targetIndex !== currentEpisodeIndex) {
         resumeTimeRef.current = 0;
+        console.log(`🔄 换源后集数变化: ${currentEpisodeIndex + 1} -> ${targetIndex + 1}，重置播放进度`);
       } else if (
         (!resumeTimeRef.current || resumeTimeRef.current === 0) &&
         currentPlayTime > 1
       ) {
         resumeTimeRef.current = currentPlayTime;
+        console.log(`💾 换源保持播放进度: ${currentPlayTime.toFixed(2)}s`);
       }
 
       // 更新URL参数（不刷新页面）
@@ -2739,6 +2753,7 @@ function PlayPageClient() {
       newUrl.searchParams.set('source', newSource);
       newUrl.searchParams.set('id', newId);
       newUrl.searchParams.set('year', newDetail.year);
+      newUrl.searchParams.set('index', targetIndex.toString());  // 🔥 同步URL的index参数
       window.history.replaceState({}, '', newUrl.toString());
 
       setVideoTitle(newDetail.title || newTitle);
@@ -2749,7 +2764,12 @@ function PlayPageClient() {
       setCurrentSource(newSource);
       setCurrentId(newId);
       setDetail(newDetail);
-      setCurrentEpisodeIndex(targetIndex);
+
+      // 🔥 只有当集数确实改变时才调用 setCurrentEpisodeIndex
+      // 这样可以避免触发不必要的 useEffect 和集数切换逻辑
+      if (targetIndex !== currentEpisodeIndex) {
+        setCurrentEpisodeIndex(targetIndex);
+      }
 
       // 🚀 换源完成后，优化弹幕加载流程
       setTimeout(async () => {
@@ -3046,6 +3066,7 @@ function PlayPageClient() {
         save_time: Date.now(),
         search_title: searchTitle,
         remarks: remarksToSave, // 优先使用搜索结果的 remarks，因为详情接口可能没有
+        douban_id: videoDoubanIdRef.current || detailRef.current?.douban_id || undefined, // 添加豆瓣ID
       });
 
       lastSaveTimeRef.current = Date.now();
@@ -6174,6 +6195,50 @@ function PlayPageClient() {
             >
               重新同步
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 源切换确认对话框 */}
+      {showSourceSwitchDialog && pendingOwnerState && (
+        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-9999'>
+          <div className='bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm mx-4 shadow-2xl'>
+            <div className='text-center'>
+              <div className='w-12 h-12 mx-auto mb-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center'>
+                <svg className='w-6 h-6 text-yellow-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' />
+                </svg>
+              </div>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-2'>
+                播放源不同
+              </h3>
+              <p className='text-sm text-gray-500 dark:text-gray-400 mb-3'>
+                房主使用的播放源与您不同，是否切换到房主的播放源？
+              </p>
+              <p className='text-base font-medium text-gray-900 dark:text-white mb-1'>
+                房主播放源
+              </p>
+              <p className='text-sm text-blue-500 dark:text-blue-400 mb-3 font-mono'>
+                {pendingOwnerState.source}
+              </p>
+              <p className='text-xs text-orange-500 dark:text-orange-400 mb-6'>
+                ⚠️ 保持当前源将无法与房主同步进度
+              </p>
+              <div className='flex gap-3'>
+                <button
+                  onClick={handleCancelSourceSwitch}
+                  className='flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors font-medium'
+                >
+                  保持当前源
+                </button>
+                <button
+                  onClick={handleConfirmSourceSwitch}
+                  className='flex-1 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition-colors font-medium'
+                >
+                  切换源
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
