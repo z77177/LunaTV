@@ -43,8 +43,20 @@ export default function HeroBanner({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // 存储刷新后的trailer URL（用于403自动重试）
-  const [refreshedTrailerUrls, setRefreshedTrailerUrls] = useState<Record<string, string>>({});
+  // 存储刷新后的trailer URL（用于403自动重试，使用localStorage持久化）
+  const [refreshedTrailerUrls, setRefreshedTrailerUrls] = useState<Record<string, string>>(() => {
+    // 从 localStorage 加载已刷新的 URL
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('refreshed-trailer-urls');
+        return stored ? JSON.parse(stored) : {};
+      } catch (error) {
+        console.error('[HeroBanner] 读取localStorage失败:', error);
+        return {};
+      }
+    }
+    return {};
+  });
 
   // 处理图片 URL，使用代理绕过防盗链
   const getProxiedImageUrl = (url: string) => {
@@ -78,10 +90,24 @@ export default function HeroBanner({
       const data = await response.json();
       if (data.code === 200 && data.data?.trailerUrl) {
         console.log('[HeroBanner] 成功获取新的trailer URL');
-        setRefreshedTrailerUrls(prev => ({
-          ...prev,
-          [doubanId]: data.data.trailerUrl
-        }));
+
+        // 更新 state 并保存到 localStorage
+        setRefreshedTrailerUrls(prev => {
+          const updated = {
+            ...prev,
+            [doubanId]: data.data.trailerUrl
+          };
+
+          // 持久化到 localStorage
+          try {
+            localStorage.setItem('refreshed-trailer-urls', JSON.stringify(updated));
+          } catch (error) {
+            console.error('[HeroBanner] 保存到localStorage失败:', error);
+          }
+
+          return updated;
+        });
+
         return data.data.trailerUrl;
       } else {
         console.warn('[HeroBanner] 未能获取新的trailer URL:', data.message);
