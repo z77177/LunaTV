@@ -43,6 +43,9 @@ export default function HeroBanner({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // 存储刷新后的trailer URL（用于403自动重试）
+  const [refreshedTrailerUrls, setRefreshedTrailerUrls] = useState<Record<string, string>>({});
+
   // 处理图片 URL，使用代理绕过防盗链
   const getProxiedImageUrl = (url: string) => {
     if (url?.includes('douban') || url?.includes('doubanio')) {
@@ -57,6 +60,40 @@ export default function HeroBanner({
       return `/api/video-proxy?url=${encodeURIComponent(url)}`;
     }
     return url;
+  };
+
+  // 刷新过期的trailer URL
+  const refreshTrailerUrl = useCallback(async (doubanId: number | string) => {
+    try {
+      console.log('[HeroBanner] 检测到trailer URL过期，重新获取:', doubanId);
+      const response = await fetch(`/api/douban/details?id=${doubanId}&nocache=1`);
+
+      if (!response.ok) {
+        console.error('[HeroBanner] 刷新trailer URL失败:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.code === 200 && data.data?.trailerUrl) {
+        console.log('[HeroBanner] 成功获取新的trailer URL');
+        setRefreshedTrailerUrls(prev => ({
+          ...prev,
+          [doubanId]: data.data.trailerUrl
+        }));
+        return data.data.trailerUrl;
+      }
+    } catch (error) {
+      console.error('[HeroBanner] 刷新trailer URL异常:', error);
+    }
+    return null;
+  }, []);
+
+  // 获取当前有效的trailer URL（优先使用刷新后的）
+  const getEffectiveTrailerUrl = (item: BannerItem) => {
+    if (item.douban_id && refreshedTrailerUrls[item.douban_id]) {
+      return refreshedTrailerUrls[item.douban_id];
+    }
+    return item.trailerUrl;
   };
 
   // 导航函数
@@ -190,12 +227,23 @@ export default function HeroBanner({
                   loop
                   playsInline
                   preload="metadata"
-                  onError={(e) => {
+                  onError={async (e) => {
+                    const video = e.currentTarget;
                     console.error('[HeroBanner] 视频加载失败:', {
                       title: item.title,
                       trailerUrl: item.trailerUrl,
                       error: e,
                     });
+
+                    // 检测是否是403错误（trailer URL过期）
+                    // 如果有douban_id，尝试刷新URL
+                    if (item.douban_id && !refreshedTrailerUrls[item.douban_id]) {
+                      const newUrl = await refreshTrailerUrl(item.douban_id);
+                      if (newUrl) {
+                        // 重新加载视频
+                        video.load();
+                      }
+                    }
                   }}
                   onLoadedData={(e) => {
                     console.log('[HeroBanner] 视频加载成功:', item.title);
@@ -207,7 +255,7 @@ export default function HeroBanner({
                     });
                   }}
                 >
-                  <source src={getProxiedVideoUrl(item.trailerUrl)} type="video/mp4" />
+                  <source src={getProxiedVideoUrl(getEffectiveTrailerUrl(item) || '')} type="video/mp4" />
                 </video>
               )}
             </div>
