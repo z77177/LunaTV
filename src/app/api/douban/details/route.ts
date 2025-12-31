@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
 import { getCacheTime } from '@/lib/config';
@@ -79,15 +80,17 @@ function randomDelay(min = 1000, max = 3000): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
+export const runtime = 'nodejs';
+
 // ============================================================================
 // 移动端API数据获取（预告片和高清图片）
 // ============================================================================
 
 /**
- * 从移动端API获取预告片和高清图片
+ * 从移动端API获取预告片和高清图片（内部函数）
  * 2024-2025 最佳实践：使用最新 User-Agent 和完整请求头
  */
-async function fetchMobileApiData(id: string): Promise<{
+async function _fetchMobileApiData(id: string): Promise<{
   trailerUrl?: string;
   backdrop?: string;
 } | null> {
@@ -154,6 +157,21 @@ async function fetchMobileApiData(id: string): Promise<{
   }
 }
 
+/**
+ * 使用 unstable_cache 包裹移动端API请求
+ * - 30分钟缓存（trailer URL 有时效性，需要较短缓存）
+ * - 与详情页缓存分开管理
+ * - Next.js会自动根据函数参数区分缓存
+ */
+const fetchMobileApiData = unstable_cache(
+  async (id: string) => _fetchMobileApiData(id),
+  ['douban-mobile-api'],
+  {
+    revalidate: 1800, // 30分钟缓存
+    tags: ['douban-mobile'],
+  }
+);
+
 // ============================================================================
 // 核心爬虫函数（带缓存）
 // ============================================================================
@@ -178,7 +196,7 @@ class DoubanError extends Error {
 /**
  * 带重试的爬取函数
  */
-export async function scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
+async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
   const target = `https://movie.douban.com/subject/${id}/`;
   const MAX_RETRIES = 3;
   const RETRY_DELAYS = [2000, 4000, 8000]; // 指数退避
@@ -259,7 +277,7 @@ export async function scrapeDoubanDetails(id: string, retryCount = 0): Promise<a
       if (retryCount < MAX_RETRIES) {
         console.warn(`[Douban] 超时，重试 ${retryCount + 1}/${MAX_RETRIES}...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[retryCount]));
-        return scrapeDoubanDetails(id, retryCount + 1);
+        return _scrapeDoubanDetails(id, retryCount + 1);
       }
 
       throw timeoutError;
@@ -271,7 +289,7 @@ export async function scrapeDoubanDetails(id: string, retryCount = 0): Promise<a
       if ((error.code === 'RATE_LIMIT' || error.code === 'SERVER_ERROR') && retryCount < MAX_RETRIES) {
         console.warn(`[Douban] ${error.message}，重试 ${retryCount + 1}/${MAX_RETRIES}...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[retryCount]));
-        return scrapeDoubanDetails(id, retryCount + 1);
+        return _scrapeDoubanDetails(id, retryCount + 1);
       }
       throw error;
     }
@@ -283,6 +301,21 @@ export async function scrapeDoubanDetails(id: string, retryCount = 0): Promise<a
     );
   }
 }
+
+/**
+ * 使用 unstable_cache 包裹爬虫函数
+ * - 4小时缓存
+ * - 自动重新验证
+ * - Next.js会自动根据函数参数区分缓存
+ */
+export const scrapeDoubanDetails = unstable_cache(
+  async (id: string, retryCount = 0) => _scrapeDoubanDetails(id, retryCount),
+  ['douban-details'],
+  {
+    revalidate: 14400, // 4小时缓存
+    tags: ['douban'],
+  }
+);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -320,9 +353,8 @@ export async function GET(request: Request) {
     const cacheTime = await getCacheTime();
 
     // 🔍 调试模式：绕过缓存
-    // 🎬 Trailer安全缓存：30分钟（使用HTTP缓存headers）
+    // 🎬 Trailer安全缓存：30分钟（与移动端API的unstable_cache保持一致）
     // 因为trailer URL有效期约2-3小时，30分钟缓存确保用户拿到的链接仍然有效
-    // 不使用unstable_cache，避免Docker环境下revalidate不工作的bug
     const trailerSafeCacheTime = 1800; // 30分钟
     const cacheHeaders = noCache ? {
       'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
