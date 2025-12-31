@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getUserRegion } from '@/lib/networkDetection';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**

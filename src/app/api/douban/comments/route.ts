@@ -22,6 +22,7 @@ function randomDelay(min = 1000, max = 3000): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
+export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

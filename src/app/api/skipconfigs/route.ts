@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { EpisodeSkipConfig } from '@/lib/types';
 
 // 配置 Node.js Runtime
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {

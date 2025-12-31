@@ -8,6 +8,7 @@ import { fetchVideoDetail } from '@/lib/fetchVideoDetail';
 import { refreshLiveChannels } from '@/lib/live';
 import { SearchResult } from '@/lib/types';
 
+export const runtime = 'nodejs';
 
 // 添加全局锁避免并发执行
 let isRunning = false;

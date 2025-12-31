@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+
 // 视频代理接口 - 支持流式传输和Range请求
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

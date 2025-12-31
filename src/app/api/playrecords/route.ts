@@ -7,6 +7,7 @@ import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 import { PlayRecord } from '@/lib/types';
 
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {

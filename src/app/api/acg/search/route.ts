@@ -4,6 +4,7 @@ import { parseStringPromise } from 'xml2js';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 
+export const runtime = 'nodejs';
 
 /**
  * POST /api/acg/search

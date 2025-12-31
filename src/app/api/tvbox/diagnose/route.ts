@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GET as getTVBoxConfig } from '../route';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function getBaseUrl(req: NextRequest): string {

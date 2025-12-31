@@ -5,6 +5,7 @@ import { getTelegramToken, verifyAndConsumeTelegramToken } from '@/lib/telegram-
 import { db } from '@/lib/db';
 import { clearConfigCache, getConfig } from '@/lib/config';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // 生成随机密码

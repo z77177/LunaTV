@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 
+export const runtime = 'nodejs';
 
 import * as https from 'https';
 import * as http from 'http';

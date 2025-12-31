@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 
+export const runtime = 'nodejs';
 
 /**
  * 获取观影室配置

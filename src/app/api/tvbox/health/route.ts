@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
 
 // Spider jar健康检查端点
 export async function GET(req: NextRequest) {

@@ -9,6 +9,7 @@ import { SimpleCrypto } from '@/lib/crypto';
 import { db } from '@/lib/db';
 import { CURRENT_VERSION } from '@/lib/version';
 
+export const runtime = 'nodejs';
 
 const gzipAsync = promisify(gzip);
 

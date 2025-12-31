@@ -5,6 +5,7 @@ import { getConfig, hasSpecialFeaturePermission } from '@/lib/config';
 import { db } from '@/lib/db';
 import { orchestrateDataSources } from '@/lib/ai-orchestrator';
 
+export const runtime = 'nodejs';
 
 interface OpenAIMessage {
   role: 'user' | 'assistant' | 'system';
