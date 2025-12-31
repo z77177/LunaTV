@@ -4,27 +4,19 @@ import { NextResponse } from 'next/server';
  * 刷新过期的 Douban trailer URL
  * 不使用任何缓存，直接调用豆瓣移动端API获取最新URL
  */
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
 
-  if (!id) {
-    return NextResponse.json(
-      {
-        code: 400,
-        message: '缺少必要参数: id',
-        error: 'MISSING_PARAMETER',
-      },
-      { status: 400 }
-    );
-  }
+// 带重试的获取函数
+async function fetchTrailerWithRetry(id: string, retryCount = 0): Promise<string | null> {
+  const MAX_RETRIES = 2;
+  const TIMEOUT = 20000; // 20秒超时
+  const RETRY_DELAY = 2000; // 2秒后重试
 
   try {
     const mobileApiUrl = `https://m.douban.com/rexxar/api/v2/movie/${id}`;
 
     // 创建 AbortController 用于超时控制
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
     const response = await fetch(mobileApiUrl, {
       signal: controller.signal,
@@ -44,29 +36,48 @@ export async function GET(request: Request) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      return NextResponse.json(
-        {
-          code: response.status,
-          message: `豆瓣移动端API请求失败: ${response.status}`,
-          error: 'DOUBAN_API_ERROR',
-        },
-        { status: response.status }
-      );
+      throw new Error(`豆瓣API返回错误: ${response.status}`);
     }
 
     const data = await response.json();
     const trailerUrl = data.trailers?.[0]?.video_url;
 
     if (!trailerUrl) {
-      return NextResponse.json(
-        {
-          code: 404,
-          message: '该影片没有预告片',
-          error: 'NO_TRAILER',
-        },
-        { status: 404 }
-      );
+      throw new Error('该影片没有预告片');
     }
+
+    return trailerUrl;
+  } catch (error) {
+    // 超时或网络错误，尝试重试
+    if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('fetch'))) {
+      if (retryCount < MAX_RETRIES) {
+        console.warn(`[refresh-trailer] 请求失败，${RETRY_DELAY}ms后重试 (${retryCount + 1}/${MAX_RETRIES})...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        return fetchTrailerWithRetry(id, retryCount + 1);
+      }
+    }
+
+    throw error;
+  }
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      {
+        code: 400,
+        message: '缺少必要参数: id',
+        error: 'MISSING_PARAMETER',
+      },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const trailerUrl = await fetchTrailerWithRetry(id);
 
     return NextResponse.json(
       {
@@ -86,14 +97,40 @@ export async function GET(request: Request) {
       }
     );
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (error instanceof Error) {
+      // 超时错误
+      if (error.name === 'AbortError') {
+        return NextResponse.json(
+          {
+            code: 504,
+            message: '请求超时，豆瓣响应过慢',
+            error: 'TIMEOUT',
+          },
+          { status: 504 }
+        );
+      }
+
+      // 没有预告片
+      if (error.message.includes('没有预告片')) {
+        return NextResponse.json(
+          {
+            code: 404,
+            message: error.message,
+            error: 'NO_TRAILER',
+          },
+          { status: 404 }
+        );
+      }
+
+      // 其他错误
       return NextResponse.json(
         {
-          code: 504,
-          message: '请求超时',
-          error: 'TIMEOUT',
+          code: 500,
+          message: '刷新 trailer URL 失败',
+          error: 'FETCH_ERROR',
+          details: error.message,
         },
-        { status: 504 }
+        { status: 500 }
       );
     }
 
@@ -102,7 +139,6 @@ export async function GET(request: Request) {
         code: 500,
         message: '刷新 trailer URL 失败',
         error: 'UNKNOWN_ERROR',
-        details: error instanceof Error ? error.message : '未知错误',
       },
       { status: 500 }
     );
