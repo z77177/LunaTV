@@ -62,44 +62,29 @@ export default function HeroBanner({
     return url;
   };
 
-  // 刷新过期的trailer URL（直接调用豆瓣移动端API，绕过后端缓存）
+  // 刷新过期的trailer URL（通过后端代理调用豆瓣移动端API，绕过缓存）
   const refreshTrailerUrl = useCallback(async (doubanId: number | string) => {
     try {
-      console.log('[HeroBanner] 检测到trailer URL过期，直接调用豆瓣移动端API:', doubanId);
+      console.log('[HeroBanner] 检测到trailer URL过期，重新获取:', doubanId);
 
-      // 🎯 直接调用豆瓣移动端API，绕过所有后端缓存
-      const mobileApiUrl = `https://m.douban.com/rexxar/api/v2/movie/${doubanId}`;
-      const response = await fetch(mobileApiUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-          'Referer': 'https://movie.douban.com/explore',
-          'Accept': 'application/json, text/plain, */*',
-          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Origin': 'https://movie.douban.com',
-          'Sec-Fetch-Dest': 'empty',
-          'Sec-Fetch-Mode': 'cors',
-          'Sec-Fetch-Site': 'same-site',
-        },
-      });
+      // 🎯 调用专门的刷新API（不使用缓存，直接调用豆瓣移动端API）
+      const response = await fetch(`/api/douban/refresh-trailer?id=${doubanId}`);
 
       if (!response.ok) {
-        console.error('[HeroBanner] 豆瓣移动端API请求失败:', response.status);
+        console.error('[HeroBanner] 刷新trailer URL失败:', response.status);
         return null;
       }
 
       const data = await response.json();
-      const trailerUrl = data.trailers?.[0]?.video_url;
-
-      if (trailerUrl) {
-        console.log('[HeroBanner] 成功从豆瓣获取新的trailer URL');
+      if (data.code === 200 && data.data?.trailerUrl) {
+        console.log('[HeroBanner] 成功获取新的trailer URL');
         setRefreshedTrailerUrls(prev => ({
           ...prev,
-          [doubanId]: trailerUrl
+          [doubanId]: data.data.trailerUrl
         }));
-        return trailerUrl;
+        return data.data.trailerUrl;
       } else {
-        console.warn('[HeroBanner] 豆瓣返回的数据中没有trailer URL');
+        console.warn('[HeroBanner] 未能获取新的trailer URL:', data.message);
       }
     } catch (error) {
       console.error('[HeroBanner] 刷新trailer URL异常:', error);
