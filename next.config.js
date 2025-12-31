@@ -8,10 +8,6 @@ const nextConfig = {
 
   reactStrictMode: false,
 
-  // 禁用内存缓存，强制使用磁盘缓存以确保 unstable_cache revalidate 正确工作
-  // 特别是在 Docker 环境中，内存缓存可能导致 revalidate 时间被忽略
-  cacheMaxMemorySize: 0,
-
   // Next.js 16 使用 Turbopack，配置 SVG 加载
   turbopack: {
     root: __dirname,
