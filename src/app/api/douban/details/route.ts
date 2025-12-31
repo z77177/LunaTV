@@ -80,8 +80,6 @@ function randomDelay(min = 1000, max = 3000): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
-export const runtime = 'nodejs';
-
 // ============================================================================
 // 移动端API数据获取（预告片和高清图片）
 // ============================================================================

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 
-export const runtime = 'nodejs';
 
 /**
  * 获取自定义去广告代码
