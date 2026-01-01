@@ -208,6 +208,23 @@ export default function HeroBanner({
     enableVideo,
   });
 
+  // 🎯 检查并刷新缺失的 trailer URL（组件挂载时）
+  useEffect(() => {
+    const checkAndRefreshMissingTrailers = async () => {
+      for (const item of items) {
+        // 如果有 douban_id 但没有 trailerUrl，尝试获取
+        if (item.douban_id && !item.trailerUrl && !refreshedTrailerUrls[item.douban_id]) {
+          console.log('[HeroBanner] 检测到缺失的 trailer，尝试获取:', item.title);
+          await refreshTrailerUrl(item.douban_id);
+        }
+      }
+    };
+
+    // 延迟执行，避免阻塞初始渲染
+    const timer = setTimeout(checkAndRefreshMissingTrailers, 1000);
+    return () => clearTimeout(timer);
+  }, [items, refreshedTrailerUrls, refreshTrailerUrl]);
+
   return (
     <div
       className="relative w-full h-[50vh] sm:h-[55vh] md:h-[60vh] overflow-hidden group"

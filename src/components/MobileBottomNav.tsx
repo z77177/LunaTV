@@ -200,10 +200,11 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
         'left-1/2 -translate-x-1/2',
         // 尺寸限制
         'w-auto max-w-[92vw]',
-        // 外观样式 - 磨砂玻璃胶囊
+        // 外观样式 - 磨砂玻璃胶囊（移动端性能优化：使用更高透明度，减少 blur）
         'rounded-full',
-        'bg-black/75 dark:bg-black/85',
-        'backdrop-blur-xl',
+        'bg-black/90 dark:bg-black/95',
+        // 移动端降低 blur 强度以提升性能
+        'backdrop-blur-md',
         'border border-white/10',
         'shadow-2xl shadow-black/40',
       )}
