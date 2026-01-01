@@ -487,6 +487,19 @@ const MultiLevelSelector: React.FC<MultiLevelSelectorProps> = ({
     };
   }, [activeCategory]);
 
+  // 组件挂载时初始化默认值
+  useEffect(() => {
+    const defaultSort = (contentType === 'anime-tv' || contentType === 'anime-movie') ? 'U' : 'T';
+    onChange({
+      type: 'all',
+      region: 'all',
+      year: 'all',
+      platform: 'all',
+      label: 'all',
+      sort: defaultSort,
+    });
+  }, [contentType]); // 当 contentType 变化时重新初始化
+
   // 点击外部关闭下拉框
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
