@@ -195,31 +195,24 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
   return (
     <nav
       className={cn(
-        'md:hidden fixed z-600',
-        // 悬浮居中定位
-        'left-1/2 -translate-x-1/2',
-        // 尺寸限制
-        'w-auto max-w-[92vw]',
-        // 外观样式 - 磨砂玻璃胶囊（移动端性能优化：使用更高透明度，减少 blur）
-        'rounded-full',
-        'bg-black/90 dark:bg-black/95',
-        // 移动端降低 blur 强度以提升性能
-        'backdrop-blur-md',
-        'border border-white/10',
-        'shadow-2xl shadow-black/40',
+        'md:hidden fixed left-0 right-0 z-600',
+        // Netflix 风格：全宽度贴底导航栏
+        'bg-black/95 dark:bg-black/98',
+        'backdrop-blur-lg',
+        'border-t border-white/5',
       )}
       style={{
-        // 距离底部安全区
-        bottom: 'calc(1rem + env(safe-area-inset-bottom))',
+        // 贴底，使用 safe area insets
+        bottom: 0,
+        paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       {/* 横向滚动容器 */}
       <div
         ref={scrollContainerRef}
         className={cn(
-          'flex items-center gap-1 px-2 py-2',
+          'flex items-center justify-around px-2 py-2',
           'overflow-x-auto',
-          'scroll-smooth',
         )}
         style={{
           scrollbarWidth: 'none',
@@ -246,33 +239,30 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
                 itemRefs.current[index] = el;
               }}
               className={cn(
-                // 基础样式
-                'shrink-0 inline-flex items-center gap-1.5',
-                'rounded-full px-3.5 py-2',
-                'text-sm font-medium',
-                'transition-all duration-300 ease-out',
-                'focus:outline-none focus:ring-2 focus:ring-white/30',
-                // 点击反馈
+                // Netflix 风格：竖向布局
+                'flex flex-col items-center justify-center',
+                'min-w-[60px] flex-1',
+                'py-2 px-1',
+                'transition-all duration-200',
                 'active:scale-95',
-                // 激活状态 (扁平化传入，不使用数组)
-                active && item.activeGradient,
-                active && item.activeTextColor,
-                active && 'shadow-lg',
-                active && 'scale-105',
-                // 非激活状态
-                !active && 'text-gray-400',
-                !active && item.hoverBg,
-                !active && 'hover:text-white',
               )}
             >
               <Icon
                 className={cn(
-                  'w-4 h-4 shrink-0',
-                  'transition-transform duration-300',
-                  active && 'drop-shadow-sm',
+                  'w-6 h-6 mb-1',
+                  'transition-colors duration-200',
+                  active ? 'text-white' : 'text-gray-400',
                 )}
               />
-              <span className='whitespace-nowrap'>{item.label}</span>
+              <span
+                className={cn(
+                  'text-[10px] font-medium',
+                  'transition-colors duration-200',
+                  active ? 'text-white' : 'text-gray-400',
+                )}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}
