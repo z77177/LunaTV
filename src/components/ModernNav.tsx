@@ -287,86 +287,51 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         </div>
       )}
 
-      {/* Mobile Bottom Navigation - 2025 Liquid Glass Design */}
+      {/* Mobile Bottom Navigation - Netflix Full-Width Style */}
       <nav
-        className='md:hidden fixed bottom-0 left-0 right-0 z-40'
+        className='md:hidden fixed left-0 right-0 z-40 bg-black/95 dark:bg-black/98 backdrop-blur-lg border-t border-white/5'
         style={{
+          bottom: 0,
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
-        {/* Liquid Glass Container - iOS WWDC25 Style */}
-        <div className='mx-2 mb-2 rounded-[28px] bg-white/70 dark:bg-gray-900/70 backdrop-blur-3xl shadow-2xl border border-white/20 dark:border-gray-800/30 overflow-hidden'>
-          {/* Floating gradient accent line on top */}
-          <div className='h-[2px] bg-linear-to-r from-transparent via-green-500/50 to-transparent'></div>
+        <div className='flex items-center justify-around px-2 py-2'>
+          {/* Show first 4 items + More button */}
+          {menuItems.slice(0, 4).map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
 
-          <div className='flex items-center justify-around px-2 py-2 h-16'>
-            {/* Show first 4 items + More button */}
-            {menuItems.slice(0, 4).map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.href);
-
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setActive(item.href)}
-                  className='relative flex flex-col items-center justify-center gap-0.5 min-w-[56px] transition-all duration-300 active:scale-95'
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setActive(item.href)}
+                className='flex flex-col items-center justify-center min-w-[60px] flex-1 py-2 px-1 transition-all duration-200 active:scale-95'
+              >
+                <Icon
+                  className={`w-6 h-6 mb-1 transition-colors duration-200 ${
+                    active ? 'text-white' : 'text-gray-400'
+                  }`}
+                />
+                <span
+                  className={`text-[10px] font-medium transition-colors duration-200 ${
+                    active ? 'text-white' : 'text-gray-400'
+                  }`}
                 >
-                  {/* Icon with active state */}
-                  <div className='relative'>
-                    {/* Active background pill */}
-                    {active && (
-                      <div className={`absolute -inset-2 bg-linear-to-br ${item.gradient} opacity-15 rounded-2xl blur-sm`}></div>
-                    )}
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
 
-                    {/* Icon container */}
-                    <div
-                      className={`relative flex items-center justify-center w-11 h-7 rounded-2xl transition-all duration-300 ${
-                        active
-                          ? 'bg-linear-to-br from-gray-100/80 to-gray-200/60 dark:from-gray-800/80 dark:to-gray-700/60 shadow-lg'
-                          : 'bg-transparent'
-                      }`}
-                    >
-                      <Icon
-                        className={`w-5 h-5 transition-all duration-300 ${
-                          active
-                            ? item.color
-                            : 'text-gray-600 dark:text-gray-400'
-                        }`}
-                        strokeWidth={active ? 2.5 : 2}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Label - only show on active */}
-                  {active && (
-                    <span
-                      className={`text-[10px] font-semibold ${item.color} transition-all duration-300 animate-in fade-in slide-in-from-bottom-1`}
-                    >
-                      {item.label}
-                    </span>
-                  )}
-
-                  {/* Active indicator dot */}
-                  {active && (
-                    <div
-                      className={`absolute -bottom-0.5 w-1 h-1 bg-linear-to-r ${item.gradient} rounded-full shadow-lg`}
-                    />
-                  )}
-                </Link>
-              );
-            })}
-
-            {/* More button */}
-            <button
-              onClick={() => setShowMoreMenu(true)}
-              className='relative flex flex-col items-center justify-center gap-0.5 min-w-[56px] transition-all duration-300 active:scale-95'
-            >
-              <div className='relative flex items-center justify-center w-11 h-7 rounded-2xl transition-all duration-300 bg-transparent'>
-                <MoreHorizontal className='w-5 h-5 text-gray-600 dark:text-gray-400' strokeWidth={2} />
-              </div>
-            </button>
-          </div>
+          {/* More button */}
+          <button
+            onClick={() => setShowMoreMenu(true)}
+            className='flex flex-col items-center justify-center min-w-[60px] flex-1 py-2 px-1 transition-all duration-200 active:scale-95'
+          >
+            <MoreHorizontal className='w-6 h-6 mb-1 text-gray-400' />
+            <span className='text-[10px] font-medium text-gray-400'>更多</span>
+          </button>
         </div>
       </nav>
 
