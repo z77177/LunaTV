@@ -263,7 +263,7 @@ export default function HeroBanner({
               />
 
               {/* 视频背景（如果启用且有预告片URL，加载完成后淡入） */}
-              {enableVideo && item.trailerUrl && index === currentIndex && (
+              {enableVideo && getEffectiveTrailerUrl(item) && index === currentIndex && (
                 <video
                   ref={videoRef}
                   className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
@@ -406,7 +406,7 @@ export default function HeroBanner({
       </div>
 
       {/* 音量控制按钮（仅视频模式） - 底部右下角，避免遮挡简介 */}
-      {enableVideo && currentItem.trailerUrl && (
+      {enableVideo && getEffectiveTrailerUrl(currentItem) && (
         <button
           onClick={toggleMute}
           className="absolute bottom-6 sm:bottom-8 right-4 sm:right-8 md:right-12 lg:right-16 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-all border border-white/50 z-10"
