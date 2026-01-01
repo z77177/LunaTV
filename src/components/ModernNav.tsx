@@ -140,7 +140,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         <div className='max-w-[2560px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20'>
           <div className='flex items-center justify-between h-16 gap-4'>
             {/* Logo */}
-            <Link href='/' className='shrink-0'>
+            <Link href='/' prefetch={false} className='shrink-0'>
               <div className='text-xl font-bold bg-linear-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent'>
                 {siteName}
               </div>
@@ -156,6 +156,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                 <Link
                   key={item.label}
                   href={item.href}
+                  prefetch={false}
                   onClick={() => setActive(item.href)}
                   className='group relative flex items-center gap-2 px-3 lg:px-4 py-2 rounded-full transition-all duration-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 whitespace-nowrap shrink-0'
                 >
@@ -249,6 +250,7 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
                   <Link
                     key={item.label}
                     href={item.href}
+                    prefetch={false}
                     onClick={() => {
                       setActive(item.href);
                       setShowMoreMenu(false);
@@ -287,9 +289,9 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
         </div>
       )}
 
-      {/* Mobile Bottom Navigation - Netflix Full-Width Style */}
+      {/* Mobile Bottom Navigation - Netflix Full-Width Style with Light Mode Support */}
       <nav
-        className='md:hidden fixed left-0 right-0 z-40 bg-black/95 dark:bg-black/98 backdrop-blur-lg border-t border-white/5'
+        className='md:hidden fixed left-0 right-0 z-40 bg-white/80 dark:bg-black/95 backdrop-blur-lg border-t border-black/5 dark:border-white/5 shadow-xl shadow-black/5 dark:shadow-2xl dark:shadow-black/40'
         style={{
           bottom: 0,
           paddingBottom: 'env(safe-area-inset-bottom)',
@@ -305,17 +307,18 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
               <Link
                 key={item.label}
                 href={item.href}
+                prefetch={false}
                 onClick={() => setActive(item.href)}
                 className='flex flex-col items-center justify-center min-w-[60px] flex-1 py-2 px-1 transition-all duration-200 active:scale-95'
               >
                 <Icon
                   className={`w-6 h-6 mb-1 transition-colors duration-200 ${
-                    active ? 'text-white' : 'text-gray-400'
+                    active ? item.color : 'text-gray-600 dark:text-gray-400'
                   }`}
                 />
                 <span
                   className={`text-[10px] font-medium transition-colors duration-200 ${
-                    active ? 'text-white' : 'text-gray-400'
+                    active ? item.color : 'text-gray-600 dark:text-gray-400'
                   }`}
                 >
                   {item.label}
@@ -329,8 +332,8 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
             onClick={() => setShowMoreMenu(true)}
             className='flex flex-col items-center justify-center min-w-[60px] flex-1 py-2 px-1 transition-all duration-200 active:scale-95'
           >
-            <MoreHorizontal className='w-6 h-6 mb-1 text-gray-400' />
-            <span className='text-[10px] font-medium text-gray-400'>更多</span>
+            <MoreHorizontal className='w-6 h-6 mb-1 text-gray-600 dark:text-gray-400' />
+            <span className='text-[10px] font-medium text-gray-600 dark:text-gray-400'>更多</span>
           </button>
         </div>
       </nav>
