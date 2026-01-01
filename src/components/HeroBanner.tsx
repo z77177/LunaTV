@@ -66,6 +66,17 @@ export default function HeroBanner({
     return url;
   };
 
+  // 确保 backdrop 是高清版本
+  const getHDBackdrop = (url?: string) => {
+    if (!url) return url;
+    return url
+      .replace('/view/photo/s/', '/view/photo/l/')
+      .replace('/view/photo/m/', '/view/photo/l/')
+      .replace('/view/photo/sqxs/', '/view/photo/l/')
+      .replace('/s_ratio_poster/', '/l_ratio_poster/')
+      .replace('/m_ratio_poster/', '/l_ratio_poster/');
+  };
+
   // 处理视频 URL，使用代理绕过防盗链
   const getProxiedVideoUrl = (url: string) => {
     if (url?.includes('douban') || url?.includes('doubanio')) {
@@ -186,7 +197,7 @@ export default function HeroBanner({
       const item = items[index];
       if (item) {
         const img = new window.Image();
-        const imageUrl = item.backdrop || item.poster;
+        const imageUrl = getHDBackdrop(item.backdrop) || item.poster;
         img.src = getProxiedImageUrl(imageUrl);
       }
     });
@@ -197,7 +208,7 @@ export default function HeroBanner({
   }
 
   const currentItem = items[currentIndex];
-  const backgroundImage = currentItem.backdrop || currentItem.poster;
+  const backgroundImage = getHDBackdrop(currentItem.backdrop) || currentItem.poster;
 
   // 🔍 调试日志
   console.log('[HeroBanner] 当前项目:', {
@@ -252,7 +263,7 @@ export default function HeroBanner({
             >
               {/* 背景图片（始终显示，作为视频的占位符） */}
               <Image
-                src={getProxiedImageUrl(item.backdrop || item.poster)}
+                src={getProxiedImageUrl(getHDBackdrop(item.backdrop) || item.poster)}
                 alt={item.title}
                 fill
                 className="object-cover object-center"
