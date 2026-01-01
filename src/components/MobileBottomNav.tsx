@@ -196,21 +196,24 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     <nav
       className={cn(
         'md:hidden fixed z-600',
-        // 悬浮居中定位
+        // 贴底居中定位
         'left-1/2 -translate-x-1/2',
         // 尺寸限制
-        'w-auto max-w-[92vw]',
+        'w-auto max-w-[95vw]',
         // 外观样式 - 磨砂玻璃胶囊（移动端性能优化：使用更高透明度，减少 blur）
-        'rounded-full',
+        // 只保留顶部圆角，底部平直贴合屏幕
+        'rounded-t-full',
         'bg-black/90 dark:bg-black/95',
         // 移动端降低 blur 强度以提升性能
         'backdrop-blur-md',
-        'border border-white/10',
+        'border-t border-l border-r border-white/10',
         'shadow-2xl shadow-black/40',
       )}
       style={{
-        // 距离底部安全区
-        bottom: 'calc(1rem + env(safe-area-inset-bottom))',
+        // 贴底，只留安全区
+        bottom: 'env(safe-area-inset-bottom, 0)',
+        // 添加底部内边距，确保内容不被安全区遮挡
+        paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
       }}
     >
       {/* 横向滚动容器 */}
