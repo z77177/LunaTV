@@ -905,8 +905,22 @@ export async function convertTMDBMovieToCalendarItem(movie: any): Promise<Releas
       genre = genres.join('/');
     }
 
-    // 上映日期
+    // 上映日期 - 过滤掉太旧的数据
     const releaseDate = movie.release_date || '';
+
+    // 🔥 过滤：只保留过去7天内和未来的电影
+    if (releaseDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+      if (releaseDate < sevenDaysAgoStr) {
+        console.log(`[TMDB] 过滤掉旧电影: ${title} (${releaseDate})`);
+        return null; // 过滤掉超过7天前的电影
+      }
+    }
 
     // 海报图片
     const cover = movie.poster_path
@@ -1005,8 +1019,22 @@ export async function convertTMDBTVToCalendarItem(tv: any): Promise<ReleaseCalen
       genre = genres.join('/');
     }
 
-    // 首播日期
+    // 首播日期 - 过滤掉太旧的数据
     const releaseDate = tv.first_air_date || '';
+
+    // 🔥 过滤：只保留过去7天内和未来的电视剧
+    if (releaseDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+      if (releaseDate < sevenDaysAgoStr) {
+        console.log(`[TMDB] 过滤掉旧电视剧: ${title} (${releaseDate})`);
+        return null; // 过滤掉超过7天前的电视剧
+      }
+    }
 
     // 海报图片
     const cover = tv.poster_path
