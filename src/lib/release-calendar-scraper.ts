@@ -759,41 +759,31 @@ async function scrapeTMDBMovies(): Promise<ReleaseCalendarItem[]> {
     console.log('🎬 [TMDB] 开始获取电影数据...');
     const items: ReleaseCalendarItem[] = [];
 
-    // 🔥 先获取第1页，读取总页数
-    const firstPageData = await getMovieUpcoming(1);
-    if (!firstPageData || !firstPageData.results) {
-      console.warn('[TMDB] 无法获取电影数据');
-      return items;
-    }
-
-    const totalMoviePages = firstPageData.total_pages || 1;
-    console.log(`📊 [TMDB] 电影总页数: ${totalMoviePages}`);
-
-    // 处理第1页数据
-    console.log(`✅ [TMDB] 电影第1/${totalMoviePages}页：获取到 ${firstPageData.results.length} 部`);
-    for (const movie of firstPageData.results) {
-      const item = await convertTMDBMovieToCalendarItem(movie);
-      if (item && item.releaseDate) {
-        items.push(item);
-      }
-    }
-
-    // 获取剩余页面
-    for (let page = 2; page <= totalMoviePages; page++) {
-      await randomDelay(300, 600); // 页面间延迟
-      const upcomingData = await getMovieUpcoming(page);
-      if (upcomingData && upcomingData.results) {
-        console.log(`✅ [TMDB] 电影第${page}/${totalMoviePages}页：获取到 ${upcomingData.results.length} 部`);
-        for (const movie of upcomingData.results) {
-          const item = await convertTMDBMovieToCalendarItem(movie);
-          if (item && item.releaseDate) {
-            items.push(item);
-          }
+    // 获取即将上映的电影
+    const upcomingData = await getMovieUpcoming(1);
+    if (upcomingData && upcomingData.results) {
+      console.log(`✅ [TMDB] 获取到 ${upcomingData.results.length} 部即将上映电影`);
+      for (const movie of upcomingData.results.slice(0, 20)) { // 限制前20部
+        const item = await convertTMDBMovieToCalendarItem(movie);
+        if (item && item.releaseDate) {
+          items.push(item);
         }
       }
     }
 
-    console.log(`✅ [TMDB] 电影数据过滤后: ${items.length} 部`);
+    // 获取正在上映的电影
+    const nowPlayingData = await getMovieNowPlaying(1);
+    if (nowPlayingData && nowPlayingData.results) {
+      console.log(`✅ [TMDB] 获取到 ${nowPlayingData.results.length} 部正在上映电影`);
+      for (const movie of nowPlayingData.results.slice(0, 20)) { // 限制前20部
+        const item = await convertTMDBMovieToCalendarItem(movie);
+        if (item && item.releaseDate) {
+          items.push(item);
+        }
+      }
+    }
+
+    console.log(`✅ [TMDB] 电影数据获取完成: ${items.length} 部`);
     return items;
   } catch (error) {
     console.error('❌ [TMDB] 获取电影数据失败:', error);
@@ -809,69 +799,31 @@ async function scrapeTMDBTVShows(): Promise<ReleaseCalendarItem[]> {
     console.log('📺 [TMDB] 开始获取电视剧数据...');
     const items: ReleaseCalendarItem[] = [];
 
-    // 🔥 今日播出 - 动态获取总页数
-    const firstAiringToday = await getTVAiringToday(1);
-    if (firstAiringToday && firstAiringToday.results) {
-      const totalAiringTodayPages = firstAiringToday.total_pages || 1;
-      console.log(`📊 [TMDB] 今日播出总页数: ${totalAiringTodayPages}`);
-
-      // 处理第1页
-      console.log(`✅ [TMDB] 今日播出第1/${totalAiringTodayPages}页：获取到 ${firstAiringToday.results.length} 部`);
-      for (const tv of firstAiringToday.results) {
+    // 获取今日播出的电视剧
+    const airingTodayData = await getTVAiringToday(1);
+    if (airingTodayData && airingTodayData.results) {
+      console.log(`✅ [TMDB] 获取到 ${airingTodayData.results.length} 部今日播出电视剧`);
+      for (const tv of airingTodayData.results.slice(0, 10)) { // 限制前10部
         const item = await convertTMDBTVToCalendarItem(tv);
         if (item && item.releaseDate) {
           items.push(item);
         }
       }
-
-      // 获取剩余页面
-      for (let page = 2; page <= totalAiringTodayPages; page++) {
-        await randomDelay(300, 600);
-        const airingTodayData = await getTVAiringToday(page);
-        if (airingTodayData && airingTodayData.results) {
-          console.log(`✅ [TMDB] 今日播出第${page}/${totalAiringTodayPages}页：获取到 ${airingTodayData.results.length} 部`);
-          for (const tv of airingTodayData.results) {
-            const item = await convertTMDBTVToCalendarItem(tv);
-            if (item && item.releaseDate) {
-              items.push(item);
-            }
-          }
-        }
-      }
     }
 
-    // 🔥 正在播出 - 动态获取总页数
-    const firstOnTheAir = await getTVOnTheAir(1);
-    if (firstOnTheAir && firstOnTheAir.results) {
-      const totalOnTheAirPages = firstOnTheAir.total_pages || 1;
-      console.log(`📊 [TMDB] 正在播出总页数: ${totalOnTheAirPages}`);
-
-      // 处理第1页
-      console.log(`✅ [TMDB] 正在播出第1/${totalOnTheAirPages}页：获取到 ${firstOnTheAir.results.length} 部`);
-      for (const tv of firstOnTheAir.results) {
+    // 获取正在播出的电视剧
+    const onTheAirData = await getTVOnTheAir(1);
+    if (onTheAirData && onTheAirData.results) {
+      console.log(`✅ [TMDB] 获取到 ${onTheAirData.results.length} 部正在播出电视剧`);
+      for (const tv of onTheAirData.results.slice(0, 30)) { // 限制前30部
         const item = await convertTMDBTVToCalendarItem(tv);
         if (item && item.releaseDate) {
           items.push(item);
         }
       }
-
-      // 获取剩余页面
-      for (let page = 2; page <= totalOnTheAirPages; page++) {
-        await randomDelay(300, 600);
-        const onTheAirData = await getTVOnTheAir(page);
-        if (onTheAirData && onTheAirData.results) {
-          console.log(`✅ [TMDB] 正在播出第${page}/${totalOnTheAirPages}页：获取到 ${onTheAirData.results.length} 部`);
-          for (const tv of onTheAirData.results) {
-            const item = await convertTMDBTVToCalendarItem(tv);
-            if (item && item.releaseDate) {
-              items.push(item);
-            }
-          }
-        }
-      }
     }
 
-    console.log(`✅ [TMDB] 电视剧数据过滤后: ${items.length} 部`);
+    console.log(`✅ [TMDB] 电视剧数据获取完成: ${items.length} 部`);
     return items;
   } catch (error) {
     console.error('❌ [TMDB] 获取电视剧数据失败:', error);
