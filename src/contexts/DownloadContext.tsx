@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { M3U8Downloader, M3U8DownloadTask } from '@/lib/download/m3u8-downloader';
+import { M3U8Downloader, M3U8DownloadTask } from '@/lib/download';
 
 interface DownloadContextType {
   tasks: M3U8DownloadTask[];
