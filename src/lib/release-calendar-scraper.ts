@@ -780,7 +780,7 @@ async function scrapeTMDBMovies(): Promise<ReleaseCalendarItem[]> {
 
     // 获取剩余页面
     for (let page = 2; page <= totalMoviePages; page++) {
-      await randomDelay(300, 600); // 页面间延迟
+      await randomDelay(50, 100); // 🔥 TMDB允许40req/s，用50-100ms延迟（每秒10-20个请求）
       const upcomingData = await getMovieUpcoming(page);
       if (upcomingData && upcomingData.results) {
         console.log(`✅ [TMDB] 电影第${page}/${totalMoviePages}页：获取到 ${upcomingData.results.length} 部`);
@@ -826,7 +826,7 @@ async function scrapeTMDBTVShows(): Promise<ReleaseCalendarItem[]> {
 
       // 获取剩余页面
       for (let page = 2; page <= totalAiringTodayPages; page++) {
-        await randomDelay(300, 600);
+        await randomDelay(50, 100); // 🔥 TMDB允许40req/s
         const airingTodayData = await getTVAiringToday(page);
         if (airingTodayData && airingTodayData.results) {
           console.log(`✅ [TMDB] 今日播出第${page}/${totalAiringTodayPages}页：获取到 ${airingTodayData.results.length} 部`);
@@ -857,7 +857,7 @@ async function scrapeTMDBTVShows(): Promise<ReleaseCalendarItem[]> {
 
       // 获取剩余页面
       for (let page = 2; page <= totalOnTheAirPages; page++) {
-        await randomDelay(300, 600);
+        await randomDelay(50, 100); // 🔥 TMDB允许40req/s
         const onTheAirData = await getTVOnTheAir(page);
         if (onTheAirData && onTheAirData.results) {
           console.log(`✅ [TMDB] 正在播出第${page}/${totalOnTheAirPages}页：获取到 ${onTheAirData.results.length} 部`);
