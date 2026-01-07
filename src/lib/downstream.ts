@@ -4,12 +4,26 @@ import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
 import { getCachedSearchPage, setCachedSearchPage } from '@/lib/search-cache';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
-// 使用 tree-shakeable 的精简版 opencc-js，减小打包体积
-import * as OpenCC from 'opencc-js/core';
-import * as Locale from 'opencc-js/preset';
 
-// 创建模块级别的繁简转换器实例（使用 ConverterFactory 以支持 tree shaking）
-const tw2cnConverter = OpenCC.ConverterFactory(Locale.from.tw, Locale.to.cn);
+// 懒加载 opencc-js - 只在第一次需要时加载，避免影响启动性能
+let tw2cnConverter: ((text: string) => string) | null = null;
+let converterPromise: Promise<(text: string) => string> | null = null;
+
+async function getTw2cnConverter(): Promise<(text: string) => string> {
+  if (tw2cnConverter) return tw2cnConverter;
+  if (converterPromise) return converterPromise;
+
+  converterPromise = (async () => {
+    const [OpenCC, Locale] = await Promise.all([
+      import('opencc-js/core'),
+      import('opencc-js/preset')
+    ]);
+    tw2cnConverter = OpenCC.ConverterFactory(Locale.from.tw, Locale.to.cn);
+    return tw2cnConverter;
+  })();
+
+  return converterPromise;
+}
 
 /**
  * 快速检测文本是否包含繁体中文字符
@@ -161,7 +175,7 @@ export async function searchFromApi(
     const apiBaseUrl = apiSite.api;
 
     // 智能搜索：生成搜索变体（优化：只生成最有用的变体）
-    const searchVariants = generateSearchVariants(query).slice(0, 2); // 最多只用前2个变体
+    const searchVariants = (await generateSearchVariants(query)).slice(0, 2); // 最多只用前2个变体
     let results: SearchResult[] = [];
     let pageCountFromFirst = 0;
 
@@ -354,7 +368,7 @@ const M3U8_PATTERN = /(https?:\/\/[^"'\s]+?\.m3u8)/g;
  * @param originalQuery 原始查询
  * @returns 按优先级排序的搜索变体数组
  */
-function generateSearchVariants(originalQuery: string): string[] {
+async function generateSearchVariants(originalQuery: string): Promise<string[]> {
   const variants: string[] = [];
   const trimmed = originalQuery.trim();
 
@@ -364,7 +378,8 @@ function generateSearchVariants(originalQuery: string): string[] {
   // 2. 繁体转简体变体（用于搜索简体数据源）
   // 先快速检测是否包含繁体字，避免对简体输入进行不必要的转换
   if (hasTraditionalChinese(trimmed)) {
-    const simplifiedVariant = tw2cnConverter(trimmed);
+    const converter = await getTw2cnConverter();
+    const simplifiedVariant = converter(trimmed);
     if (simplifiedVariant !== trimmed && !variants.includes(simplifiedVariant)) {
       variants.push(simplifiedVariant);
       console.log(`[DEBUG] 添加繁转简变体: "${trimmed}" -> "${simplifiedVariant}"`);
