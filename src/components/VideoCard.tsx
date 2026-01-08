@@ -1367,11 +1367,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
                 WebkitTouchCallout: 'none',
-                // Firefox line-clamp fix - 不使用style，改用Tailwind的line-clamp-2类
-                // display: '-webkit-box',
-                // WebkitLineClamp: 2,
-                // WebkitBoxOrient: 'vertical',
-                // overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
                 lineHeight: '1.4',
                 // Firefox scale transform fix
                 willChange: 'transform',
