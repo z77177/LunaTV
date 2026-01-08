@@ -1358,7 +1358,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             <div className='absolute inset-0 bg-linear-to-r from-transparent via-green-50/0 to-transparent dark:via-green-900/0 group-hover:via-green-50/50 dark:group-hover:via-green-900/30 transition-all duration-300 rounded-md'></div>
 
             <span
-              className='block text-xs @[140px]:text-sm font-bold line-clamp-2 text-gray-900 dark:text-gray-100 transition-all duration-300 ease-in-out group-hover:scale-[1.02] peer relative z-10 group-hover:drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
+              className='block text-xs @[140px]:text-sm font-bold line-clamp-2 text-gray-900 dark:text-gray-100 transition-all duration-300 ease-in-out group-hover:scale-[1.02] peer relative z-10 group-hover:text-green-600 dark:group-hover:text-green-400 group-hover:drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
               style={{
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
@@ -1372,24 +1372,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
               onContextMenu={(e) => {
                 e.preventDefault();
                 return false;
-              }}
-              onMouseEnter={(e) => {
-                // 使用标准的CSS渐变语法，兼容所有浏览器包括Firefox
-                const target = e.currentTarget;
-                target.style.background = 'linear-gradient(to right, rgb(22, 163, 74), rgb(16, 185, 129), rgb(20, 184, 166))';
-                target.style.webkitBackgroundClip = 'text';
-                target.style.backgroundClip = 'text';
-                target.style.webkitTextFillColor = 'transparent';
-                target.style.color = 'transparent';
-              }}
-              onMouseLeave={(e) => {
-                // 恢复原始颜色
-                const target = e.currentTarget;
-                target.style.background = '';
-                target.style.webkitBackgroundClip = '';
-                target.style.backgroundClip = '';
-                target.style.webkitTextFillColor = '';
-                target.style.color = '';
               }}
             >
               {actualTitle}
