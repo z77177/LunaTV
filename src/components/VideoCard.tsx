@@ -714,7 +714,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   return (
     <>
       <div
-        className='@container group relative w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-30 hover:drop-shadow-2xl'
+        className='@container group relative w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:z-30 hover:drop-shadow-2xl'
         onClick={handleClick}
         {...longPressProps}
         style={{
@@ -726,10 +726,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
           touchAction: 'manipulation',
           // 禁用右键菜单和长按菜单
           pointerEvents: 'auto',
-          // Firefox scale transform fix - 强制GPU加速避免元素消失
-          willChange: 'transform',
-          backfaceVisibility: 'hidden',
-          transform: 'translateZ(0)',
         } as React.CSSProperties}
         onContextMenu={(e) => {
           // 阻止默认右键菜单
@@ -1362,7 +1358,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
             <div className='absolute inset-0 bg-linear-to-r from-transparent via-green-50/0 to-transparent dark:via-green-900/0 group-hover:via-green-50/50 dark:group-hover:via-green-900/30 transition-all duration-300 rounded-md'></div>
 
             <span
-              className='block text-xs @[140px]:text-sm font-bold line-clamp-2 text-gray-900 dark:text-gray-100 transition-all duration-300 ease-in-out group-hover:scale-[1.02] peer relative z-10 group-hover:drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
+              className='block text-xs @[140px]:text-sm font-bold line-clamp-2 text-gray-900 dark:text-gray-100 transition-all duration-300 ease-in-out peer relative z-10 group-hover:drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
               style={{
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
@@ -1372,9 +1368,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden',
                 lineHeight: '1.4',
-                // Firefox scale transform fix
-                willChange: 'transform',
-                backfaceVisibility: 'hidden',
               } as React.CSSProperties}
               onContextMenu={(e) => {
                 e.preventDefault();
