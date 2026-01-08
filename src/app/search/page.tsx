@@ -913,10 +913,10 @@ function SearchPageClient() {
       <div className='overflow-visible mb-10 -mt-6 md:mt-0'>
         {/* 搜索框区域 - 美化版 */}
         <div className='mb-8'>
-          {/* 搜索类型选项卡 - 美化版 */}
+          {/* 搜索类型选项卡 - 美化增强版 */}
           <div className='max-w-2xl mx-auto mb-6'>
             <div className='flex items-center justify-center'>
-              <div className='inline-flex items-center bg-linear-to-r from-gray-50 via-white to-gray-50 dark:from-gray-800 dark:via-gray-750 dark:to-gray-800 rounded-xl p-1.5 space-x-2 shadow-lg border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm'>
+              <div className='inline-flex items-center bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-gray-800/90 dark:via-gray-750 dark:to-gray-800/90 rounded-xl p-1.5 space-x-2 shadow-lg border border-gray-200/60 dark:border-gray-600/60 backdrop-blur-sm'>
                 <button
                   type='button'
                   onClick={() => {
@@ -936,10 +936,10 @@ function SearchPageClient() {
                       router.push(`/search?q=${encodeURIComponent(currentQuery)}`);
                     }
                   }}
-                  className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 relative overflow-hidden ${
+                  className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 relative overflow-hidden ${
                     searchType === 'video'
-                      ? 'bg-linear-to-br from-green-400 via-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 scale-105'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                      ? 'bg-gradient-to-br from-green-400 via-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/40 scale-105 ring-2 ring-green-300/50 dark:ring-green-500/50'
+                      : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-700/70 hover:shadow-md'
                   }`}
                 >
                   🎬 影视资源
@@ -961,10 +961,10 @@ function SearchPageClient() {
                       handleNetDiskSearch(currentQuery);
                     }
                   }}
-                  className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 relative overflow-hidden ${
+                  className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 relative overflow-hidden ${
                     searchType === 'netdisk'
-                      ? 'bg-linear-to-br from-blue-400 via-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 scale-105'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                      ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/40 scale-105 ring-2 ring-blue-300/50 dark:ring-blue-500/50'
+                      : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-700/70 hover:shadow-md'
                   }`}
                 >
                   💾 网盘资源
@@ -991,10 +991,10 @@ function SearchPageClient() {
                       setTimeout(() => handleYouTubeSearch(currentQuery), 0);
                     }
                   }}
-                  className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 relative overflow-hidden ${
+                  className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 relative overflow-hidden ${
                     searchType === 'youtube'
-                      ? 'bg-linear-to-br from-red-400 via-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30 scale-105'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                      ? 'bg-gradient-to-br from-red-400 via-red-500 to-rose-600 text-white shadow-lg shadow-red-500/40 scale-105 ring-2 ring-red-300/50 dark:ring-red-500/50'
+                      : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-700/70 hover:shadow-md'
                   }`}
                 >
                   📺 YouTube
@@ -1017,10 +1017,10 @@ function SearchPageClient() {
                       handleTmdbActorSearch(currentQuery, tmdbActorType, tmdbFilterState);
                     }
                   }}
-                  className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 relative overflow-hidden ${
+                  className={`px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 relative overflow-hidden ${
                     searchType === 'tmdb-actor'
-                      ? 'bg-linear-to-br from-purple-400 via-purple-500 to-violet-600 text-white shadow-lg shadow-purple-500/30 scale-105'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                      ? 'bg-gradient-to-br from-purple-400 via-purple-500 to-violet-600 text-white shadow-lg shadow-purple-500/40 scale-105 ring-2 ring-purple-300/50 dark:ring-purple-500/50'
+                      : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-700/70 hover:shadow-md'
                   }`}
                 >
                   🎬 TMDB演员
