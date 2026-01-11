@@ -124,8 +124,6 @@ function PlayPageClient() {
 
   // 视频分辨率状态
   const [videoResolution, setVideoResolution] = useState<{ width: number; height: number } | null>(null);
-  const [showResolutionTag, setShowResolutionTag] = useState(false);
-  const resolutionTagTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 进度条拖拽状态管理
   const isDraggingProgressRef = useRef(false);
@@ -4035,17 +4033,6 @@ function PlayPageClient() {
               handleNextEpisode();
             },
           },
-          {
-            position: 'right',
-            index: 10,
-            html: '<i class="art-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></i>',
-            tooltip: '视频信息',
-            click: function () {
-              if (artPlayerRef.current) {
-                artPlayerRef.current.info.show = !artPlayerRef.current.info.show;
-              }
-            },
-          },
           // 🚀 简单弹幕发送按钮（仅Web端显示）
           ...(isMobile ? [] : [{
             position: 'right',
@@ -4266,22 +4253,11 @@ function PlayPageClient() {
         setError(null);
         setPlayerReady(true); // 标记播放器已就绪，启用观影室同步
 
-        // 获取视频分辨率并显示标签
+        // 获取视频分辨率并显示徽章
         const video = artPlayerRef.current.video as HTMLVideoElement;
         const updateResolution = () => {
           if (video.videoWidth && video.videoHeight) {
             setVideoResolution({ width: video.videoWidth, height: video.videoHeight });
-            setShowResolutionTag(true);
-            
-            // 清除之前的定时器
-            if (resolutionTagTimeoutRef.current) {
-              clearTimeout(resolutionTagTimeoutRef.current);
-            }
-            
-            // 5秒后自动隐藏标签
-            resolutionTagTimeoutRef.current = setTimeout(() => {
-              setShowResolutionTag(false);
-            }, 5000);
           }
         };
         
@@ -5546,31 +5522,32 @@ function PlayPageClient() {
                   </div>
                 )}
 
-                {/* 视频分辨率显示标签 */}
-                {videoResolution && showResolutionTag && (
+                {/* 视频分辨率徽章 - 固定显示在左下角 */}
+                {videoResolution && (
                   <div
                     style={{
                       position: 'fixed',
-                      bottom: '80px',
-                      right: '20px',
-                      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                      bottom: '70px',
+                      left: '20px',
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
                       color: 'white',
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '600',
                       zIndex: 100,
-                      backdropFilter: 'blur(10px)',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
                       transition: 'opacity 0.3s ease',
                       pointerEvents: 'none',
+                      opacity: 0.85,
                     }}
                   >
-                    {videoResolution.width} × {videoResolution.height}
-                    {videoResolution.height >= 2160 ? ' (4K)' : 
-                     videoResolution.height >= 1440 ? ' (2K)' : 
-                     videoResolution.height >= 1080 ? ' (1080P)' : 
-                     videoResolution.height >= 720 ? ' (720P)' : ''}
+                    {videoResolution.height >= 2160 ? '4K' : 
+                     videoResolution.height >= 1440 ? '2K' : 
+                     videoResolution.height >= 1080 ? '1080P' : 
+                     videoResolution.height >= 720 ? '720P' : 
+                     videoResolution.height + 'P'}
                   </div>
                 )}
 
