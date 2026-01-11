@@ -4253,10 +4253,46 @@ function PlayPageClient() {
         setError(null);
         setPlayerReady(true); // 标记播放器已就绪，启用观影室同步
 
-        // 获取视频分辨率并显示徽章
+        // 使用ArtPlayer layers API添加分辨率徽章
         const video = artPlayerRef.current.video as HTMLVideoElement;
+        
+        // 添加分辨率徽章layer
+        artPlayerRef.current.layers.add({
+          name: 'resolution-badge',
+          html: '<div class="resolution-badge"></div>',
+          style: {
+            position: 'absolute',
+            bottom: '60px',
+            left: '20px',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            color: 'white',
+            padding: '4px 10px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            fontWeight: '600',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            opacity: '0.85',
+            pointerEvents: 'none',
+          },
+        });
+        
         const updateResolution = () => {
           if (video.videoWidth && video.videoHeight) {
+            const height = video.videoHeight;
+            const label = height >= 2160 ? '4K' : 
+                         height >= 1440 ? '2K' : 
+                         height >= 1080 ? '1080P' : 
+                         height >= 720 ? '720P' : 
+                         height + 'P';
+            
+            // 更新layer内容
+            const badge = artPlayerRef.current.layers['resolution-badge'];
+            if (badge) {
+              badge.innerHTML = label;
+            }
+            
+            // 同时更新state供React使用
             setVideoResolution({ width: video.videoWidth, height: video.videoHeight });
           }
         };
@@ -5519,35 +5555,6 @@ function PlayPageClient() {
                         跳过设置
                       </span>
                     </button>
-                  </div>
-                )}
-
-                {/* 视频分辨率徽章 - 固定显示在左下角 */}
-                {videoResolution && (
-                  <div
-                    style={{
-                      position: 'fixed',
-                      bottom: '70px',
-                      left: '20px',
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
-                      padding: '4px 10px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      zIndex: 100,
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      transition: 'opacity 0.3s ease',
-                      pointerEvents: 'none',
-                      opacity: 0.85,
-                    }}
-                  >
-                    {videoResolution.height >= 2160 ? '4K' : 
-                     videoResolution.height >= 1440 ? '2K' : 
-                     videoResolution.height >= 1080 ? '1080P' : 
-                     videoResolution.height >= 720 ? '720P' : 
-                     videoResolution.height + 'P'}
                   </div>
                 )}
 
