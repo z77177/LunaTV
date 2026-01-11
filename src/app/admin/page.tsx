@@ -5509,7 +5509,7 @@ const LiveSourceConfig = ({
         epg: newLiveSource.epg,
         isTvBox: newLiveSource.isTvBox,
       });
-        setNewLiveSource({
+      setNewLiveSource({
         name: '',
         key: '',
         url: '',
