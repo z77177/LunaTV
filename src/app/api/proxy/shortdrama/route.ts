@@ -1,7 +1,6 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 
 import { NextResponse } from "next/server";
-import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
 
@@ -41,7 +40,7 @@ export async function GET(request: Request) {
     const agent = isHttps ? httpsAgent : httpAgent;
 
     const headers: Record<string, string> = {
-      'User-Agent': DEFAULT_USER_AGENT,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       'Accept': '*/*',
       'Accept-Encoding': 'identity',
       'Connection': 'keep-alive',

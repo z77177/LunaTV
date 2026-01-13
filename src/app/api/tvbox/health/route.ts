@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
 
@@ -31,7 +30,7 @@ export async function GET(req: NextRequest) {
         signal: controller.signal,
         headers: {
           'User-Agent':
-            DEFAULT_USER_AGENT,
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
       });
 

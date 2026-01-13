@@ -2,7 +2,6 @@
 
 import { getConfig } from '@/lib/config';
 import { TMDB_CACHE_EXPIRE, getCacheKey, getCache, setCache } from '@/lib/tmdb-cache';
-import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // TMDB API 配置
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -244,7 +243,7 @@ async function fetchTMDB<T>(endpoint: string, params: Record<string, string> = {
   const response = await fetch(url.toString(), {
     headers: {
       'Accept': 'application/json',
-      'User-Agent': DEFAULT_USER_AGENT,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
     }
   });
 
