@@ -2,7 +2,7 @@ import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
 import { getCacheTime } from '@/lib/config';
-import { getRandomUserAgentWithInfo, getSecChUaHeaders } from '@/lib/user-agent';
+import { getRandomUserAgent, getRandomUserAgentWithInfo, getSecChUaHeaders } from '@/lib/user-agent';
 
 // 请求限制器
 let lastRequestTime = 0;
@@ -11,6 +11,81 @@ const MIN_REQUEST_INTERVAL = 2000; // 2秒最小间隔
 function randomDelay(min = 1000, max = 3000): Promise<void> {
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
   return new Promise(resolve => setTimeout(resolve, delay));
+}
+
+/**
+ * 检测是否为豆瓣 challenge 页面
+ */
+function isDoubanChallengePage(html: string): boolean {
+  return (
+    html.includes('sha512') &&
+    html.includes('process(cha)') &&
+    html.includes('载入中')
+  );
+}
+
+/**
+ * 从 Mobile API 获取详情（fallback 方案）
+ */
+async function fetchFromMobileAPI(id: string): Promise<any> {
+  try {
+    const mobileApiUrl = `https://m.douban.com/rexxar/api/v2/movie/${id}`;
+
+    console.log(`[Douban Mobile API] 请求: ${mobileApiUrl}`);
+
+    const userAgent = getRandomUserAgent();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(mobileApiUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': userAgent,
+        'Referer': 'https://m.douban.com/',
+        'Accept': 'application/json',
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Mobile API 返回 ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[Douban Mobile API] 成功获取数据`);
+
+    // 转换 Mobile API 数据格式到标准格式
+    return {
+      id: data.id,
+      title: data.title,
+      originalTitle: data.original_title || '',
+      year: data.year || '',
+      rating: {
+        value: data.rating?.value || 0,
+        count: data.rating?.count || 0,
+      },
+      genres: data.genres || [],
+      directors: data.directors?.map((d: any) => d.name) || [],
+      actors: data.actors?.map((a: any) => a.name) || [],
+      summary: data.intro || '',
+      poster: data.pic?.large || data.pic?.normal || '',
+      countries: data.countries || [],
+      languages: data.languages || [],
+      duration: data.durations?.[0] || '',
+      releaseDate: data.pubdate?.[0] || '',
+      trailerUrl: data.trailers?.[0]?.video_url || '',
+      imdbId: '',
+      tags: data.tags || [],
+    };
+  } catch (error) {
+    console.error(`[Douban Mobile API] 获取失败:`, error);
+    throw new DoubanError(
+      'Mobile API 获取失败，请稍后再试',
+      'SERVER_ERROR',
+      500
+    );
+  }
 }
 
 export const runtime = 'nodejs';
@@ -215,11 +290,14 @@ async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
     const response = await fetch(target, fetchOptions);
     clearTimeout(timeoutId);
 
+    let html: string;
+
     // 处理不同的HTTP状态码
     if (!response.ok) {
       if (response.status === 429) {
-        // 速率限制
-        throw new DoubanError('请求过于频繁，请稍后再试', 'RATE_LIMIT', 429);
+        // 速率限制 - fallback 到 Mobile API
+        console.log(`[Douban] 遇到 429 速率限制，尝试使用 Mobile API...`);
+        return fetchFromMobileAPI(id);
       } else if (response.status >= 500) {
         // 服务器错误
         throw new DoubanError(`豆瓣服务器错误: ${response.status}`, 'SERVER_ERROR', response.status);
@@ -231,7 +309,13 @@ async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
       }
     }
 
-    const html = await response.text();
+    html = await response.text();
+
+    // 检测 challenge 页面 - fallback 到 Mobile API
+    if (isDoubanChallengePage(html)) {
+      console.log(`[Douban] 检测到反爬虫 challenge 页面，fallback 到 Mobile API...`);
+      return fetchFromMobileAPI(id);
+    }
 
     // 解析详细信息
     return parseDoubanDetails(html, id);
