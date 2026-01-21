@@ -9,7 +9,7 @@ const nextConfig = {
   reactStrictMode: false,
 
   // Puppeteer/Chromium 相关包不进行 bundle（用于 Vercel serverless）
-  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth'],
 
   // Next.js 16 使用 Turbopack，配置 SVG 加载
   turbopack: {
