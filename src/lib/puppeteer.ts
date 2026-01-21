@@ -1,35 +1,6 @@
-import puppeteerCore, { Browser, Page } from 'puppeteer-core';
-import { addExtra } from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import puppeteer, { Browser, Page } from 'puppeteer-core';
 
 import { getRandomUserAgent, getRandomUserAgentWithInfo, getSecChUaHeaders } from './user-agent';
-
-// 🎯 使用 addExtra 增强 puppeteer-core，添加 stealth 插件支持
-const puppeteer = addExtra(puppeteerCore);
-puppeteer.use(StealthPlugin());
-
-// 🎯 重试配置 - 基于2025-2026最佳实践
-const PUPPETEER_MAX_RETRIES = 3;
-const PUPPETEER_BASE_DELAY = 2000; // 2秒
-const PUPPETEER_MAX_DELAY = 30000; // 最大30秒
-
-/**
- * 计算exponential backoff延迟（带jitter）
- * 参考: https://dev.to/abhivyaktii/retrying-failed-requests-with-exponential-backoff-48ld
- */
-function calculateBackoffDelay(retryCount: number): number {
-  // Exponential backoff: base_delay * (2 ^ retry_count)
-  const exponentialDelay = PUPPETEER_BASE_DELAY * Math.pow(2, retryCount);
-
-  // 限制最大延迟
-  const cappedDelay = Math.min(exponentialDelay, PUPPETEER_MAX_DELAY);
-
-  // 添加jitter（随机性）避免thundering herd问题
-  // jitter范围：0.5x 到 1.5x
-  const jitter = 0.5 + Math.random();
-
-  return Math.floor(cappedDelay * jitter);
-}
 
 /**
  * 获取 Puppeteer 浏览器实例
@@ -39,11 +10,7 @@ export async function getBrowser(): Promise<Browser> {
   const isDocker = process.env.DOCKER_BUILD === 'true';
   const isVercel = process.env.VERCEL === '1';
 
-  const launchOptions: {
-    headless: boolean;
-    args: string[];
-    executablePath?: string;
-  } = {
+  const launchOptions: Parameters<typeof puppeteer.launch>[0] = {
     headless: true,
     args: [
       '--no-sandbox',
@@ -53,10 +20,6 @@ export async function getBrowser(): Promise<Browser> {
       '--no-first-run',
       '--no-zygote',
       '--disable-gpu',
-      // 🎯 额外的反检测参数
-      '--disable-blink-features=AutomationControlled', // 隐藏自动化标识
-      '--disable-features=IsolateOrigins,site-per-process',
-      '--window-size=1920,1080', // 模拟真实窗口大小
     ],
   };
 
@@ -84,10 +47,9 @@ export async function getBrowser(): Promise<Browser> {
 }
 
 /**
- * 使用 Puppeteer 获取页面 HTML（单次尝试）
- * 参考: https://www.browserless.io/blog/ultimate-guide-to-puppeteer-web-scraping-in-2025
+ * 使用 Puppeteer 获取页面 HTML（绕过 JS 挑战）
  */
-async function _fetchPageWithPuppeteerOnce(url: string, options?: {
+export async function fetchPageWithPuppeteer(url: string, options?: {
   waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
   timeout?: number;
 }): Promise<{ html: string; cookies: any[] }> {
@@ -95,26 +57,6 @@ async function _fetchPageWithPuppeteerOnce(url: string, options?: {
 
   try {
     const page = await browser.newPage();
-
-    // 🎯 隐藏webdriver属性 - 反bot检测
-    await page.evaluateOnNewDocument(() => {
-      // 删除 navigator.webdriver
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => undefined,
-      });
-
-      // 模拟真实的Chrome对象
-      (window as any).chrome = {
-        runtime: {},
-      };
-
-      // 模拟权限API
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters: any) =>
-        parameters.name === 'notifications'
-          ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
-          : originalQuery(parameters);
-    });
 
     // 使用项目的随机 User-Agent（带浏览器信息）
     const { ua, browser: browserType, platform } = getRandomUserAgentWithInfo();
@@ -139,11 +81,6 @@ async function _fetchPageWithPuppeteerOnce(url: string, options?: {
       // 注意：Sec-CH-UA headers 需要通过 CDP 设置，Puppeteer 不直接支持
     });
 
-    // 🎯 监听失败的请求（用于调试）
-    page.on('requestfailed', (request) => {
-      console.warn(`[Puppeteer] Request failed: ${request.url()}, error: ${request.failure()?.errorText}`);
-    });
-
     // 访问页面
     await page.goto(url, {
       waitUntil: options?.waitUntil || 'networkidle2',
@@ -166,48 +103,9 @@ async function _fetchPageWithPuppeteerOnce(url: string, options?: {
 }
 
 /**
- * 使用 Puppeteer 获取页面 HTML（带重试机制）
- * 参考: https://scrapeops.io/puppeteer-web-scraping-playbook/nodejs-puppeteer-beginners-guide-part-4/
+ * 使用 Puppeteer 绕过豆瓣的 Challenge 页面
  */
-export async function fetchPageWithPuppeteer(url: string, options?: {
-  waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
-  timeout?: number;
-  maxRetries?: number;
-}): Promise<{ html: string; cookies: any[] }> {
-  const maxRetries = options?.maxRetries ?? PUPPETEER_MAX_RETRIES;
-  let lastError: Error | undefined;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[Puppeteer] 尝试 ${attempt + 1}/${maxRetries + 1}: ${url}`);
-
-      const result = await _fetchPageWithPuppeteerOnce(url, options);
-
-      console.log(`[Puppeteer] ✅ 成功获取页面 (尝试 ${attempt + 1}/${maxRetries + 1}), HTML 长度: ${result.html.length}`);
-
-      return result;
-    } catch (error) {
-      lastError = error as Error;
-
-      console.error(`[Puppeteer] ❌ 尝试 ${attempt + 1}/${maxRetries + 1} 失败:`, error);
-
-      // 如果还有重试机会
-      if (attempt < maxRetries) {
-        const delay = calculateBackoffDelay(attempt);
-        console.log(`[Puppeteer] 等待 ${delay}ms 后重试...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  // 所有重试都失败
-  throw new Error(`Puppeteer在${maxRetries + 1}次尝试后失败: ${lastError?.message}`);
-}
-
-/**
- * 使用 Puppeteer 绕过豆瓣的 Challenge 页面（带重试）
- */
-export async function bypassDoubanChallenge(url: string, maxRetries?: number): Promise<{
+export async function bypassDoubanChallenge(url: string): Promise<{
   html: string;
   cookies: any[];
 }> {
@@ -216,10 +114,9 @@ export async function bypassDoubanChallenge(url: string, maxRetries?: number): P
   const result = await fetchPageWithPuppeteer(url, {
     waitUntil: 'networkidle2',
     timeout: 30000,
-    maxRetries,
   });
 
-  console.log(`[Puppeteer] ✅ 成功绕过Challenge，HTML 长度: ${result.html.length}`);
+  console.log(`[Puppeteer] ✅ 成功获取页面，HTML 长度: ${result.html.length}`);
 
   return result;
 }
