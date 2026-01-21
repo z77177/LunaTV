@@ -436,22 +436,7 @@ async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
     console.log(`[Douban] 开始解析页面内容...`);
 
     // 解析详细信息
-    const result = parseDoubanDetails(html, id);
-
-    // 🎯 检查关键字段：如果标题为空，说明解析失败，fallback 到 Mobile API
-    if (!result.data.title || result.data.title.trim() === '') {
-      console.warn(`[Douban] ⚠️ 解析结果缺少关键字段（标题为空），可能是页面结构异常`);
-      console.log(`[Douban] 使用 Mobile API fallback...`);
-      try {
-        return await fetchFromMobileAPI(id);
-      } catch (mobileError) {
-        console.error(`[Douban] Mobile API fallback 也失败:`, mobileError);
-        // 返回原始解析结果（虽然不完整，但至少有部分数据）
-        return result;
-      }
-    }
-
-    return result;
+    return parseDoubanDetails(html, id);
   } catch (error) {
     // 超时错误
     if (error instanceof Error && error.name === 'AbortError') {
@@ -632,9 +617,8 @@ function parseDoubanDetails(html: string, id: string) {
     let screenwriters: string[] = [];
     let cast: string[] = [];
 
-    // 导演：实际HTML结构是 <span><span class='pl'>导演</span>: <span class='attrs'>...</span></span>
-    // 注意：有些电影每个导演外面还包一层span，需要用[\s\S]匹配到外层attrs的结束标签
-    const directorMatch = html.match(/<span class=['"]pl['"]>导演<\/span>[:\s]*<span class=['"]attrs['"](?: style="[^"]*")?>([\s\S]*?)<\/span>\s*<\/span>/);
+    // 导演：<span class='pl'>导演</span>: <span class='attrs'><a href="..." rel="v:directedBy">刘家成</a></span>
+    const directorMatch = html.match(/<span class=['"]pl['"]>导演<\/span>:\s*<span class=['"]attrs['"]>(.*?)<\/span>/);
     if (directorMatch) {
       const directorLinks = directorMatch[1].match(/<a[^>]*>([^<]+)<\/a>/g);
       if (directorLinks) {
@@ -645,9 +629,8 @@ function parseDoubanDetails(html: string, id: string) {
       }
     }
 
-    // 编剧：实际HTML结构是 <span><span class='pl'>编剧</span>: <span class='attrs'>...</span></span>
-    // 注意：有些电影每个编剧外面还包一层span，需要用[\s\S]匹配到外层attrs的结束标签
-    const writerMatch = html.match(/<span class=['"]pl['"]>编剧<\/span>[:\s]*<span class=['"]attrs['"](?: style="[^"]*")?>([\s\S]*?)<\/span>\s*<\/span>/);
+    // 编剧：<span class='pl'>编剧</span>: <span class='attrs'><a href="...">王贺</a></span>
+    const writerMatch = html.match(/<span class=['"]pl['"]>编剧<\/span>:\s*<span class=['"]attrs['"]>(.*?)<\/span>/);
     if (writerMatch) {
       const writerLinks = writerMatch[1].match(/<a[^>]*>([^<]+)<\/a>/g);
       if (writerLinks) {
@@ -658,9 +641,8 @@ function parseDoubanDetails(html: string, id: string) {
       }
     }
 
-    // 主演：实际HTML结构是 <span><span class='pl'>主演</span>: <span class='attrs'>...</span></span>
-    // 注意：有些电影每个演员外面还包一层span，需要用[\s\S]匹配到外层attrs的结束标签
-    const castMatch = html.match(/<span class=['"]pl['"]>主演<\/span>[:\s]*<span class=['"]attrs['"](?: style="[^"]*")?>([\s\S]*?)<\/span>\s*<\/span>/);
+    // 主演：<span class='pl'>主演</span>: <span class='attrs'><a href="..." rel="v:starring">杨幂</a> / <a href="...">欧豪</a> / ...</span>
+    const castMatch = html.match(/<span class=['"]pl['"]>主演<\/span>:\s*<span class=['"]attrs['"]>(.*?)<\/span>/);
     if (castMatch) {
       const castLinks = castMatch[1].match(/<a[^>]*>([^<]+)<\/a>/g);
       if (castLinks) {
@@ -835,13 +817,13 @@ function parseDoubanDetails(html: string, id: string) {
     let episode_length: number | undefined;
     let movie_duration: number | undefined;
     
-    // 先尝试提取剧集的单集片长 - 可能是纯文本或在span标签内
-    const singleEpisodeDurationMatch = html.match(/<span[^>]*class="pl">单集片长:<\/span>\s*(?:<span[^>]*>)?([^<]+)/);
+    // 先尝试提取剧集的单集片长
+    const singleEpisodeDurationMatch = html.match(/<span[^>]*class="pl">单集片长:<\/span>([^<]+)/);
     if (singleEpisodeDurationMatch) {
       episode_length = parseInt(singleEpisodeDurationMatch[1].trim()) || undefined;
     } else {
-      // 如果没有单集片长，尝试提取电影的总片长 - 可能是纯文本或在span标签内
-      const movieDurationMatch = html.match(/<span[^>]*class="pl">片长:<\/span>\s*(?:<span[^>]*>)?([^<]+)/);
+      // 如果没有单集片长，尝试提取电影的总片长
+      const movieDurationMatch = html.match(/<span[^>]*class="pl">片长:<\/span>([^<]+)/);
       if (movieDurationMatch) {
         movie_duration = parseInt(movieDurationMatch[1].trim()) || undefined;
       }
