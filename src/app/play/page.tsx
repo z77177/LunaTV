@@ -19,6 +19,7 @@ import CommentSection from '@/components/play/CommentSection';
 import DownloadButtons from '@/components/play/DownloadButtons';
 import FavoriteButton from '@/components/play/FavoriteButton';
 import BackToTopButton from '@/components/play/BackToTopButton';
+import LoadingScreen from '@/components/play/LoadingScreen';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
 import { ClientCache } from '@/lib/client-cache';
@@ -5302,154 +5303,11 @@ function PlayPageClient() {
 
   if (loading) {
     return (
-      <PageLayout activePath='/play'>
-        <div className='flex items-center justify-center min-h-screen bg-transparent'>
-          <div className='text-center max-w-md mx-auto px-6'>
-            {/* 动画影院图标 */}
-            <div className='relative mb-8'>
-              <div className='relative mx-auto w-24 h-24 bg-linear-to-r from-green-500 to-emerald-600 rounded-2xl shadow-2xl flex items-center justify-center transform hover:scale-105 transition-transform duration-300'>
-                <div className='text-white text-4xl'>
-                  {loadingStage === 'searching' && '🔍'}
-                  {loadingStage === 'preferring' && '⚡'}
-                  {loadingStage === 'fetching' && '🎬'}
-                  {loadingStage === 'ready' && '✨'}
-                </div>
-                {/* 旋转光环 */}
-                <div className='absolute -inset-2 bg-linear-to-r from-green-500 to-emerald-600 rounded-2xl opacity-20 animate-spin'></div>
-              </div>
-
-              {/* 浮动粒子效果 */}
-              <div className='absolute top-0 left-0 w-full h-full pointer-events-none'>
-                <div className='absolute top-2 left-2 w-2 h-2 bg-green-400 rounded-full animate-bounce'></div>
-                <div
-                  className='absolute top-4 right-4 w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce'
-                  style={{ animationDelay: '0.5s' }}
-                ></div>
-                <div
-                  className='absolute bottom-3 left-6 w-1 h-1 bg-lime-400 rounded-full animate-bounce'
-                  style={{ animationDelay: '1s' }}
-                ></div>
-              </div>
-            </div>
-
-            {/* 进度指示器 */}
-            <div className='mb-6 w-80 mx-auto'>
-              <div className='flex justify-center space-x-2 mb-4'>
-                <div
-                  className={`w-3 h-3 rounded-full transition-all duration-500 ${loadingStage === 'searching' || loadingStage === 'fetching'
-                    ? 'bg-green-500 scale-125'
-                    : loadingStage === 'preferring' ||
-                      loadingStage === 'ready'
-                      ? 'bg-green-500'
-                      : 'bg-gray-300'
-                    }`}
-                ></div>
-                <div
-                  className={`w-3 h-3 rounded-full transition-all duration-500 ${loadingStage === 'preferring'
-                    ? 'bg-green-500 scale-125'
-                    : loadingStage === 'ready'
-                      ? 'bg-green-500'
-                      : 'bg-gray-300'
-                    }`}
-                ></div>
-                <div
-                  className={`w-3 h-3 rounded-full transition-all duration-500 ${loadingStage === 'ready'
-                    ? 'bg-green-500 scale-125'
-                    : 'bg-gray-300'
-                    }`}
-                ></div>
-              </div>
-
-              {/* 进度条 */}
-              <div className='w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden'>
-                <div
-                  className='h-full bg-linear-to-r from-green-500 to-emerald-600 rounded-full transition-all duration-1000 ease-out'
-                  style={{
-                    width:
-                      loadingStage === 'searching' ||
-                        loadingStage === 'fetching'
-                        ? '33%'
-                        : loadingStage === 'preferring'
-                          ? '66%'
-                          : '100%',
-                  }}
-                ></div>
-              </div>
-            </div>
-
-            {/* 加载消息 */}
-            <div className='space-y-2'>
-              <p className='text-xl font-semibold text-gray-800 dark:text-gray-200 animate-pulse'>
-                {loadingMessage}
-              </p>
-
-              {/* Netflix风格测速进度显示 */}
-              {speedTestProgress && (
-                <div className='mt-6 space-y-3'>
-                  {/* 进度条容器 */}
-                  <div className='relative w-full'>
-                    {/* 背景进度条 */}
-                    <div className='h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden'>
-                      {/* 动态进度条 - Netflix红色 */}
-                      <div
-                        className='h-full bg-gradient-to-r from-red-600 to-red-500 rounded-full transition-all duration-300 ease-out relative overflow-hidden'
-                        style={{
-                          width: `${(speedTestProgress.current / speedTestProgress.total) * 100}%`,
-                        }}
-                      >
-                        {/* 闪烁效果 */}
-                        <div className='absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer'></div>
-                      </div>
-                    </div>
-
-                    {/* 进度数字 - 靠右显示 */}
-                    <div className='absolute -top-6 right-0 text-xs font-medium text-gray-500 dark:text-gray-400'>
-                      {speedTestProgress.current}/{speedTestProgress.total}
-                    </div>
-                  </div>
-
-                  {/* 当前测试源信息卡片 */}
-                  <div className='bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700'>
-                    <div className='flex items-center gap-2'>
-                      {/* 脉动指示器 */}
-                      <div className='relative'>
-                        <div className='w-2 h-2 bg-red-500 rounded-full animate-pulse'></div>
-                        <div className='absolute inset-0 w-2 h-2 bg-red-500 rounded-full animate-ping'></div>
-                      </div>
-
-                      {/* 源名称 */}
-                      <span className='text-sm font-semibold text-gray-700 dark:text-gray-300 truncate flex-1'>
-                        {speedTestProgress.currentSource}
-                      </span>
-                    </div>
-
-                    {/* 测试结果 */}
-                    {speedTestProgress.result && (
-                      <div className='mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-mono'>
-                        {speedTestProgress.result === '测速失败' ? (
-                          <span className='text-red-500 flex items-center gap-1'>
-                            <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
-                              <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z' clipRule='evenodd' />
-                            </svg>
-                            连接失败
-                          </span>
-                        ) : (
-                          <span className='text-green-600 dark:text-green-400 flex items-center gap-1'>
-                            <svg className='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
-                              <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z' clipRule='evenodd' />
-                            </svg>
-                            {speedTestProgress.result}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </PageLayout>
+      <LoadingScreen
+        loadingStage={loadingStage}
+        loadingMessage={loadingMessage}
+        speedTestProgress={speedTestProgress}
+      />
     );
   }
 
