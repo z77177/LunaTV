@@ -12,6 +12,7 @@ const Grid = dynamic(
   }
 );
 
+// @ts-ignore - useInfiniteLoader exists at runtime but type definitions are incomplete
 import { useInfiniteLoader } from 'react-window-infinite-loader';
 
 import { DoubanItem } from '@/lib/types';
