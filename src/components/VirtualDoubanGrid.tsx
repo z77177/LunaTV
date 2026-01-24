@@ -308,11 +308,9 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
               }
             }
           }}
-        />
-      )}
-      
-      {/* 加载更多指示器 */}
-      {containerWidth > 100 && isLoadingMore && (
+        >
+          {/* 加载更多指示器 - 作为Grid的children显示在滚动容器内 */}
+          {isLoadingMore && (
         <div className='flex justify-center mt-8 py-8'>
           <div className='relative px-8 py-4 rounded-2xl bg-linear-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
             {/* 动画背景 */}
@@ -338,10 +336,12 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
             </div>
           </div>
         </div>
+          )}
+        </Grid>
       )}
-      
+
       {/* 已加载完所有内容的提示 */}
-      {containerWidth > 100 && !hasMore && totalItemCount > 0 && (
+      {!hasMore && totalItemCount > 0 && (
         <div className='flex justify-center mt-8 py-8'>
           <div className='relative px-8 py-5 rounded-2xl bg-linear-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
             {/* 装饰性背景 */}
