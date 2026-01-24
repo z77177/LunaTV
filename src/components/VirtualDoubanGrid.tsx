@@ -296,10 +296,11 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
             // 使用react-window v2.1.2的API：
             // 1. visibleCells: 真实可见的单元格范围
             // 2. allCells: 包含overscan的所有渲染单元格范围
-            const { rowStopIndex: visibleRowStopIndex } = visibleCells;
+            // 使用 allCells 的 rowStopIndex 来更早触发加载
+            const { rowStopIndex: overscanRowStopIndex } = allCells;
 
-            // 简化逻辑：基于可见行检测，触发服务器分页加载
-            if (visibleRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD && needsServerData) {
+            // 基于overscan行检测，触发服务器分页加载
+            if (overscanRowStopIndex >= rowCount - LOAD_MORE_THRESHOLD && needsServerData) {
               // 防止重复调用onLoadMore
               const now = Date.now();
               if (now - lastLoadMoreCallRef.current > 1000) {
@@ -337,11 +338,9 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
           </div>
         </div>
           )}
-        </Grid>
-      )}
 
-      {/* 已加载完所有内容的提示 */}
-      {!hasMore && totalItemCount > 0 && (
+          {/* 已加载完所有内容的提示 - 也放在Grid内部 */}
+          {!hasMore && totalItemCount > 0 && (
         <div className='flex justify-center mt-8 py-8'>
           <div className='relative px-8 py-5 rounded-2xl bg-linear-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm overflow-hidden'>
             {/* 装饰性背景 */}
@@ -378,6 +377,8 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
             </div>
           </div>
         </div>
+          )}
+        </Grid>
       )}
     </div>
   );
