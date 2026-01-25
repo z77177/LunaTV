@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       TMDBApiKey,
       TMDBLanguage,
       EnableTMDBActorSearch,
+      cronConfig,
     } = body as {
       SiteName: string;
       Announcement: string;
@@ -61,6 +62,13 @@ export async function POST(request: NextRequest) {
       TMDBApiKey?: string;
       TMDBLanguage?: string;
       EnableTMDBActorSearch?: boolean;
+      cronConfig?: {
+        enableAutoRefresh: boolean;
+        maxRecordsPerRun: number;
+        onlyRefreshRecent: boolean;
+        recentDays: number;
+        onlyRefreshOngoing: boolean;
+      };
     };
 
     // 参数校验
@@ -119,6 +127,26 @@ export async function POST(request: NextRequest) {
       };
     }
     adminConfig.DoubanConfig.enablePuppeteer = EnablePuppeteer;
+
+    // 更新 Cron 配置
+    if (cronConfig) {
+      if (!adminConfig.CronConfig) {
+        adminConfig.CronConfig = {
+          enableAutoRefresh: true,
+          maxRecordsPerRun: 100,
+          onlyRefreshRecent: true,
+          recentDays: 30,
+          onlyRefreshOngoing: true,
+        };
+      }
+      adminConfig.CronConfig = {
+        enableAutoRefresh: cronConfig.enableAutoRefresh,
+        maxRecordsPerRun: cronConfig.maxRecordsPerRun,
+        onlyRefreshRecent: cronConfig.onlyRefreshRecent,
+        recentDays: cronConfig.recentDays,
+        onlyRefreshOngoing: cronConfig.onlyRefreshOngoing,
+      };
+    }
 
     // 写入数据库
     await db.saveAdminConfig(adminConfig);
