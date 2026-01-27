@@ -5196,11 +5196,15 @@ function PlayPageClient() {
                 currentId={currentId}
                 videoTitle={searchTitle || videoTitle}
                 availableSources={availableSources.filter(source => {
-                  // 必须有集数数据
-                  if (!source.episodes || source.episodes.length < 1) return false;
+                  // 必须有集数数据（所有源包括短剧源都必须有至少1集）
+                  if (!source.episodes || source.episodes.length < 1) {
+                    return false;
+                  }
 
-                  // 短剧源始终显示，不受集数差异限制
-                  if (source.source === 'shortdrama') return true;
+                  // 短剧源不受集数差异限制（但必须有集数数据）
+                  if (source.source === 'shortdrama') {
+                    return true;
+                  }
 
                   // 如果当前有 detail，只显示集数相近的源（允许 ±30% 的差异）
                   if (detail && detail.episodes && detail.episodes.length > 0) {
