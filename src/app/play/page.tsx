@@ -2262,7 +2262,9 @@ function PlayPageClient() {
           throw new Error('该源没有可用的集数数据');
         }
 
-        setAvailableSources([detailData]);
+        // 只有数据有效时才设置 availableSources
+        // 注意：这里不应该直接设置，因为后续逻辑会统一设置
+        // setAvailableSources([detailData]);
         return [detailData];
       } catch (err) {
         console.error('获取视频详情失败:', err);
