@@ -2460,8 +2460,13 @@ function PlayPageClient() {
       // 对于短剧，直接获取详情，跳过搜索
       if (currentSource === 'shortdrama' && currentId) {
         sourcesInfo = await fetchSourceDetail(currentSource, currentId);
-        // 设置可用源列表（即使只有短剧源本身）
-        setAvailableSources(sourcesInfo);
+        // 只有当短剧源有有效数据时才设置可用源列表
+        if (sourcesInfo.length > 0 && sourcesInfo[0].episodes && sourcesInfo[0].episodes.length > 0) {
+          setAvailableSources(sourcesInfo);
+        } else {
+          console.log('⚠️ 短剧源没有有效数据，不设置可用源列表');
+          setAvailableSources([]);
+        }
       } else {
         // 其他情况先搜索所有视频源
         sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
