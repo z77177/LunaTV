@@ -2262,6 +2262,13 @@ function PlayPageClient() {
           throw new Error('该源没有可用的集数数据');
         }
 
+        // 对于短剧源，还需要检查 title 和 poster 是否有效
+        if (source === 'shortdrama') {
+          if (!detailData.title || !detailData.poster) {
+            throw new Error('短剧源数据不完整（缺少标题或海报）');
+          }
+        }
+
         // 只有数据有效时才设置 availableSources
         // 注意：这里不应该直接设置，因为后续逻辑会统一设置
         // setAvailableSources([detailData]);
