@@ -3760,6 +3760,9 @@ function PlayPageClient() {
               const savedOpacity = parseFloat(localStorage.getItem('danmaku_opacity') || '0.8');
               const savedMargin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
               const savedModes = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
+              const savedAntiOverlap = localStorage.getItem('danmaku_antiOverlap') !== null
+                ? localStorage.getItem('danmaku_antiOverlap') === 'true'
+                : !isMobile; // 默认值：桌面端开启，移动端关闭
 
               return [
                 {
@@ -3871,6 +3874,21 @@ function PlayPageClient() {
                       });
                     }
                     return item.html;
+                  },
+                },
+                {
+                  html: '防重叠',
+                  tooltip: savedAntiOverlap ? '已开启（弹幕不重叠，性能消耗较高）' : '已关闭（弹幕可能重叠，性能更好）',
+                  switch: savedAntiOverlap,
+                  onSwitch: function (item: any) {
+                    const newValue = !item.switch;
+                    localStorage.setItem('danmaku_antiOverlap', String(newValue));
+                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                        antiOverlap: newValue,
+                      });
+                    }
+                    return newValue;
                   },
                 },
               ];
@@ -3992,7 +4010,9 @@ function PlayPageClient() {
                 width: 300,
 
                 // 🎯 激进优化配置 - 保持功能完整性
-                antiOverlap: devicePerformance === 'high', // 只有高性能设备开启防重叠，避免重叠计算
+                antiOverlap: localStorage.getItem('danmaku_antiOverlap') !== null
+                  ? localStorage.getItem('danmaku_antiOverlap') === 'true'
+                  : (devicePerformance === 'high'), // 默认值：高性能设备开启防重叠
                 synchronousPlayback: true, // ✅ 必须保持true！确保弹幕与视频播放速度同步
                 heatmap: false, // 关闭热力图，减少DOM计算开销
                 
