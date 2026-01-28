@@ -3766,7 +3766,7 @@ function PlayPageClient() {
                   html: '字号',
                   tooltip: `${savedFontSize}px`,
                   range: [savedFontSize, 12, 40, 1],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const value = Math.round(item.range[0]);
                     localStorage.setItem('danmaku_fontSize', String(value));
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
@@ -3781,7 +3781,7 @@ function PlayPageClient() {
                   html: '速度',
                   tooltip: `${savedSpeed.toFixed(1)}`,
                   range: [savedSpeed, 1, 10, 0.5],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const value = Math.round(item.range[0] * 2) / 2; // 保留0.5精度
                     localStorage.setItem('danmaku_speed', String(value));
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
@@ -3796,7 +3796,7 @@ function PlayPageClient() {
                   html: '透明度',
                   tooltip: `${Math.round(savedOpacity * 100)}%`,
                   range: [savedOpacity, 0.1, 1.0, 0.05],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const value = Math.round(item.range[0] * 20) / 20; // 保留0.05精度
                     localStorage.setItem('danmaku_opacity', String(value));
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
@@ -3816,7 +3816,7 @@ function PlayPageClient() {
                     100,
                     5
                   ],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const topValue = Math.round(item.range[0] / 5) * 5; // 5%步长
                     const topMargin = topValue === 0 ? 10 : `${topValue}%`;
                     const currentMargin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
@@ -3839,7 +3839,7 @@ function PlayPageClient() {
                     100,
                     5
                   ],
-                  onRange: function (item: any) {
+                  onChange: function (item: any) {
                     const bottomValue = Math.round(item.range[0] / 5) * 5; // 5%步长
                     const bottomMargin = bottomValue === 0 ? 10 : `${bottomValue}%`;
                     const currentMargin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
