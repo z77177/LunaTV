@@ -275,6 +275,7 @@ export async function cacheVideoContent(
 /**
  * 清理过期的缓存文件
  * 由 Kvrocks TTL 自动触发，这里只是清理孤儿文件
+ * 🚀 优化：添加错误处理和 LRU 列表清理
  */
 export async function cleanupExpiredCache(): Promise<void> {
   try {
@@ -284,6 +285,7 @@ export async function cleanupExpiredCache(): Promise<void> {
 
     let cleanedCount = 0;
     let freedSize = 0;
+    let errorCount = 0;
 
     for (const file of files) {
       if (!file.endsWith('.mp4')) continue;
@@ -291,24 +293,40 @@ export async function cleanupExpiredCache(): Promise<void> {
       const cacheKey = file.replace('.mp4', '');
       const metaKey = `${KEYS.VIDEO_META}${cacheKey}`;
 
-      // 检查元数据是否存在
-      const meta = await redis.get(metaKey);
-      if (!meta) {
-        // 元数据不存在，说明已过期，删除文件
-        const filePath = path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, file);
-        const stats = await fs.stat(filePath);
-        await fs.unlink(filePath);
+      try {
+        // 检查元数据是否存在
+        const meta = await redis.get(metaKey);
+        if (!meta) {
+          // 元数据不存在，说明已过期，删除文件
+          const filePath = path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, file);
 
-        cleanedCount++;
-        freedSize += stats.size;
+          try {
+            const stats = await fs.stat(filePath);
+            await fs.unlink(filePath);
 
-        // 更新总缓存大小
-        await redis.decrBy(KEYS.VIDEO_SIZE, stats.size);
+            cleanedCount++;
+            freedSize += stats.size;
+
+            // 更新总缓存大小
+            await redis.decrBy(KEYS.VIDEO_SIZE, stats.size);
+
+            // 🚀 从 LRU 列表中移除
+            await redis.zRem(KEYS.VIDEO_LRU, [cacheKey]);
+
+            console.log(`[VideoCache] 清理过期文件: ${cacheKey}`);
+          } catch (fileError) {
+            console.error(`[VideoCache] 删除文件失败: ${cacheKey}`, fileError);
+            errorCount++;
+          }
+        }
+      } catch (error) {
+        console.error(`[VideoCache] 处理文件失败: ${file}`, error);
+        errorCount++;
       }
     }
 
     if (cleanedCount > 0) {
-      console.log(`[VideoCache] 清理完成: 删除 ${cleanedCount} 个文件，释放 ${(freedSize / 1024 / 1024).toFixed(2)}MB`);
+      console.log(`[VideoCache] 清理完成: 删除 ${cleanedCount} 个文件，释放 ${(freedSize / 1024 / 1024).toFixed(2)}MB${errorCount > 0 ? `, 错误 ${errorCount} 个` : ''}`);
     }
   } catch (error) {
     console.error('[VideoCache] 清理缓存失败:', error);
@@ -318,6 +336,7 @@ export async function cleanupExpiredCache(): Promise<void> {
 /**
  * 删除指定 URL 的视频缓存
  * 用于处理视频 URL 过期的情况
+ * 🚀 优化：添加 LRU 列表清理
  */
 export async function deleteVideoCache(videoUrl: string): Promise<void> {
   const cacheKey = getCacheKey(videoUrl);
@@ -337,6 +356,9 @@ export async function deleteVideoCache(videoUrl: string): Promise<void> {
 
     // 删除元数据
     await redis.del(metaKey);
+
+    // 🚀 从 LRU 列表中移除
+    await redis.zRem(KEYS.VIDEO_LRU, [cacheKey]);
 
     // 删除文件
     try {
@@ -440,6 +462,11 @@ export async function migrateOldCache(): Promise<void> {
 
         // 删除旧元数据
         await redis.del(oldMetaKey);
+
+        // 🚀 更新 LRU 列表：移除旧 key，添加新 key
+        await redis.zRem(KEYS.VIDEO_LRU, [oldCacheKey]);
+        const now = Date.now();
+        await redis.zAdd(KEYS.VIDEO_LRU, [{ score: now, value: newCacheKey }]);
 
         migratedCount++;
       } catch (error) {
