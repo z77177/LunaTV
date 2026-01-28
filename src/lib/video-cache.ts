@@ -41,8 +41,8 @@ const CACHE_CONFIG = {
   // 视频文件存储目录（Docker volume 持久化）
   VIDEO_CACHE_DIR: process.env.VIDEO_CACHE_DIR || '/tmp/video-cache',
 
-  // 最大缓存大小：500MB（防止磁盘占用过多）
-  MAX_CACHE_SIZE: 500 * 1024 * 1024, // 500 MB
+  // 最大缓存大小：2GB（优化后，可缓存更多视频）
+  MAX_CACHE_SIZE: 2 * 1024 * 1024 * 1024, // 2 GB
 };
 
 // Kvrocks Key 前缀
@@ -532,5 +532,46 @@ export async function cleanupLRU(requiredSpace: number): Promise<boolean> {
   } catch (error) {
     console.error('[VideoCache] LRU 清理失败:', error);
     return false;
+  }
+}
+
+/**
+ * 🚀 启动时校验：重新计算实际磁盘使用，修正计数器
+ * 防止 Redis 重启或异常导致的计数不准确
+ */
+export async function validateCacheSize(): Promise<void> {
+  try {
+    console.log('[VideoCache] 启动校验：开始计算实际磁盘使用...');
+    await ensureCacheDir();
+
+    const files = await fs.readdir(CACHE_CONFIG.VIDEO_CACHE_DIR);
+    const redis = await getKvrocksClient();
+
+    let actualTotalSize = 0;
+    let validFileCount = 0;
+
+    for (const file of files) {
+      if (!file.endsWith('.mp4')) continue;
+
+      try {
+        const filePath = path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, file);
+        const stats = await fs.stat(filePath);
+        actualTotalSize += stats.size;
+        validFileCount++;
+      } catch (error) {
+        console.error(`[VideoCache] 无法读取文件: ${file}`, error);
+      }
+    }
+
+    // 更新 Redis 中的总大小
+    await redis.set(KEYS.VIDEO_SIZE, actualTotalSize.toString());
+
+    console.log(`[VideoCache] ✅ 启动校验完成:`);
+    console.log(`  - 文件数量: ${validFileCount}`);
+    console.log(`  - 实际大小: ${(actualTotalSize / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`  - 最大限制: ${(CACHE_CONFIG.MAX_CACHE_SIZE / 1024 / 1024).toFixed(2)}MB`);
+
+  } catch (error) {
+    console.error('[VideoCache] 启动校验失败:', error);
   }
 }
