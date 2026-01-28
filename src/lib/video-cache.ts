@@ -50,6 +50,7 @@ const KEYS = {
   TRAILER_URL: 'trailer:url:', // trailer:url:{douban_id} → URL
   VIDEO_META: 'video:meta:', // video:meta:{url_hash} → 元数据
   VIDEO_SIZE: 'video:total_size', // 总缓存大小
+  VIDEO_LRU: 'video:lru', // Sorted Set: 记录文件访问时间 (score = timestamp)
 };
 
 /**
@@ -187,6 +188,11 @@ export async function getCachedVideoPath(videoUrl: string): Promise<string | nul
     const metaKey = `${KEYS.VIDEO_META}${cacheKey}`;
     await redis.expire(metaKey, CACHE_CONFIG.VIDEO_TTL);
 
+    // 🚀 LRU: 更新访问时间（使用当前时间戳作为 score）
+    const now = Date.now();
+    await redis.zAdd(KEYS.VIDEO_LRU, [{ score: now, value: cacheKey }]);
+    console.log(`[VideoCache] 更新 LRU 访问时间: ${cacheKey}`);
+
     return filePath;
   } catch {
     return null;
@@ -219,8 +225,18 @@ export async function cacheVideoContent(
     console.log(`[VideoCache] 当前缓存大小: ${(totalSize / 1024 / 1024).toFixed(2)}MB / ${(CACHE_CONFIG.MAX_CACHE_SIZE / 1024 / 1024).toFixed(2)}MB`);
 
     if (totalSize + fileSize > CACHE_CONFIG.MAX_CACHE_SIZE) {
-      console.warn(`[VideoCache] 缓存空间不足，跳过缓存 (当前: ${(totalSize / 1024 / 1024).toFixed(2)}MB)`);
-      return filePath;
+      console.warn(`[VideoCache] 缓存空间不足，尝试 LRU 清理...`);
+
+      // 🚀 LRU: 尝试清理旧文件释放空间
+      const requiredSpace = fileSize;
+      const cleaned = await cleanupLRU(requiredSpace);
+
+      if (!cleaned) {
+        console.warn(`[VideoCache] LRU 清理失败，跳过缓存`);
+        return filePath;
+      }
+
+      console.log(`[VideoCache] LRU 清理成功，继续缓存`);
     }
 
     // 写入文件
@@ -239,6 +255,10 @@ export async function cacheVideoContent(
 
     const metaKey = `${KEYS.VIDEO_META}${cacheKey}`;
     await redis.setEx(metaKey, CACHE_CONFIG.VIDEO_TTL, meta);
+
+    // 🚀 LRU: 添加到访问时间记录
+    const now = Date.now();
+    await redis.zAdd(KEYS.VIDEO_LRU, [{ score: now, value: cacheKey }]);
 
     // 更新总缓存大小
     await redis.incrBy(KEYS.VIDEO_SIZE, fileSize);
@@ -432,5 +452,85 @@ export async function migrateOldCache(): Promise<void> {
     }
   } catch (error) {
     console.error('[VideoCache] 迁移缓存失败:', error);
+  }
+}
+
+/**
+ * 🚀 LRU 清理：当缓存满时删除最久未使用的文件
+ * @param requiredSpace 需要释放的空间（字节）
+ * @returns 是否成功释放足够空间
+ */
+export async function cleanupLRU(requiredSpace: number): Promise<boolean> {
+  try {
+    console.log(`[VideoCache] LRU 清理开始，需要释放: ${(requiredSpace / 1024 / 1024).toFixed(2)}MB`);
+
+    const redis = await getKvrocksClient();
+    let freedSpace = 0;
+    let deletedCount = 0;
+
+    // 获取最旧的文件（按访问时间升序）
+    const oldestFiles = await redis.zRange(KEYS.VIDEO_LRU, 0, -1);
+
+    if (!oldestFiles || oldestFiles.length === 0) {
+      console.log('[VideoCache] LRU 列表为空，无法清理');
+      return false;
+    }
+
+    console.log(`[VideoCache] 找到 ${oldestFiles.length} 个缓存文件`);
+
+    // 逐个删除最旧的文件，直到释放足够空间
+    for (const cacheKey of oldestFiles) {
+      if (freedSpace >= requiredSpace) {
+        break; // 已释放足够空间
+      }
+
+      try {
+        // 获取文件大小
+        const metaKey = `${KEYS.VIDEO_META}${cacheKey}`;
+        const meta = await redis.get(metaKey);
+
+        if (!meta) {
+          // 元数据不存在，从 LRU 中移除
+          await redis.zRem(KEYS.VIDEO_LRU, [cacheKey]);
+          continue;
+        }
+
+        const metaData = JSON.parse(meta);
+        const fileSize = metaData.size || 0;
+
+        // 删除文件
+        const filePath = getVideoCachePath(cacheKey);
+        try {
+          await fs.unlink(filePath);
+          console.log(`[VideoCache] LRU 删除文件: ${cacheKey} (${(fileSize / 1024 / 1024).toFixed(2)}MB)`);
+        } catch (err) {
+          console.log(`[VideoCache] 文件不存在: ${cacheKey}`);
+        }
+
+        // 删除元数据
+        await redis.del(metaKey);
+
+        // 从 LRU 中移除
+        await redis.zRem(KEYS.VIDEO_LRU, [cacheKey]);
+
+        // 更新总缓存大小
+        if (fileSize > 0) {
+          await redis.decrBy(KEYS.VIDEO_SIZE, fileSize);
+        }
+
+        freedSpace += fileSize;
+        deletedCount++;
+
+      } catch (error) {
+        console.error(`[VideoCache] LRU 删除失败: ${cacheKey}`, error);
+      }
+    }
+
+    console.log(`[VideoCache] LRU 清理完成: 删除 ${deletedCount} 个文件，释放 ${(freedSpace / 1024 / 1024).toFixed(2)}MB`);
+    return freedSpace >= requiredSpace;
+
+  } catch (error) {
+    console.error('[VideoCache] LRU 清理失败:', error);
+    return false;
   }
 }
