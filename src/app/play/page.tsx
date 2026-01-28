@@ -3878,17 +3878,19 @@ function PlayPageClient() {
                 },
                 {
                   html: '防重叠',
-                  tooltip: savedAntiOverlap ? '已开启（弹幕不重叠，性能消耗较高）' : '已关闭（弹幕可能重叠，性能更好）',
-                  switch: savedAntiOverlap,
-                  onSwitch: function (item: any) {
-                    const newValue = !item.switch;
-                    localStorage.setItem('danmaku_antiOverlap', String(newValue));
+                  tooltip: '弹幕防重叠（开启后性能消耗较高）',
+                  selector: [
+                    { html: '开启', value: true, default: savedAntiOverlap === true },
+                    { html: '关闭', value: false, default: savedAntiOverlap === false },
+                  ],
+                  onSelect: function (item: any) {
+                    localStorage.setItem('danmaku_antiOverlap', String(item.value));
                     if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
                       artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                        antiOverlap: newValue,
+                        antiOverlap: item.value,
                       });
                     }
-                    return newValue;
+                    return item.html;
                   },
                 },
               ];
