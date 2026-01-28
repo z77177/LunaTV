@@ -20,6 +20,7 @@ interface PerformanceData {
   currentStatus: {
     system: {
       cpuUsage: number;
+      cpuCores: number;
       memoryUsage: {
         heapUsed: number;
         heapTotal: number;
@@ -417,7 +418,7 @@ export default function PerformanceMonitor() {
             {data.currentStatus.system.cpuUsage.toFixed(2)}%
           </div>
           <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-            LunaTV 进程占用
+            机器共 {data.currentStatus.system.cpuCores} 核
           </div>
         </div>
 
