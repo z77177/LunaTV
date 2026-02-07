@@ -13,10 +13,22 @@ export async function GET(request: NextRequest) {
   const config = await getConfig();
   console.log('TelegramAuthConfig:', config.TelegramAuthConfig);
 
+  // 检查是否是内部请求（middleware 获取信任网络配置）
+  const isInternalRequest = request.headers.get('x-internal-request') === 'true';
+  const requestedKey = new URL(request.url).searchParams.get('key');
+
+  // 内部请求：只返回特定配置
+  if (isInternalRequest && requestedKey === 'TrustedNetworkConfig') {
+    return NextResponse.json({
+      TrustedNetworkConfig: config.TrustedNetworkConfig || null,
+    });
+  }
+
   const result: any = {
     SiteName: config.SiteConfig.SiteName,
     StorageType: process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage',
     Version: CURRENT_VERSION,
+    DownloadEnabled: config.DownloadConfig?.enabled ?? true,
   };
 
   // 添加 Telegram 登录配置（仅公开必要信息）

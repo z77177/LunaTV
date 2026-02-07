@@ -1,8 +1,11 @@
+import ipaddr from 'ipaddr.js';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getSpiderJarFromBlob, uploadSpiderJarToBlob } from '@/lib/blobStorage';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 import { getSpiderJar, getCandidates } from '@/lib/spiderJar';
+import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // Helper function to get base URL with SITE_BASE env support
 function getBaseUrl(request: NextRequest): string {
@@ -217,26 +220,32 @@ export async function GET(request: NextRequest) {
       const isAllowed = securityConfig.allowedIPs.some(allowedIP => {
         const trimmedIP = allowedIP.trim();
         if (trimmedIP === '*') return true;
-        
-        // 支持CIDR格式检查
-        if (trimmedIP.includes('/')) {
-          // 简单的CIDR匹配（实际生产环境建议使用专门的库）
-          const [network, mask] = trimmedIP.split('/');
-          const networkParts = network.split('.').map(Number);
-          const clientParts = clientIP.split('.').map(Number);
-          const maskBits = parseInt(mask, 10);
-          
-          // 简化的子网匹配逻辑
-          if (maskBits >= 24) {
-            const networkPrefix = networkParts.slice(0, 3).join('.');
-            const clientPrefix = clientParts.slice(0, 3).join('.');
-            return networkPrefix === clientPrefix;
+
+        try {
+          // 使用 ipaddr.js 处理 IPv4/IPv6 地址和 CIDR
+          // process() 会将 IPv4-mapped IPv6 (::ffff:x.x.x.x) 转换为 IPv4
+          const clientAddr = ipaddr.process(clientIP);
+
+          // 支持 CIDR 格式检查
+          if (trimmedIP.includes('/')) {
+            const [network, prefixLength] = ipaddr.parseCIDR(trimmedIP);
+            // 确保地址类型匹配（IPv4 vs IPv6）
+            if (clientAddr.kind() === network.kind()) {
+              return clientAddr.match(network, prefixLength);
+            }
+            return false;
           }
-          
-          return clientIP.startsWith(network.split('.').slice(0, 2).join('.'));
+
+          // 单个 IP 地址匹配
+          const allowedAddr = ipaddr.process(trimmedIP);
+          if (clientAddr.kind() === allowedAddr.kind()) {
+            return clientAddr.toString() === allowedAddr.toString();
+          }
+          return false;
+        } catch {
+          // 如果解析失败，回退到简单字符串匹配
+          return clientIP === trimmedIP;
         }
-        
-        return clientIP === trimmedIP;
       });
       
       if (!isAllowed) {
@@ -435,7 +444,7 @@ export async function GET(request: NextRequest) {
           // 苹果CMS接口优化配置
           siteHeader = {
             'User-Agent':
-              'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36',
+              DEFAULT_USER_AGENT,
             Accept: 'application/json, text/plain, */*',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Cache-Control': 'no-cache',
@@ -743,34 +752,34 @@ export async function GET(request: NextRequest) {
     // 使用新的 Spider Jar 管理逻辑（下载真实 jar + 缓存）
     const jarInfo = await getSpiderJar(forceSpiderRefresh);
 
-    // 🔑 最终策略：优先使用远程公网 jar，失败时使用本地代理
-    let finalSpiderUrl: string;
+    // 🔑 混合策略：优先使用 Vercel Blob CDN，降级到本地代理
+    // Blob CDN: 全球加速，减轻服务器负载（仅 Vercel 部署可用）
+    // 本地代理: 兼容所有部署环境，确保 100% 可用
+    let finalSpiderUrl = `${baseUrl}/api/proxy/spider.jar;md5;${jarInfo.md5}`;
 
-    if (jarInfo.success && jarInfo.source !== 'fallback') {
-      // 成功获取远程 jar，直接使用远程 URL（公网地址，减轻服务器负载）
-      finalSpiderUrl = `${jarInfo.source};md5;${jarInfo.md5}`;
-      console.log(`[Spider] 使用远程公网 jar: ${jarInfo.source}`);
-    } else {
-      // 远程失败，使用本地代理端点（确保100%可用）
-      finalSpiderUrl = `${baseUrl}/api/proxy/spider.jar;md5;${jarInfo.md5}`;
-      console.warn(`[Spider] 远程 jar 获取失败，使用本地代理: ${finalSpiderUrl.split(';')[0]}`);
+    // 尝试使用 Blob CDN（仅 Vercel 环境）
+    if (!globalSpiderJar) {
+      const blobJar = await getSpiderJarFromBlob();
+      if (blobJar) {
+        // Blob 存在，使用 CDN
+        finalSpiderUrl = `${blobJar.url};md5;${jarInfo.md5}`;
+        console.log(`[Spider] ✅ Using Blob CDN: ${blobJar.url}`);
+      } else {
+        // Blob 不存在，异步上传（不阻塞响应）
+        console.log(`[Spider] Blob CDN not available, using proxy`);
+        if (jarInfo.success && jarInfo.source !== 'fallback') {
+          uploadSpiderJarToBlob(jarInfo.buffer, jarInfo.md5, jarInfo.source).catch(
+            (err) => console.error('[Spider] Blob upload failed:', err)
+          );
+        }
+      }
     }
 
-    // 如果用户源配置中有自定义jar，优先使用（但必须是公网地址）
+    // 🔑 处理用户自定义 jar（如果有）
     if (globalSpiderJar) {
-      try {
-        const jarUrl = new URL(globalSpiderJar.split(';')[0]);
-        if (!isPrivateHost(jarUrl.hostname)) {
-          // 用户自定义的公网 jar，直接使用
-          finalSpiderUrl = globalSpiderJar;
-          console.log(`[Spider] 使用用户自定义 jar: ${globalSpiderJar}`);
-        } else {
-          console.warn(`[Spider] 用户配置的jar是私网地址，使用自动选择结果`);
-        }
-      } catch {
-        // URL解析失败，使用自动选择结果
-        console.warn(`[Spider] 用户配置的jar解析失败，使用自动选择结果`);
-      }
+      const customJarUrl = globalSpiderJar.split(';')[0];
+      console.log(`[Spider] 自定义 jar: ${customJarUrl}，通过代理提供`);
+      finalSpiderUrl = `${baseUrl}/api/proxy/spider.jar?url=${encodeURIComponent(customJarUrl)};md5;${jarInfo.md5}`;
     }
 
     // 设置 spider 字段和状态透明化字段
@@ -806,7 +815,7 @@ export async function GET(request: NextRequest) {
           } else {
             fastSite.header = {
               'User-Agent':
-                'Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36',
+                DEFAULT_USER_AGENT,
               Connection: 'close',
             };
           }
@@ -891,7 +900,8 @@ export async function GET(request: NextRequest) {
     // 根据format参数返回不同格式
     if (format === 'base64' || format === 'txt') {
       // 返回base64编码的配置（TVBox常用格式）
-      const configStr = JSON.stringify(tvboxConfig, null, 2);
+      // 使用紧凑格式减小文件大小，提升网络传输成功率
+      const configStr = JSON.stringify(tvboxConfig, null, 0);
       const base64Config = Buffer.from(configStr).toString('base64');
 
       return new NextResponse(base64Config, {
@@ -900,18 +910,33 @@ export async function GET(request: NextRequest) {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET',
           'Access-Control-Allow-Headers': 'Content-Type',
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
+          // 🚨 严格禁止缓存，确保影视仓等客户端每次获取最新配置（解决电信网络缓存问题）
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
     } else {
       // 返回JSON格式（使用 text/plain 提高 TVBox 分支兼容性）
-      return new NextResponse(JSON.stringify(tvboxConfig), {
+      // 确保数字类型字段为数字，提升兼容性
+      const responseContent = JSON.stringify(tvboxConfig, (key, value) => {
+        // 数字类型的字段确保为数字
+        if (['type', 'searchable', 'quickSearch', 'filterable'].includes(key)) {
+          return typeof value === 'string' ? parseInt(value) || 0 : value;
+        }
+        return value;
+      }, 0); // 紧凑格式，不使用缩进，减小文件大小
+
+      return new NextResponse(responseContent, {
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET',
           'Access-Control-Allow-Headers': 'Content-Type',
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
+          // 🚨 严格禁止缓存，确保影视仓等客户端每次获取最新配置（解决电信网络缓存问题）
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
     }

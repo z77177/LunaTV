@@ -1,83 +1,192 @@
 import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
-import { getCacheTime } from '@/lib/config';
+import { getCacheTime, getConfig } from '@/lib/config';
+import { fetchDoubanWithVerification } from '@/lib/douban-anti-crawler';
+import { bypassDoubanChallenge } from '@/lib/puppeteer';
+import { getRandomUserAgent, getRandomUserAgentWithInfo, getSecChUaHeaders } from '@/lib/user-agent';
+import { recordRequest } from '@/lib/performance-monitor';
 
-// 用户代理池 - 2025 最新版本（多浏览器策略）
-const USER_AGENTS = [
-  // Chrome 133 (2025最新)
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-  // Firefox 133 (2025最新)
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0',
-  // Safari 18 (2025最新)
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
-  // Edge 133 (2025最新)
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0',
-];
+/**
+ * 从配置中获取豆瓣 Cookies
+ */
+async function getDoubanCookies(): Promise<string | null> {
+  try {
+    const config = await getConfig();
+    return config.DoubanConfig?.cookies || null;
+  } catch (error) {
+    console.warn('[Douban] 获取 cookies 配置失败:', error);
+    return null;
+  }
+}
 
 // 请求限制器
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 2000; // 2秒最小间隔
 
-/**
- * 获取随机 User-Agent 及对应的浏览器指纹
- */
-function getRandomUserAgent(): {
-  ua: string;
-  browser: 'chrome' | 'firefox' | 'safari' | 'edge';
-  platform: string;
-} {
-  const index = Math.floor(Math.random() * USER_AGENTS.length);
-  const ua = USER_AGENTS[index];
-
-  // 识别浏览器类型和平台
-  let browser: 'chrome' | 'firefox' | 'safari' | 'edge' = 'chrome';
-  let platform = 'Windows';
-
-  if (ua.includes('Firefox')) {
-    browser = 'firefox';
-  } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
-    browser = 'safari';
-  } else if (ua.includes('Edg/')) {
-    browser = 'edge';
-  }
-
-  if (ua.includes('Macintosh')) {
-    platform = 'macOS';
-  } else if (ua.includes('Linux')) {
-    platform = 'Linux';
-  }
-
-  return { ua, browser, platform };
-}
-
-/**
- * 生成 Sec-CH-UA 客户端提示（Chrome/Edge）
- */
-function getSecChUaHeaders(browser: 'chrome' | 'firefox' | 'safari' | 'edge', platform: string): Record<string, string> {
-  if (browser === 'chrome') {
-    return {
-      'Sec-CH-UA': '"Google Chrome";v="133", "Chromium";v="133", "Not?A_Brand";v="24"',
-      'Sec-CH-UA-Mobile': '?0',
-      'Sec-CH-UA-Platform': `"${platform}"`,
-    };
-  } else if (browser === 'edge') {
-    return {
-      'Sec-CH-UA': '"Microsoft Edge";v="133", "Chromium";v="133", "Not?A_Brand";v="24"',
-      'Sec-CH-UA-Mobile': '?0',
-      'Sec-CH-UA-Platform': `"${platform}"`,
-    };
-  }
-  // Firefox 和 Safari 不发送 Sec-CH-UA
-  return {};
-}
-
 function randomDelay(min = 1000, max = 3000): Promise<void> {
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
   return new Promise(resolve => setTimeout(resolve, delay));
+}
+
+/**
+ * 检测是否为豆瓣 challenge 页面
+ */
+function isDoubanChallengePage(html: string): boolean {
+  return (
+    html.includes('sha512') &&
+    html.includes('process(cha)') &&
+    html.includes('载入中')
+  );
+}
+
+/**
+ * 从 Mobile API 获取详情（fallback 方案）
+ */
+async function fetchFromMobileAPI(id: string): Promise<{
+  code: number;
+  message: string;
+  data: any;
+}> {
+  try {
+    // 先尝试 movie 端点
+    let mobileApiUrl = `https://m.douban.com/rexxar/api/v2/movie/${id}`;
+
+    console.log(`[Douban Mobile API] 开始请求: ${mobileApiUrl}`);
+
+    // 获取随机浏览器指纹
+    const { ua, browser, platform } = getRandomUserAgentWithInfo();
+    const secChHeaders = getSecChUaHeaders(browser, platform);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    let response = await fetch(mobileApiUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': ua,
+        'Referer': 'https://movie.douban.com/explore',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Origin': 'https://movie.douban.com',
+        ...secChHeaders,
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+      },
+      redirect: 'manual', // 手动处理重定向
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log(`[Douban Mobile API] 响应状态: ${response.status}`);
+
+    // 如果是 3xx 重定向，说明可能是电视剧，尝试 tv 端点
+    if (response.status >= 300 && response.status < 400) {
+      console.log(`[Douban Mobile API] 检测到重定向，尝试 TV 端点: ${id}`);
+      mobileApiUrl = `https://m.douban.com/rexxar/api/v2/tv/${id}`;
+
+      const tvController = new AbortController();
+      const tvTimeoutId = setTimeout(() => tvController.abort(), 15000);
+
+      response = await fetch(mobileApiUrl, {
+        signal: tvController.signal,
+        headers: {
+          'User-Agent': ua,
+          'Referer': 'https://movie.douban.com/explore',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Origin': 'https://movie.douban.com',
+          ...secChHeaders,
+          'Sec-Fetch-Dest': 'empty',
+          'Sec-Fetch-Mode': 'cors',
+          'Sec-Fetch-Site': 'same-site',
+        },
+      });
+
+      clearTimeout(tvTimeoutId);
+      console.log(`[Douban Mobile API] TV 端点响应状态: ${response.status}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Mobile API 返回 ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[Douban Mobile API] ✅ 成功获取数据，标题: ${data.title}, 类型: ${data.is_tv ? 'TV' : 'Movie'}, episodes_count: ${data.episodes_count || 0}`);
+
+    // 转换 celebrities 数据
+    const celebrities = (data.actors || []).slice(0, 10).map((actor: any, index: number) => ({
+      id: actor.id || `actor-${index}`,
+      name: actor.name || '',
+      avatar: actor.avatar?.large || actor.avatar?.normal || '',
+      role: '演员',
+      avatars: actor.avatar ? {
+        small: actor.avatar.small || '',
+        medium: actor.avatar.normal || '',
+        large: actor.avatar.large || '',
+      } : undefined,
+    }));
+
+    // 解析时长
+    const durationStr = data.durations?.[0] || '';
+    const durationMatch = durationStr.match(/(\d+)/);
+    const movie_duration = durationMatch ? parseInt(durationMatch[1]) : 0;
+
+    // 解析电视剧集数和单集时长
+    const episodes = data.episodes_count || 0;
+
+    // 尝试从 episodes_info 解析单集时长，格式可能是 "每集45分钟" 或类似
+    let episode_length = 0;
+    if (data.episodes_info) {
+      const episodeLengthMatch = data.episodes_info.match(/(\d+)/);
+      if (episodeLengthMatch) {
+        episode_length = parseInt(episodeLengthMatch[1]);
+      }
+    }
+    // 如果 episodes_info 没有，尝试从 durations 获取（对于有些电视剧）
+    if (!episode_length && durationMatch && data.is_tv) {
+      episode_length = parseInt(durationMatch[1]);
+    }
+
+    // 转换 Mobile API 数据格式到标准格式，并包装成 API 响应格式
+    return {
+      code: 200,
+      message: '获取成功（使用 Mobile API）',
+      data: {
+        id: data.id,
+        title: data.title,
+        poster: data.pic?.large || data.pic?.normal || '',
+        rate: data.rating?.value ? data.rating.value.toFixed(1) : '0.0',
+        year: data.year || '',
+        directors: data.directors?.map((d: any) => d.name) || [],
+        screenwriters: [],
+        cast: data.actors?.map((a: any) => a.name) || [],
+        genres: data.genres || [],
+        countries: data.countries || [],
+        languages: data.languages || [],
+        ...(episodes > 0 && { episodes }), // 只在有值时才包含
+        ...(episode_length > 0 && { episode_length }), // 只在有值时才包含
+        ...(movie_duration > 0 && { movie_duration }), // 只在有值时才包含
+        first_aired: data.pubdate?.[0] || '',
+        plot_summary: data.intro || '',
+        celebrities,
+        recommendations: [], // Mobile API 没有推荐数据
+        actors: celebrities, // 与 web 版保持一致
+        backdrop: data.pic?.large || '',
+        trailerUrl: data.trailers?.[0]?.video_url || '',
+      },
+    };
+  } catch (error) {
+    console.error(`[Douban Mobile API] ❌ 获取失败:`, error);
+    throw new DoubanError(
+      'Mobile API 获取失败，请稍后再试',
+      'SERVER_ERROR',
+      500
+    );
+  }
 }
 
 export const runtime = 'nodejs';
@@ -99,6 +208,10 @@ async function _fetchMobileApiData(id: string): Promise<{
     // 先尝试 movie 端点
     let mobileApiUrl = `https://m.douban.com/rexxar/api/v2/movie/${id}`;
 
+    // 获取随机浏览器指纹
+    const { ua, browser, platform } = getRandomUserAgentWithInfo();
+    const secChHeaders = getSecChUaHeaders(browser, platform);
+
     // 创建 AbortController 用于超时控制
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
@@ -106,13 +219,13 @@ async function _fetchMobileApiData(id: string): Promise<{
     let response = await fetch(mobileApiUrl, {
       signal: controller.signal,
       headers: {
-        // 2024-2025 最新 User-Agent（桌面版更不容易被限制）
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+        'User-Agent': ua,
         'Referer': 'https://movie.douban.com/explore',  // 更具体的 Referer
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         'Accept-Encoding': 'gzip, deflate, br',
         'Origin': 'https://movie.douban.com',
+        ...secChHeaders,  // Chrome/Edge 的 Sec-CH-UA 头部
         'Sec-Fetch-Dest': 'empty',
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'same-site',
@@ -133,12 +246,13 @@ async function _fetchMobileApiData(id: string): Promise<{
       response = await fetch(mobileApiUrl, {
         signal: tvController.signal,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+          'User-Agent': ua,
           'Referer': 'https://movie.douban.com/explore',
           'Accept': 'application/json, text/plain, */*',
           'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
           'Accept-Encoding': 'gzip, deflate, br',
           'Origin': 'https://movie.douban.com',
+          ...secChHeaders,  // Chrome/Edge 的 Sec-CH-UA 头部
           'Sec-Fetch-Dest': 'empty',
           'Sec-Fetch-Mode': 'cors',
           'Sec-Fetch-Site': 'same-site',
@@ -223,6 +337,28 @@ class DoubanError extends Error {
 }
 
 /**
+ * 尝试使用反爬验证获取页面
+ */
+async function tryFetchWithAntiCrawler(url: string): Promise<{ success: boolean; html?: string; error?: string }> {
+  try {
+    console.log('[Douban] 🔐 尝试使用反爬验证...');
+    const response = await fetchDoubanWithVerification(url);
+
+    if (response.ok) {
+      const html = await response.text();
+      console.log(`[Douban] ✅ 反爬验证成功，页面长度: ${html.length}`);
+      return { success: true, html };
+    }
+
+    console.log(`[Douban] ⚠️ 反爬验证返回状态: ${response.status}`);
+    return { success: false, error: `Status ${response.status}` };
+  } catch (error) {
+    console.log('[Douban] ❌ 反爬验证失败:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+/**
  * 带重试的爬取函数
  */
 async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
@@ -249,9 +385,30 @@ async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
     const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     // 获取随机浏览器指纹
-    const { ua, browser, platform } = getRandomUserAgent();
+    const { ua, browser, platform } = getRandomUserAgentWithInfo();
     const secChHeaders = getSecChUaHeaders(browser, platform);
 
+    // 🍪 获取豆瓣 Cookies（如果配置了）
+    const doubanCookies = await getDoubanCookies();
+
+    let html: string | null = null;
+
+    // 🔐 优先级 1: 尝试使用反爬验证
+    const antiCrawlerResult = await tryFetchWithAntiCrawler(target);
+    if (antiCrawlerResult.success && antiCrawlerResult.html) {
+      // 检查是否为 challenge 页面
+      if (!isDoubanChallengePage(antiCrawlerResult.html)) {
+        console.log('[Douban] ✅ 反爬验证成功，直接使用返回的页面');
+        html = antiCrawlerResult.html;
+      } else {
+        console.log('[Douban] ⚠️ 反爬验证返回了 challenge 页面，尝试其他方式');
+      }
+    } else {
+      console.log('[Douban] ⚠️ 反爬验证失败，尝试 Cookie 方式');
+    }
+
+    // 🍪 优先级 2: 如果反爬验证失败，使用 Cookie 方式（原有逻辑）
+    if (!html) {
     // 🎯 2025 最佳实践：按照真实浏览器的头部顺序发送
     const fetchOptions = {
       signal: controller.signal,
@@ -271,29 +428,97 @@ async function _scrapeDoubanDetails(id: string, retryCount = 0): Promise<any> {
         'User-Agent': ua,
         // 随机添加 Referer（50% 概率）
         ...(Math.random() > 0.5 ? { 'Referer': 'https://www.douban.com/' } : {}),
+        // 🍪 如果配置了 Cookies，则添加到请求头
+        ...(doubanCookies ? { 'Cookie': doubanCookies } : {}),
       },
     };
+
+    // 如果使用了 Cookies，记录日志
+    if (doubanCookies) {
+      console.log(`[Douban] 使用配置的 Cookies 请求: ${id}`);
+    }
 
     const response = await fetch(target, fetchOptions);
     clearTimeout(timeoutId);
 
-    // 处理不同的HTTP状态码
+    console.log(`[Douban] 响应状态: ${response.status}`);
+
+    // 先检查状态码
     if (!response.ok) {
-      if (response.status === 429) {
-        // 速率限制
-        throw new DoubanError('请求过于频繁，请稍后再试', 'RATE_LIMIT', 429);
+      console.log(`[Douban] HTTP 错误: ${response.status}`);
+
+      // 302/301 重定向 或 429 速率限制 - 直接用 Mobile API
+      if (response.status === 429 || response.status === 302 || response.status === 301) {
+        console.log(`[Douban] 状态码 ${response.status}，使用 Mobile API fallback...`);
+        try {
+          return await fetchFromMobileAPI(id);
+        } catch (mobileError) {
+          throw new DoubanError('豆瓣 API 和 Mobile API 均不可用，请稍后再试', 'NETWORK_ERROR', response.status);
+        }
       } else if (response.status >= 500) {
-        // 服务器错误
         throw new DoubanError(`豆瓣服务器错误: ${response.status}`, 'SERVER_ERROR', response.status);
       } else if (response.status === 404) {
-        // 资源不存在
         throw new DoubanError(`影片不存在: ${id}`, 'SERVER_ERROR', 404);
       } else {
         throw new DoubanError(`HTTP错误: ${response.status}`, 'NETWORK_ERROR', response.status);
       }
     }
 
-    const html = await response.text();
+    // 获取HTML内容
+    html = await response.text();
+    console.log(`[Douban] 页面长度: ${html.length}`);
+
+    // 检测 challenge 页面
+    if (isDoubanChallengePage(html)) {
+      console.log(`[Douban] 检测到 challenge 页面`);
+
+      // 🍪 如果使用了 Cookies 但仍然遇到 challenge，说明 cookies 可能失效
+      if (doubanCookies) {
+        console.warn(`[Douban] ⚠️ 使用 Cookies 仍遇到 Challenge，Cookies 可能已失效`);
+      }
+
+      // 获取配置，检查是否启用 Puppeteer
+      const config = await getConfig();
+      const enablePuppeteer = config.DoubanConfig?.enablePuppeteer ?? false;
+
+      if (enablePuppeteer) {
+        console.log(`[Douban] Puppeteer 已启用，尝试绕过 Challenge...`);
+        try {
+          // 尝试使用 Puppeteer 绕过 Challenge
+          const puppeteerResult = await bypassDoubanChallenge(target);
+          html = puppeteerResult.html;
+
+          // 再次检测是否成功绕过
+          if (isDoubanChallengePage(html)) {
+            console.log(`[Douban] Puppeteer 绕过失败，使用 Mobile API fallback...`);
+            return await fetchFromMobileAPI(id);
+          }
+
+          console.log(`[Douban] ✅ Puppeteer 成功绕过 Challenge`);
+          // 继续使用 Puppeteer 获取的 HTML 进行解析
+        } catch (puppeteerError) {
+          console.error(`[Douban] Puppeteer 执行失败:`, puppeteerError);
+          console.log(`[Douban] 使用 Mobile API fallback...`);
+          try {
+            return await fetchFromMobileAPI(id);
+          } catch (mobileError) {
+            throw new DoubanError('豆瓣反爬虫激活，Puppeteer 和 Mobile API 均不可用', 'RATE_LIMIT', 429);
+          }
+        }
+      } else {
+        // Puppeteer 未启用，直接使用 Mobile API
+        console.log(`[Douban] Puppeteer 未启用，直接使用 Mobile API fallback...`);
+        return await fetchFromMobileAPI(id);
+      }
+    }
+
+    // 🍪 如果使用了 Cookies 且成功获取页面，记录成功日志
+    if (doubanCookies) {
+      console.log(`[Douban] ✅ 使用 Cookies 成功获取页面: ${id}`);
+    }
+    } // 结束 if (!html) 块
+
+    console.log(`[Douban] 开始解析页面内容...`);
 
     // 解析详细信息
     return parseDoubanDetails(html, id);
@@ -347,11 +572,27 @@ export const scrapeDoubanDetails = unstable_cache(
 );
 
 export async function GET(request: Request) {
+  const startTime = Date.now();
+  const startMemory = process.memoryUsage().heapUsed;
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const noCache = searchParams.get('nocache') === '1' || searchParams.get('debug') === '1';
 
   if (!id) {
+    // 记录失败请求
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/douban/details',
+      statusCode: 400,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: 0,
+      requestSize: 0,
+      responseSize: 0,
+    });
+
     return NextResponse.json(
       {
         code: 400,
@@ -398,6 +639,23 @@ export async function GET(request: Request) {
       'X-Data-Source': 'scraper-cached',
     };
 
+    // 计算响应大小
+    const responseData = JSON.stringify(details);
+    const responseSize = Buffer.byteLength(responseData, 'utf8');
+
+    // 记录成功请求
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/douban/details',
+      statusCode: 200,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: 0,
+      requestSize: 0, // GET 请求通常没有 body
+      responseSize: responseSize,
+    });
+
     return NextResponse.json(details, { headers: cacheHeaders });
   } catch (error) {
     // 处理 DoubanError
@@ -409,13 +667,28 @@ export async function GET(request: Request) {
         500
       );
 
-      return NextResponse.json(
-        {
-          code: statusCode,
-          message: error.message,
-          error: error.code,
-          details: `获取豆瓣详情失败 (ID: ${id})`,
-        },
+      const errorResponse = {
+        code: statusCode,
+        message: error.message,
+        error: error.code,
+        details: `获取豆瓣详情失败 (ID: ${id})`,
+      };
+      const errorResponseSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
+
+      // 记录错误请求
+      recordRequest({
+        timestamp: startTime,
+        method: 'GET',
+        path: '/api/douban/details',
+        statusCode,
+        duration: Date.now() - startTime,
+        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        dbQueries: 0,
+        requestSize: 0,
+        responseSize: errorResponseSize,
+      });
+
+      return NextResponse.json(errorResponse,
         {
           status: statusCode,
           headers: {
@@ -430,27 +703,51 @@ export async function GET(request: Request) {
 
     // 解析错误
     if (error instanceof Error && error.message.includes('解析')) {
-      return NextResponse.json(
-        {
-          code: 500,
-          message: '解析豆瓣数据失败，可能是页面结构已变化',
-          error: 'PARSE_ERROR',
-          details: error.message,
-        },
-        { status: 500 }
-      );
+      const parseErrorResponse = {
+        code: 500,
+        message: '解析豆瓣数据失败，可能是页面结构已变化',
+        error: 'PARSE_ERROR',
+        details: error.message,
+      };
+      const parseErrorSize = Buffer.byteLength(JSON.stringify(parseErrorResponse), 'utf8');
+
+      recordRequest({
+        timestamp: startTime,
+        method: 'GET',
+        path: '/api/douban/details',
+        statusCode: 500,
+        duration: Date.now() - startTime,
+        memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+        dbQueries: 0,
+        requestSize: 0,
+        responseSize: parseErrorSize,
+      });
+
+      return NextResponse.json(parseErrorResponse, { status: 500 });
     }
 
     // 未知错误
-    return NextResponse.json(
-      {
-        code: 500,
-        message: '获取豆瓣详情失败',
-        error: 'UNKNOWN_ERROR',
-        details: error instanceof Error ? error.message : '未知错误',
-      },
-      { status: 500 }
-    );
+    const unknownErrorResponse = {
+      code: 500,
+      message: '获取豆瓣详情失败',
+      error: 'UNKNOWN_ERROR',
+      details: error instanceof Error ? error.message : '未知错误',
+    };
+    const unknownErrorSize = Buffer.byteLength(JSON.stringify(unknownErrorResponse), 'utf8');
+
+    recordRequest({
+      timestamp: startTime,
+      method: 'GET',
+      path: '/api/douban/details',
+      statusCode: 500,
+      duration: Date.now() - startTime,
+      memoryUsed: (process.memoryUsage().heapUsed - startMemory) / 1024 / 1024,
+      dbQueries: 0,
+      requestSize: 0,
+      responseSize: unknownErrorSize,
+    });
+
+    return NextResponse.json(unknownErrorResponse, { status: 500 });
   }
 }
 

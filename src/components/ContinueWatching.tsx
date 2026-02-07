@@ -2,7 +2,7 @@
 'use client';
 
 import { Clock, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 
 import type { PlayRecord } from '@/lib/db.client';
 import {
@@ -27,7 +27,8 @@ interface ContinueWatchingProps {
   className?: string;
 }
 
-export default function ContinueWatching({ className }: ContinueWatchingProps) {
+// 🚀 优化方案6：使用React.memo防止不必要的重渲染
+function ContinueWatching({ className }: ContinueWatchingProps) {
   const [playRecords, setPlayRecords] = useState<
     (PlayRecord & { key: string })[]
   >([]);
@@ -259,6 +260,8 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
               const { source, id } = parseKey(record.key);
               const newEpisodesCount = getNewEpisodesCount(record);
               const latestTotalEpisodes = getLatestTotalEpisodes(record);
+              // 优先使用播放记录中保存的 type，否则根据集数判断
+              const cardType = record.type || (latestTotalEpisodes > 1 ? 'tv' : '');
               return (
                 <div
                   key={record.key}
@@ -282,9 +285,10 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                           prev.filter((r) => r.key !== record.key)
                         )
                       }
-                      type={latestTotalEpisodes > 1 ? 'tv' : ''}
+                      type={cardType}
                       remarks={record.remarks}
                       priority={index < 4}
+                      douban_id={record.douban_id}
                     />
                   </div>
                   {/* 新集数徽章 - Netflix 统一风格 */}
@@ -300,3 +304,5 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     </section>
   );
 }
+
+export default memo(ContinueWatching);
