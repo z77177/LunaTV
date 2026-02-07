@@ -5320,7 +5320,7 @@ function PlayPageClient() {
           modes: JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]') as Array<0 | 1 | 2>,
           antiOverlap: localStorage.getItem('danmaku_antiOverlap') !== null
             ? localStorage.getItem('danmaku_antiOverlap') === 'true'
-            : !isMobile,
+            : true, // 默认开启防重叠
           visible: localStorage.getItem('danmaku_visible') !== 'false',
         }}
         onSettingsChange={(newSettings) => {
