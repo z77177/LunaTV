@@ -348,6 +348,7 @@ function PlayPageClient() {
   const {
     externalDanmuEnabled,
     setExternalDanmuEnabled,
+    danmuList, // 弹幕列表state（用于显示弹幕数量）
     loadExternalDanmu,
     handleDanmuOperationOptimized,
     externalDanmuEnabledRef,
@@ -5382,7 +5383,7 @@ function PlayPageClient() {
           setIsDanmuSettingsPanelOpen(false);
           setTimeout(() => setIsDanmuSettingsPanelOpen(true), 50);
         }}
-        danmuCount={artPlayerRef.current?.plugins?.artplayerPluginDanmuku?.danmuku?.length || 0}
+        danmuCount={danmuList.length} // 使用state而不是ref，确保React能追踪变化
         loading={danmuLoadingRef.current?.loading || false}
         onReload={async () => {
           // 重新加载外部弹幕
