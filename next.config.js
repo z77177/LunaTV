@@ -34,8 +34,8 @@ const nextConfig = {
 
   // 图片优化配置
   images: {
-    // NOTE: 已启用 Next.js 图片优化（Vercel/Docker standalone 支持）
-    // 如果部署到不支持图片优化的平台（如静态托管），可添加 unoptimized: true
+    // 禁用 Next.js 图片优化（代理图片不兼容）
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
