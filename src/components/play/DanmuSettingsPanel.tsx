@@ -306,8 +306,8 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
 
       {/* 内容区域 - 零滚动设计 */}
       <div className='px-5 py-4 space-y-4 overflow-hidden'>
-        {/* 匹配信息标签 - 显示片名 */}
-        {matchInfo && settings.enabled && danmuCount > 0 && (
+        {/* 匹配信息标签 - 显示片名（只要有matchInfo就显示，不要求danmuCount>0） */}
+        {matchInfo && settings.enabled && (
           <div
             className='px-3 py-2 rounded-xl backdrop-blur-sm'
             style={{
