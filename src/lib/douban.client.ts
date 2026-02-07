@@ -2,6 +2,25 @@
 
 import { ClientCache } from './client-cache';
 import { DoubanItem, DoubanResult, DoubanCommentsResult } from './types';
+import { getRandomUserAgent, DEFAULT_USER_AGENT } from './user-agent';
+
+// 🔍 调试工具：在浏览器控制台使用
+if (typeof window !== 'undefined') {
+  (window as any).enableDoubanDebug = () => {
+    localStorage.setItem('DOUBAN_DEBUG', '1');
+    console.log('✅ 豆瓣调试模式已启用！页面将跳过缓存，直接获取最新数据。');
+    console.log('💡 刷新页面后生效。使用 disableDoubanDebug() 关闭。');
+  };
+  (window as any).disableDoubanDebug = () => {
+    localStorage.removeItem('DOUBAN_DEBUG');
+    console.log('❌ 豆瓣调试模式已关闭，恢复缓存功能。');
+  };
+  (window as any).checkDoubanDebug = () => {
+    const enabled = localStorage.getItem('DOUBAN_DEBUG') === '1';
+    console.log(`🔍 豆瓣调试模式: ${enabled ? '✅ 已启用' : '❌ 已关闭'}`);
+    return enabled;
+  };
+}
 
 // 豆瓣数据缓存配置（秒）
 const DOUBAN_CACHE_EXPIRE = {
@@ -158,13 +177,13 @@ export function clearDoubanCache(): void {
 // 初始化缓存系统（应该在应用启动时调用）
 export async function initDoubanCache(): Promise<void> {
   if (typeof window === 'undefined') return;
-  
+
   // 立即清理一次过期缓存
   await cleanExpiredCache();
-  
-  // 每10分钟清理一次过期缓存
-  setInterval(() => cleanExpiredCache(), 10 * 60 * 1000);
-  
+
+  // 每1小时清理一次过期缓存
+  setInterval(() => cleanExpiredCache(), 60 * 60 * 1000);
+
   console.log('缓存系统已初始化（豆瓣+Bangumi）');
 }
 
@@ -241,8 +260,7 @@ async function fetchWithTimeout(
   const fetchOptions: RequestInit = {
     signal: controller.signal,
     headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      'User-Agent': getRandomUserAgent(),
       Referer: 'https://movie.douban.com/',
       Accept: 'application/json, text/plain, */*',
     },
@@ -633,35 +651,48 @@ export async function getDoubanDetails(id: string): Promise<{
     episode_length?: number;
     first_aired?: string;
     plot_summary?: string;
+    backdrop?: string;
+    trailerUrl?: string;
   };
 }> {
-  // 检查缓存 - 如果缓存中没有plot_summary则重新获取
-  const cacheKey = getCacheKey('details', { id });
-  const cached = await getCache(cacheKey);
-  if (cached && cached.data?.plot_summary) {
-    console.log(`豆瓣详情缓存命中(有简介): ${id}`);
-    return cached;
+  // 🔍 调试模式：检查localStorage标志
+  const isDebugMode = typeof window !== 'undefined' && localStorage.getItem('DOUBAN_DEBUG') === '1';
+
+  if (isDebugMode) {
+    console.log(`[Debug Mode] 跳过缓存，直接请求: ${id}`);
+  } else {
+    // 检查缓存 - 如果缓存中没有plot_summary则重新获取
+    const cacheKey = getCacheKey('details', { id });
+    const cached = await getCache(cacheKey);
+    if (cached && cached.data?.plot_summary) {
+      console.log(`豆瓣详情缓存命中(有简介): ${id}`);
+      return cached;
+    }
+    if (cached && !cached.data?.plot_summary) {
+      console.log(`豆瓣详情缓存无效(缺少简介): ${id}，重新获取`);
+      // 缓存无效，继续执行下面的逻辑重新获取
+    }
   }
-  if (cached && !cached.data?.plot_summary) {
-    console.log(`豆瓣详情缓存无效(缺少简介): ${id}，重新获取`);
-    // 缓存无效，继续执行下面的逻辑重新获取
-  }
-  
+
   try {
-    const response = await fetch(`/api/douban/details?id=${id}`);
-    
+    const noCacheParam = isDebugMode ? '&nocache=1' : '';
+    const response = await fetch(`/api/douban/details?id=${id}${noCacheParam}`);
+
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
-    
+
     const result = await response.json();
-    
-    // 保存到缓存
-    if (result.code === 200) {
+
+    // 🎯 只缓存有效数据（必须有 title）
+    if (result.code === 200 && result.data?.title && !isDebugMode) {
+      const cacheKey = getCacheKey('details', { id });
       await setCache(cacheKey, result, DOUBAN_CACHE_EXPIRE.details);
       console.log(`豆瓣详情已缓存: ${id}`);
+    } else if (result.code === 200 && !result.data?.title) {
+      console.warn(`⚠️ 豆瓣详情数据无效（缺少标题），不缓存: ${id}`);
     }
-    
+
     return result;
   } catch (error) {
     return {
@@ -812,7 +843,7 @@ export async function getDoubanActorMovies(
 
     const response = await fetch(searchUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         'Referer': 'https://www.douban.com/',

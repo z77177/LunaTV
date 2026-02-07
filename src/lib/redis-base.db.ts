@@ -163,6 +163,29 @@ export abstract class BaseRedisStorage implements IStorage {
     this.withRetry = createRetryWrapper(config.clientName, () => this.client);
   }
 
+  // 🚀 使用 SCAN 替代 KEYS，避免阻塞 Redis
+  // SCAN 是渐进式遍历，不会阻塞服务器
+  protected async scanKeys(pattern: string): Promise<string[]> {
+    const keys = new Set<string>(); // 使用 Set 去重（SCAN 可能返回重复 key）
+    let cursor = 0;
+
+    do {
+      const result = await this.withRetry(() =>
+        this.client.scan(cursor, {
+          MATCH: pattern,
+          COUNT: 100, // 每次扫描 100 个 key
+        })
+      );
+
+      cursor = result.cursor;
+      for (const key of result.keys) {
+        keys.add(key);
+      }
+    } while (cursor !== 0);
+
+    return Array.from(keys);
+  }
+
   // ---------- 播放记录 ----------
   private prKey(user: string, key: string) {
     return `u:${user}:pr:${key}`; // u:username:pr:source+id
@@ -192,7 +215,7 @@ export abstract class BaseRedisStorage implements IStorage {
     userName: string
   ): Promise<Record<string, PlayRecord>> {
     const pattern = `u:${userName}:pr:*`;
-    const keys: string[] = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
     if (keys.length === 0) return {};
     const values = await this.withRetry(() => this.client.mGet(keys));
     const result: Record<string, PlayRecord> = {};
@@ -236,7 +259,7 @@ export abstract class BaseRedisStorage implements IStorage {
 
   async getAllFavorites(userName: string): Promise<Record<string, Favorite>> {
     const pattern = `u:${userName}:fav:*`;
-    const keys: string[] = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
     if (keys.length === 0) return {};
     const values = await this.withRetry(() => this.client.mGet(keys));
     const result: Record<string, Favorite> = {};
@@ -253,6 +276,50 @@ export abstract class BaseRedisStorage implements IStorage {
 
   async deleteFavorite(userName: string, key: string): Promise<void> {
     await this.withRetry(() => this.client.del(this.favKey(userName, key)));
+  }
+
+  // ---------- 🚀 批量写入方法（使用 mSet，减少 RTT） ----------
+
+  /**
+   * 批量保存播放记录（使用 mSet）
+   * @param userName 用户名
+   * @param records 键值对 { "source+id": PlayRecord }
+   */
+  async setPlayRecordsBatch(
+    userName: string,
+    records: Record<string, PlayRecord>
+  ): Promise<void> {
+    const entries = Object.entries(records);
+    if (entries.length === 0) return;
+
+    // 构建 mSet 参数：[key1, val1, key2, val2, ...]
+    const msetArgs: string[] = [];
+    for (const [key, record] of entries) {
+      msetArgs.push(this.prKey(userName, key), JSON.stringify(record));
+    }
+
+    await this.withRetry(() => this.client.mSet(msetArgs));
+  }
+
+  /**
+   * 批量保存收藏（使用 mSet）
+   * @param userName 用户名
+   * @param favorites 键值对 { "source+id": Favorite }
+   */
+  async setFavoritesBatch(
+    userName: string,
+    favorites: Record<string, Favorite>
+  ): Promise<void> {
+    const entries = Object.entries(favorites);
+    if (entries.length === 0) return;
+
+    // 构建 mSet 参数：[key1, val1, key2, val2, ...]
+    const msetArgs: string[] = [];
+    for (const [key, favorite] of entries) {
+      msetArgs.push(this.favKey(userName, key), JSON.stringify(favorite));
+    }
+
+    await this.withRetry(() => this.client.mSet(msetArgs));
   }
 
   // ---------- 用户注册 / 登录 ----------
@@ -293,42 +360,227 @@ export abstract class BaseRedisStorage implements IStorage {
 
   // 删除用户及其所有数据
   async deleteUser(userName: string): Promise<void> {
-    // 删除用户密码
+    // 删除用户密码 (V1)
     await this.withRetry(() => this.client.del(this.userPwdKey(userName)));
+
+    // 删除用户信息 (V2)
+    await this.withRetry(() => this.client.del(this.userInfoKey(userName)));
+
+    // 从用户列表中移除 (V2)
+    await this.withRetry(() => this.client.zRem(this.userListKey(), userName));
+
+    // 删除 OIDC 映射（如果存在）
+    try {
+      const userInfo = await this.getUserInfoV2(userName);
+      if (userInfo?.oidcSub) {
+        await this.withRetry(() => this.client.del(this.oidcSubKey(userInfo.oidcSub!)));
+      }
+    } catch (e) {
+      // 忽略错误，用户信息可能已被删除
+    }
 
     // 删除搜索历史
     await this.withRetry(() => this.client.del(this.shKey(userName)));
 
     // 删除播放记录
     const playRecordPattern = `u:${userName}:pr:*`;
-    const playRecordKeys = await this.withRetry(() =>
-      this.client.keys(playRecordPattern)
-    );
+    const playRecordKeys = await this.scanKeys(playRecordPattern);
     if (playRecordKeys.length > 0) {
       await this.withRetry(() => this.client.del(playRecordKeys));
     }
 
     // 删除收藏夹
     const favoritePattern = `u:${userName}:fav:*`;
-    const favoriteKeys = await this.withRetry(() =>
-      this.client.keys(favoritePattern)
-    );
+    const favoriteKeys = await this.scanKeys(favoritePattern);
     if (favoriteKeys.length > 0) {
       await this.withRetry(() => this.client.del(favoriteKeys));
     }
 
     // 删除跳过片头片尾配置
     const skipConfigPattern = `u:${userName}:skip:*`;
-    const skipConfigKeys = await this.withRetry(() =>
-      this.client.keys(skipConfigPattern)
-    );
+    const skipConfigKeys = await this.scanKeys(skipConfigPattern);
     if (skipConfigKeys.length > 0) {
       await this.withRetry(() => this.client.del(skipConfigKeys));
+    }
+
+    // 删除剧集跳过配置
+    const episodeSkipPattern = `u:${userName}:episodeskip:*`;
+    const episodeSkipKeys = await this.scanKeys(episodeSkipPattern);
+    if (episodeSkipKeys.length > 0) {
+      await this.withRetry(() => this.client.del(episodeSkipKeys));
     }
 
     // 删除用户登入统计数据
     const loginStatsKey = `user_login_stats:${userName}`;
     await this.withRetry(() => this.client.del(loginStatsKey));
+  }
+
+  // ---------- 用户相关（新版本 V2，支持 OIDC） ----------
+  private userInfoKey(user: string) {
+    return `u:${user}:info`;
+  }
+
+  private userListKey() {
+    return 'users:list';
+  }
+
+  private oidcSubKey(oidcSub: string) {
+    return `oidc:sub:${oidcSub}`;
+  }
+
+  // SHA256加密密码
+  private async hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // 创建新用户（新版本）
+  async createUserV2(
+    userName: string,
+    password: string,
+    role: 'owner' | 'admin' | 'user' = 'user',
+    tags?: string[],
+    oidcSub?: string,
+    enabledApis?: string[]
+  ): Promise<void> {
+    const hashedPassword = await this.hashPassword(password);
+    const createdAt = Date.now();
+
+    // 存储用户信息到Hash
+    const userInfo: Record<string, string> = {
+      role,
+      banned: 'false',
+      password: hashedPassword,
+      created_at: createdAt.toString(),
+    };
+
+    if (tags && tags.length > 0) {
+      userInfo.tags = JSON.stringify(tags);
+    }
+
+    if (enabledApis && enabledApis.length > 0) {
+      userInfo.enabledApis = JSON.stringify(enabledApis);
+    }
+
+    if (oidcSub) {
+      userInfo.oidcSub = oidcSub;
+      // 创建OIDC映射
+      await this.withRetry(() => this.client.set(this.oidcSubKey(oidcSub), userName));
+    }
+
+    await this.withRetry(() => this.client.hSet(this.userInfoKey(userName), userInfo));
+
+    // 添加到用户列表（Sorted Set，按注册时间排序）
+    await this.withRetry(() => this.client.zAdd(this.userListKey(), {
+      score: createdAt,
+      value: userName,
+    }));
+  }
+
+  // 验证用户密码（新版本）
+  async verifyUserV2(userName: string, password: string): Promise<boolean> {
+    const userInfo = await this.withRetry(() =>
+      this.client.hGetAll(this.userInfoKey(userName))
+    );
+
+    if (!userInfo || !userInfo.password) {
+      return false;
+    }
+
+    const hashedPassword = await this.hashPassword(password);
+    return userInfo.password === hashedPassword;
+  }
+
+  // 获取用户信息（新版本）
+  async getUserInfoV2(userName: string): Promise<{
+    username: string;
+    role: 'owner' | 'admin' | 'user';
+    banned: boolean;
+    tags?: string[];
+    oidcSub?: string;
+    enabledApis?: string[];
+    createdAt?: number;
+  } | null> {
+    const userInfo = await this.withRetry(() =>
+      this.client.hGetAll(this.userInfoKey(userName))
+    );
+
+    if (!userInfo || Object.keys(userInfo).length === 0) {
+      return null;
+    }
+
+    // 安全解析 tags 字段
+    let parsedTags: string[] | undefined;
+    if (userInfo.tags) {
+      try {
+        // 如果 tags 已经是数组（某些 Redis 客户端行为），直接使用
+        if (Array.isArray(userInfo.tags)) {
+          parsedTags = userInfo.tags;
+        } else {
+          // 尝试 JSON 解析
+          const parsed = JSON.parse(userInfo.tags);
+          parsedTags = Array.isArray(parsed) ? parsed : [parsed];
+        }
+      } catch (e) {
+        // JSON 解析失败，可能是单个字符串值
+        console.warn(`用户 ${userName} tags 解析失败，原始值:`, userInfo.tags);
+        // 如果是逗号分隔的字符串
+        if (typeof userInfo.tags === 'string' && userInfo.tags.includes(',')) {
+          parsedTags = userInfo.tags.split(',').map(t => t.trim());
+        } else if (typeof userInfo.tags === 'string') {
+          parsedTags = [userInfo.tags];
+        }
+      }
+    }
+
+    // 安全解析 enabledApis 字段
+    let parsedApis: string[] | undefined;
+    if (userInfo.enabledApis) {
+      try {
+        if (Array.isArray(userInfo.enabledApis)) {
+          parsedApis = userInfo.enabledApis;
+        } else {
+          const parsed = JSON.parse(userInfo.enabledApis);
+          parsedApis = Array.isArray(parsed) ? parsed : [parsed];
+        }
+      } catch (e) {
+        console.warn(`用户 ${userName} enabledApis 解析失败`);
+        if (typeof userInfo.enabledApis === 'string' && userInfo.enabledApis.includes(',')) {
+          parsedApis = userInfo.enabledApis.split(',').map(t => t.trim());
+        } else if (typeof userInfo.enabledApis === 'string') {
+          parsedApis = [userInfo.enabledApis];
+        }
+      }
+    }
+
+    return {
+      username: userName,
+      role: (userInfo.role as 'owner' | 'admin' | 'user') || 'user',
+      banned: userInfo.banned === 'true',
+      tags: parsedTags,
+      oidcSub: userInfo.oidcSub,
+      enabledApis: parsedApis,
+      createdAt: userInfo.created_at ? parseInt(userInfo.created_at, 10) : undefined,
+    };
+  }
+
+  // 检查用户是否存在（新版本）
+  async checkUserExistV2(userName: string): Promise<boolean> {
+    const exists = await this.withRetry(() =>
+      this.client.exists(this.userInfoKey(userName))
+    );
+    return exists === 1;
+  }
+
+  // 通过OIDC Sub查找用户名
+  async getUserByOidcSub(oidcSub: string): Promise<string | null> {
+    const userName = await this.withRetry(() =>
+      this.client.get(this.oidcSubKey(oidcSub))
+    );
+    return userName ? ensureString(userName) : null;
   }
 
   // ---------- 搜索历史 ----------
@@ -365,13 +617,27 @@ export abstract class BaseRedisStorage implements IStorage {
 
   // ---------- 获取全部用户 ----------
   async getAllUsers(): Promise<string[]> {
-    const keys = await this.withRetry(() => this.client.keys('u:*:pwd'));
-    return keys
+    // 获取 V1 用户（u:*:pwd）
+    const v1Keys = await this.scanKeys('u:*:pwd');
+    const v1Users = v1Keys
       .map((k) => {
         const match = k.match(/^u:(.+?):pwd$/);
         return match ? ensureString(match[1]) : undefined;
       })
       .filter((u): u is string => typeof u === 'string');
+
+    // 获取 V2 用户（u:*:info）
+    const v2Keys = await this.scanKeys('u:*:info');
+    const v2Users = v2Keys
+      .map((k) => {
+        const match = k.match(/^u:(.+?):info$/);
+        return match ? ensureString(match[1]) : undefined;
+      })
+      .filter((u): u is string => typeof u === 'string');
+
+    // 合并并去重（V2 优先，因为可能同时存在 V1 和 V2）
+    const allUsers = new Set([...v2Users, ...v1Users]);
+    return Array.from(allUsers);
   }
 
   // ---------- 管理员配置 ----------
@@ -434,7 +700,7 @@ export abstract class BaseRedisStorage implements IStorage {
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     const pattern = `u:${userName}:skip:*`;
-    const keys = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
 
     if (keys.length === 0) {
       return {};
@@ -504,7 +770,7 @@ export abstract class BaseRedisStorage implements IStorage {
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     const pattern = `u:${userName}:episodeskip:*`;
-    const keys = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
 
     if (keys.length === 0) {
       return {};
@@ -660,7 +926,7 @@ export abstract class BaseRedisStorage implements IStorage {
     // Redis的TTL机制会自动清理过期数据，这里主要用于手动清理
     // 可以根据需要实现特定前缀的缓存清理
     const pattern = prefix ? `cache:${prefix}*` : 'cache:*';
-    const keys = await this.withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
 
     if (keys.length > 0) {
       await this.withRetry(() => this.client.del(keys));
@@ -824,8 +1090,8 @@ export abstract class BaseRedisStorage implements IStorage {
         activeUsers,
       };
 
-      // 缓存结果30分钟
-      await this.setCache('play_stats_summary', result, 1800);
+      // 缓存结果1小时
+      await this.setCache('play_stats_summary', result, 3600);
 
       return result;
     } catch (error) {

@@ -131,6 +131,62 @@ https://your-domain.com/api/tvbox?format=json&token=USER_SPECIFIC_TOKEN
 
 防止滥用，默认每分钟 60 次请求。
 
+## 🚀 Spider JAR 加速（Vercel 用户专享）
+
+### 📦 什么是 Spider JAR？
+
+Spider JAR 是 TVBox 用于解析视频源的核心组件（约 276KB），通常托管在 GitHub 上。
+
+### ⚡ Vercel Blob CDN 加速
+
+**仅适用于部署在 Vercel 的用户**，LunaTV 自动启用全球 CDN 加速：
+
+**优势：**
+- ✅ **全球加速** - 用户从最近的 CDN 节点下载（0.5秒 vs 2秒）
+- ✅ **减轻服务器负载** - 99% 的流量走 CDN，不占用服务器带宽
+- ✅ **自动更新** - 每天凌晨 1 点通过 Cron 自动更新
+- ✅ **无感降级** - 未配置 Token 时自动使用代理模式
+- ✅ **零配置** - 配置 Token 后完全自动，无需手动维护
+
+**工作原理：**
+```
+首次部署 → 用户请求 → 服务器从 GitHub 拉取 → 异步上传到 Vercel Blob CDN
+后续请求 → 用户直接从 CDN 下载 ✅ 超快！
+每天凌晨1点 → Cron 自动更新 → 拉取最新 JAR 并上传到 CDN
+```
+
+**配置步骤（Vercel 用户）：**
+
+1. 在 Vercel 项目设置中添加环境变量：
+   ```
+   BLOB_READ_WRITE_TOKEN=<your-token>
+   ```
+
+2. 获取 Token：
+   - 访问 Vercel Dashboard → Storage → Create Database → Blob
+   - 复制生成的 `BLOB_READ_WRITE_TOKEN`
+
+3. 重新部署项目，自动生效！
+
+**Cron 定时任务说明：**
+
+LunaTV 的 Cron 任务（每天凌晨 1 点）会自动执行以下操作：
+- 🕷️ **Spider JAR 更新** - 从 GitHub 拉取最新版本并上传到 Blob CDN（仅 Vercel + Token）
+- 📺 **直播频道刷新** - 更新所有直播源的频道数量
+- 📊 **播放记录更新** - 刷新用户的播放记录和收藏（检查剧集更新）
+- 🧹 **用户清理** - 清理非活跃用户（如果启用）
+- 🔄 **配置同步** - 同步配置订阅（如果启用）
+
+**注意事项：**
+- ⚠️ 如果未配置 `BLOB_READ_WRITE_TOKEN`，Spider JAR 更新会自动跳过（不影响其他功能）
+- ✅ Cron 任务配置在 `vercel.json` 中，默认每天 1:00 AM UTC 执行
+- ✅ 可以通过访问 `/api/cron` 手动触发（需要管理员权限）
+
+**非 Vercel 用户：**
+- ✅ 自动降级到服务器代理模式
+- ✅ 所有功能正常工作
+- ✅ 无需任何配置
+
 ## 🎛️ 高级功能
 
 ### 🎯 智能搜索代理（新功能）
@@ -204,6 +260,58 @@ https://your-domain.com/api/tvbox?strict=1
 - **OrionTV**：使用 `/adult/` 路径前缀控制
 - **多设备**：不同设备使用不同 URL，灵活控制
 - **个人使用**：添加 `?adult=1` 或使用 `/adult/` 路径查看完整内容
+
+### ☁️ Cloudflare Worker 代理加速
+
+LunaTV 支持通过 Cloudflare Worker 为视频源 API 提供全球 CDN 加速。
+
+**功能特点：**
+- ✅ **全球加速** - 利用 Cloudflare 全球 CDN 节点加速源站访问
+- ✅ **智能替换** - 自动检测并替换源中已有的旧代理地址
+- ✅ **统一管理** - 管理面板一键启用，所有源自动应用
+- ✅ **支持自定义** - 可部署自己的 Worker 服务
+
+**配置方法：**
+
+1. **管理员后台配置**
+   - 登录 LunaTV 管理后台
+   - 进入 **TVBox 安全配置** 页面
+   - 找到 **Cloudflare Worker 代理** 区域
+   - 启用代理并配置 Worker 地址（默认：`https://corsapi.smone.workers.dev`）
+   - 保存配置
+
+2. **自定义部署（可选）**
+
+   如果想部署自己的 Worker 服务，请参考：
+   - 项目地址：[CORSAPI](https://github.com/SzeMeng76/CORSAPI)
+   - 部署到 Cloudflare Workers
+   - 在管理面板填入你的 Worker 地址
+
+**工作原理：**
+
+1. 原始源地址：`https://lovedan.net/api.php/provide/vod`
+2. 启用代理后自动转换为：`https://corsapi.smone.workers.dev/p/lovedan?url=https://lovedan.net/api.php/provide/vod`
+3. TVBox 调用时添加参数：`...?url=...&ac=list&pg=1`
+4. Worker 自动转发所有参数到真实源：`https://lovedan.net/api.php/provide/vod?ac=list&pg=1`
+
+**智能处理：**
+- 🔄 **自动去重**：如果源地址已包含代理（如 `?url=`），自动提取真实地址并替换为新代理
+- 🎯 **唯一路径**：为每个源生成唯一的 `/p/{sourceId}` 路径，避免 TVBox 将所有源识别为同一个
+- 📦 **参数转发**：完整转发 TVBox 的所有 API 参数（`ac`, `ids`, `pg` 等）
+
+**示例：**
+
+假设你有一个源已经配置了旧代理：
+```
+https://old-proxy.com/?url=https://lovedan.net/api.php/provide/vod
+```
+
+启用新代理后，系统会自动：
+1. 检测到 `?url=` 参数
+2. 提取真实地址：`https://lovedan.net/api.php/provide/vod`
+3. 替换为新代理：`https://corsapi.smone.workers.dev/p/lovedan?url=https://lovedan.net/api.php/provide/vod`
+
+这样就实现了代理的统一管理和升级。
 
 ### 🔄 Spider Jar 智能管理
 
@@ -526,6 +634,17 @@ GET /api/tvbox/health?url=JAR_URL
 本功能遵循项目主许可证，仅供学习和个人使用。请遵守相关法律法规，不要用于商业用途。
 
 ## 🆕 更新日志
+
+### v3.1 - 2025-01-04
+
+- ✨ **Cloudflare Worker 代理加速** - 为视频源 API 提供全球 CDN 加速
+  - 管理面板一键启用/配置代理地址
+  - 自动检测并替换源中已有的旧代理
+  - 为每个源生成唯一路径（避免 TVBox 识别冲突）
+  - 完整转发 TVBox API 参数（ac, ids, pg 等）
+  - 支持自定义部署 Worker 服务
+- 🔧 智能代理去重和替换机制
+- 📝 完善 Worker 代理配置文档
 
 ### v3.0 - 2025-11-01
 

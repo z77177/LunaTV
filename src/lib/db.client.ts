@@ -46,6 +46,7 @@ export interface Favorite {
   save_time: number;
   search_title?: string;
   origin?: 'vod' | 'live';
+  type?: string; // 内容类型（movie/tv/variety/shortdrama等）
   releaseDate?: string; // 上映日期 (YYYY-MM-DD)，用于即将上映内容
   remarks?: string; // 备注信息（如"X天后上映"、"已上映"等）
 }
@@ -594,7 +595,7 @@ if (typeof window !== 'undefined') {
 function fetchWithTimeout(
   url: string,
   options: RequestInit = {},
-  timeout = 15000 // 默认15秒超时
+  timeout = 30000 // 默认30秒超时（优化收藏同步性能）
 ): Promise<Response> {
   return new Promise((resolve, reject) => {
     const controller = new AbortController();
@@ -828,8 +829,8 @@ export async function getAllPlayRecords(forceRefresh = false): Promise<Record<st
           }
         })
         .catch((err) => {
-          console.warn('后台同步播放记录失败:', err);
-          triggerGlobalError('后台同步播放记录失败');
+          // 后台同步失败不影响用户使用，静默处理（用户已有缓存数据）
+          console.warn('[后台同步] 播放记录同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;
@@ -1105,8 +1106,8 @@ export async function getSearchHistory(): Promise<string[]> {
           }
         })
         .catch((err) => {
-          console.warn('后台同步搜索历史失败:', err);
-          triggerGlobalError('后台同步搜索历史失败');
+          // 后台同步失败不影响用户使用，静默处理（用户已有缓存数据）
+          console.warn('[后台同步] 搜索历史同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;
@@ -1326,8 +1327,8 @@ export async function getAllFavorites(): Promise<Record<string, Favorite>> {
           }
         })
         .catch((err) => {
-          console.warn('后台同步收藏失败:', err);
-          triggerGlobalError('后台同步收藏失败');
+          // 后台同步失败不影响用户使用，静默处理
+          console.warn('[后台同步] 收藏数据同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;
@@ -1512,8 +1513,8 @@ export async function isFavorited(
           }
         })
         .catch((err) => {
-          console.warn('后台同步收藏失败:', err);
-          triggerGlobalError('后台同步收藏失败');
+          // 后台同步失败不影响用户使用，静默处理
+          console.warn('[后台同步] 收藏数据同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return !!cachedFavorites[key];
@@ -1980,8 +1981,8 @@ export async function getAllSkipConfigs(): Promise<Record<string, EpisodeSkipCon
           }
         })
         .catch((err) => {
-          console.warn('后台同步跳过片头片尾配置失败:', err);
-          triggerGlobalError('后台同步跳过片头片尾配置失败');
+          // 后台同步失败不影响用户使用，静默处理（用户已有缓存数据）
+          console.warn('[后台同步] 跳过片头片尾配置同步失败（不影响使用，已使用缓存数据）:', err);
         });
 
       return cachedData;

@@ -1,5 +1,19 @@
+import { clsx, type ClassValue } from 'clsx';
 import he from 'he';
 import Hls from 'hls.js';
+import { twMerge } from 'tailwind-merge';
+
+/**
+ * Utility function for merging Tailwind CSS classes
+ * Combines clsx and tailwind-merge for optimal class handling
+ *
+ * @example
+ * cn('px-2 py-1', condition && 'bg-blue-500')
+ * cn('px-2', 'px-4') // => 'px-4' (tailwind-merge handles conflicts)
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 // 增强的设备检测逻辑，参考最新的设备特征
 const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
@@ -72,11 +86,12 @@ function getDoubanImageProxyConfig(): {
   | 'img3'
   | 'cmliussss-cdn-tencent'
   | 'cmliussss-cdn-ali'
+  | 'baidu'
   | 'custom';
   proxyUrl: string;
 } {
   // 安全地访问 localStorage（避免服务端渲染报错）
-  let doubanImageProxyType: 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'custom' = 'server'; // 默认值
+  let doubanImageProxyType: 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'baidu' | 'custom' = 'server'; // 默认值
   let doubanImageProxy = '';
 
   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
@@ -93,7 +108,7 @@ function getDoubanImageProxyConfig(): {
 
     const effectiveRuntimeType = (runtimeType === 'direct') ? 'server' : runtimeType;
 
-    doubanImageProxyType = (effectiveStoredType || effectiveRuntimeType || 'server') as 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'custom';
+    doubanImageProxyType = (effectiveStoredType || effectiveRuntimeType || 'server') as 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'baidu' | 'custom';
     doubanImageProxy =
       localStorage.getItem('doubanImageProxyUrl') ||
       (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY ||
@@ -138,6 +153,8 @@ export function processImageUrl(originalUrl: string): string {
         /img\d+\.doubanio\.com/g,
         'img.doubanio.cmliussss.com'
       );
+    case 'baidu':
+      return `https://image.baidu.com/search/down?url=${encodeURIComponent(originalUrl)}`;
     case 'custom':
       return `${proxyUrl}${encodeURIComponent(originalUrl)}`;
     case 'direct':
@@ -383,6 +400,14 @@ export async function getVideoResolutionFromM3u8(m3u8Url: string): Promise<{
           reject(new Error(`HLS Error: ${data.type} - ${data.details}`));
         }
       });
+
+      // 为分片请求添加时间戳参数破除浏览器缓存
+      hls.config.xhrSetup = function(xhr: XMLHttpRequest, url: string) {
+        const urlWithTimestamp = url.includes('?')
+          ? `${url}&_t=${Date.now()}`
+          : `${url}?_t=${Date.now()}`;
+        xhr.open('GET', urlWithTimestamp, true);
+      };
 
       // 加载m3u8
       try {

@@ -98,15 +98,18 @@ export class UpstashRedisStorage implements IStorage {
     const keys: string[] = await withRetry(() => this.client.keys(pattern));
     if (keys.length === 0) return {};
 
+    // 🚀 优化：使用 mget 批量获取，只算1条命令（而不是N条）
+    const values = await withRetry(() => this.client.mget<PlayRecord[]>(...keys));
+
     const result: Record<string, PlayRecord> = {};
-    for (const fullKey of keys) {
-      const value = await withRetry(() => this.client.get(fullKey));
+    keys.forEach((fullKey, index) => {
+      const value = values[index];
       if (value) {
         // 截取 source+id 部分
         const keyPart = ensureString(fullKey.replace(`u:${userName}:pr:`, ''));
-        result[keyPart] = value as PlayRecord;
+        result[keyPart] = value;
       }
-    }
+    });
     return result;
   }
 
@@ -141,19 +144,66 @@ export class UpstashRedisStorage implements IStorage {
     const keys: string[] = await withRetry(() => this.client.keys(pattern));
     if (keys.length === 0) return {};
 
+    // 🚀 优化：使用 mget 批量获取，只算1条命令（而不是N条）
+    const values = await withRetry(() => this.client.mget<Favorite[]>(...keys));
+
     const result: Record<string, Favorite> = {};
-    for (const fullKey of keys) {
-      const value = await withRetry(() => this.client.get(fullKey));
+    keys.forEach((fullKey, index) => {
+      const value = values[index];
       if (value) {
         const keyPart = ensureString(fullKey.replace(`u:${userName}:fav:`, ''));
-        result[keyPart] = value as Favorite;
+        result[keyPart] = value;
       }
-    }
+    });
     return result;
   }
 
   async deleteFavorite(userName: string, key: string): Promise<void> {
     await withRetry(() => this.client.del(this.favKey(userName, key)));
+  }
+
+  // ---------- 🚀 批量写入方法（使用 mset，只算1条命令） ----------
+
+  /**
+   * 批量保存播放记录（使用 mset，无论多少条都只算1条命令）
+   * @param userName 用户名
+   * @param records 键值对 { "source+id": PlayRecord }
+   */
+  async setPlayRecordsBatch(
+    userName: string,
+    records: Record<string, PlayRecord>
+  ): Promise<void> {
+    const entries = Object.entries(records);
+    if (entries.length === 0) return;
+
+    // 构建 mset 参数：{ fullKey: JSON.stringify(record) }
+    const msetData: Record<string, string> = {};
+    for (const [key, record] of entries) {
+      msetData[this.prKey(userName, key)] = JSON.stringify(record);
+    }
+
+    await withRetry(() => this.client.mset(msetData));
+  }
+
+  /**
+   * 批量保存收藏（使用 mset，无论多少条都只算1条命令）
+   * @param userName 用户名
+   * @param favorites 键值对 { "source+id": Favorite }
+   */
+  async setFavoritesBatch(
+    userName: string,
+    favorites: Record<string, Favorite>
+  ): Promise<void> {
+    const entries = Object.entries(favorites);
+    if (entries.length === 0) return;
+
+    // 构建 mset 参数：{ fullKey: JSON.stringify(favorite) }
+    const msetData: Record<string, string> = {};
+    for (const [key, favorite] of entries) {
+      msetData[this.favKey(userName, key)] = JSON.stringify(favorite);
+    }
+
+    await withRetry(() => this.client.mset(msetData));
   }
 
   // ---------- 用户注册 / 登录 ----------
@@ -194,8 +244,24 @@ export class UpstashRedisStorage implements IStorage {
 
   // 删除用户及其所有数据
   async deleteUser(userName: string): Promise<void> {
-    // 删除用户密码
+    // 删除用户密码 (V1)
     await withRetry(() => this.client.del(this.userPwdKey(userName)));
+
+    // 删除用户信息 (V2)
+    await withRetry(() => this.client.del(this.userInfoKey(userName)));
+
+    // 从用户列表中移除 (V2)
+    await withRetry(() => this.client.zrem(this.userListKey(), userName));
+
+    // 删除 OIDC 映射（如果存在）
+    try {
+      const userInfo = await this.getUserInfoV2(userName);
+      if (userInfo?.oidcSub) {
+        await withRetry(() => this.client.del(this.oidcSubKey(userInfo.oidcSub!)));
+      }
+    } catch (e) {
+      // 忽略错误，用户信息可能已被删除
+    }
 
     // 删除搜索历史
     await withRetry(() => this.client.del(this.shKey(userName)));
@@ -227,9 +293,190 @@ export class UpstashRedisStorage implements IStorage {
       await withRetry(() => this.client.del(...skipConfigKeys));
     }
 
+    // 删除剧集跳过配置
+    const episodeSkipPattern = `u:${userName}:episodeskip:*`;
+    const episodeSkipKeys = await withRetry(() =>
+      this.client.keys(episodeSkipPattern)
+    );
+    if (episodeSkipKeys.length > 0) {
+      await withRetry(() => this.client.del(...episodeSkipKeys));
+    }
+
     // 删除用户登入统计数据
     const loginStatsKey = `user_login_stats:${userName}`;
     await withRetry(() => this.client.del(loginStatsKey));
+  }
+
+  // ---------- 用户相关（新版本 V2，支持 OIDC） ----------
+  private userInfoKey(user: string) {
+    return `u:${user}:info`;
+  }
+
+  private userListKey() {
+    return 'users:list';
+  }
+
+  private oidcSubKey(oidcSub: string) {
+    return `oidc:sub:${oidcSub}`;
+  }
+
+  // SHA256加密密码
+  private async hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // 创建新用户（新版本）
+  async createUserV2(
+    userName: string,
+    password: string,
+    role: 'owner' | 'admin' | 'user' = 'user',
+    tags?: string[],
+    oidcSub?: string,
+    enabledApis?: string[]
+  ): Promise<void> {
+    const hashedPassword = await this.hashPassword(password);
+    const createdAt = Date.now();
+
+    // 存储用户信息到Hash
+    const userInfo: Record<string, string> = {
+      role,
+      banned: 'false',
+      password: hashedPassword,
+      created_at: createdAt.toString(),
+    };
+
+    if (tags && tags.length > 0) {
+      userInfo.tags = JSON.stringify(tags);
+    }
+
+    if (enabledApis && enabledApis.length > 0) {
+      userInfo.enabledApis = JSON.stringify(enabledApis);
+    }
+
+    if (oidcSub) {
+      userInfo.oidcSub = oidcSub;
+      // 创建OIDC映射
+      await withRetry(() => this.client.set(this.oidcSubKey(oidcSub), userName));
+    }
+
+    await withRetry(() => this.client.hset(this.userInfoKey(userName), userInfo));
+
+    // 添加到用户列表（Sorted Set，按注册时间排序）
+    await withRetry(() => this.client.zadd(this.userListKey(), {
+      score: createdAt,
+      member: userName,
+    }));
+  }
+
+  // 验证用户密码（新版本）
+  async verifyUserV2(userName: string, password: string): Promise<boolean> {
+    const userInfo = await withRetry(() =>
+      this.client.hgetall(this.userInfoKey(userName))
+    );
+
+    if (!userInfo || !userInfo.password) {
+      return false;
+    }
+
+    const hashedPassword = await this.hashPassword(password);
+    return userInfo.password === hashedPassword;
+  }
+
+  // 获取用户信息（新版本）
+  async getUserInfoV2(userName: string): Promise<{
+    username: string;
+    role: 'owner' | 'admin' | 'user';
+    banned: boolean;
+    tags?: string[];
+    oidcSub?: string;
+    enabledApis?: string[];
+    createdAt?: number;
+  } | null> {
+    const userInfo = await withRetry(() =>
+      this.client.hgetall(this.userInfoKey(userName))
+    );
+
+    if (!userInfo || Object.keys(userInfo).length === 0) {
+      return null;
+    }
+
+    // 安全解析 tags 字段
+    let parsedTags: string[] | undefined;
+    if (userInfo.tags) {
+      try {
+        const tagsStr = ensureString(userInfo.tags);
+        // 如果 tags 已经是数组（某些情况），直接使用
+        if (Array.isArray(userInfo.tags)) {
+          parsedTags = userInfo.tags;
+        } else {
+          // 尝试 JSON 解析
+          const parsed = JSON.parse(tagsStr);
+          parsedTags = Array.isArray(parsed) ? parsed : [parsed];
+        }
+      } catch (e) {
+        // JSON 解析失败，可能是单个字符串值
+        console.warn(`用户 ${userName} tags 解析失败，原始值:`, userInfo.tags);
+        const tagsStr = ensureString(userInfo.tags);
+        // 如果是逗号分隔的字符串
+        if (tagsStr.includes(',')) {
+          parsedTags = tagsStr.split(',').map(t => t.trim());
+        } else {
+          parsedTags = [tagsStr];
+        }
+      }
+    }
+
+    // 安全解析 enabledApis 字段
+    let parsedApis: string[] | undefined;
+    if (userInfo.enabledApis) {
+      try {
+        const apisStr = ensureString(userInfo.enabledApis);
+        if (Array.isArray(userInfo.enabledApis)) {
+          parsedApis = userInfo.enabledApis;
+        } else {
+          const parsed = JSON.parse(apisStr);
+          parsedApis = Array.isArray(parsed) ? parsed : [parsed];
+        }
+      } catch (e) {
+        console.warn(`用户 ${userName} enabledApis 解析失败`);
+        const apisStr = ensureString(userInfo.enabledApis);
+        if (apisStr.includes(',')) {
+          parsedApis = apisStr.split(',').map(t => t.trim());
+        } else {
+          parsedApis = [apisStr];
+        }
+      }
+    }
+
+    return {
+      username: userName,
+      role: (userInfo.role as 'owner' | 'admin' | 'user') || 'user',
+      banned: userInfo.banned === 'true',
+      tags: parsedTags,
+      oidcSub: userInfo.oidcSub ? ensureString(userInfo.oidcSub) : undefined,
+      enabledApis: parsedApis,
+      createdAt: userInfo.created_at ? parseInt(ensureString(userInfo.created_at), 10) : undefined,
+    };
+  }
+
+  // 检查用户是否存在（新版本）
+  async checkUserExistV2(userName: string): Promise<boolean> {
+    const exists = await withRetry(() =>
+      this.client.exists(this.userInfoKey(userName))
+    );
+    return exists === 1;
+  }
+
+  // 通过OIDC Sub查找用户名
+  async getUserByOidcSub(oidcSub: string): Promise<string | null> {
+    const userName = await withRetry(() =>
+      this.client.get(this.oidcSubKey(oidcSub))
+    );
+    return userName ? ensureString(userName) : null;
   }
 
   // ---------- 搜索历史 ----------
@@ -266,13 +513,27 @@ export class UpstashRedisStorage implements IStorage {
 
   // ---------- 获取全部用户 ----------
   async getAllUsers(): Promise<string[]> {
-    const keys = await withRetry(() => this.client.keys('u:*:pwd'));
-    return keys
+    // 获取 V1 用户（u:*:pwd）
+    const v1Keys = await withRetry(() => this.client.keys('u:*:pwd'));
+    const v1Users = v1Keys
       .map((k) => {
         const match = k.match(/^u:(.+?):pwd$/);
         return match ? ensureString(match[1]) : undefined;
       })
       .filter((u): u is string => typeof u === 'string');
+
+    // 获取 V2 用户（u:*:info）
+    const v2Keys = await withRetry(() => this.client.keys('u:*:info'));
+    const v2Users = v2Keys
+      .map((k) => {
+        const match = k.match(/^u:(.+?):info$/);
+        return match ? ensureString(match[1]) : undefined;
+      })
+      .filter((u): u is string => typeof u === 'string');
+
+    // 合并并去重（V2 优先，因为可能同时存在 V1 和 V2）
+    const allUsers = new Set([...v2Users, ...v1Users]);
+    return Array.from(allUsers);
   }
 
   // ---------- 管理员配置 ----------
@@ -1037,6 +1298,8 @@ function getUpstashRedisClient(): Redis {
     client = new Redis({
       url: upstashUrl,
       token: upstashToken,
+      // 启用 auto-pipelining 减少 HTTP 往返延迟
+      enableAutoPipelining: true,
       // 可选配置
       retry: {
         retries: 3,
