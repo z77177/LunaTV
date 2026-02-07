@@ -17,6 +17,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 // ============================================================================
 
 interface DanmuSettings {
+  enabled: boolean; // 启用弹幕主开关
   fontSize: number;
   speed: number;
   opacity: number;
@@ -24,6 +25,11 @@ interface DanmuSettings {
   modes: Array<0 | 1 | 2>;
   antiOverlap: boolean;
   visible: boolean;
+}
+
+interface DanmuMatchInfo {
+  animeTitle: string;
+  episodeTitle: string;
 }
 
 interface DanmuSettingsPanelProps {
@@ -41,6 +47,8 @@ interface DanmuSettingsPanelProps {
   loading?: boolean;
   /** 重新加载回调 */
   onReload?: () => void;
+  /** 匹配信息（显示片名） */
+  matchInfo?: DanmuMatchInfo | null;
 }
 
 // ============================================================================
@@ -94,6 +102,7 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
   danmuCount = 0,
   loading = false,
   onReload,
+  matchInfo,
 }: DanmuSettingsPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -297,8 +306,58 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
 
       {/* 内容区域 - 零滚动设计 */}
       <div className='px-5 py-4 space-y-4 overflow-hidden'>
-        {/* 快捷开关行 - 并排紧凑设计 */}
-        <div className='grid grid-cols-2 gap-3'>
+        {/* 匹配信息标签 - 显示片名 */}
+        {matchInfo && settings.enabled && danmuCount > 0 && (
+          <div
+            className='px-3 py-2 rounded-xl backdrop-blur-sm'
+            style={{
+              background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            <p
+              className='text-xs text-green-300 font-medium whitespace-nowrap overflow-hidden text-ellipsis'
+              title={`${matchInfo.animeTitle} - ${matchInfo.episodeTitle}`}
+            >
+              ✨ {matchInfo.animeTitle}
+            </p>
+            <p className='text-[11px] text-green-400/70 mt-0.5 truncate'>
+              {matchInfo.episodeTitle}
+            </p>
+          </div>
+        )}
+
+        {/* 启用弹幕主开关 */}
+        <div className='flex items-center justify-between py-1'>
+          <span className='text-sm font-medium text-gray-200'>启用弹幕</span>
+          <button
+            onClick={() => handleUpdate('enabled', !settings.enabled)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 active:scale-90`}
+            style={{
+              background: settings.enabled
+                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                : '#4b5563',
+              boxShadow: settings.enabled
+                ? '0 0 16px rgba(16, 185, 129, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
+                : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+              transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+            }}
+          >
+            <span
+              className='inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-all duration-300'
+              style={{
+                transform: settings.enabled ? 'translateX(22px)' : 'translateX(2px)',
+                transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }}
+            />
+          </button>
+        </div>
+
+        {/* 只有启用弹幕后才显示其他设置 */}
+        {settings.enabled && (
+          <>
+            {/* 快捷开关行 - 并排紧凑设计 */}
+            <div className='grid grid-cols-2 gap-3'>
           {/* 显示开关 */}
           <div
             className='flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer'
@@ -586,6 +645,8 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
             ))}
           </div>
         </div>
+          </>
+        )}
       </div>
 
       {/* 底部装饰条 */}

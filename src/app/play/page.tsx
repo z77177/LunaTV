@@ -3825,6 +3825,7 @@ function PlayPageClient() {
           {
             name: '弹幕设置',
             html: '弹幕设置',
+            tooltip: '打开弹幕设置面板', // 添加tooltip避免显示undefined
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
             // 🎨 点击式按钮，打开美化的弹幕设置面板
             onClick: function () {
@@ -5313,6 +5314,7 @@ function PlayPageClient() {
         isOpen={isDanmuSettingsPanelOpen}
         onClose={() => setIsDanmuSettingsPanelOpen(false)}
         settings={{
+          enabled: externalDanmuEnabled, // 启用弹幕主开关
           fontSize: parseInt(localStorage.getItem('danmaku_fontSize') || '25'),
           speed: parseFloat(localStorage.getItem('danmaku_speed') || '5'),
           opacity: parseFloat(localStorage.getItem('danmaku_opacity') || '0.8'),
@@ -5323,7 +5325,20 @@ function PlayPageClient() {
             : true, // 默认开启防重叠
           visible: localStorage.getItem('danmaku_visible') !== 'false',
         }}
+        matchInfo={
+          detail?.title && currentEpisodeIndex >= 0
+            ? {
+                animeTitle: detail.title,
+                episodeTitle: `第 ${currentEpisodeIndex + 1} 集`,
+              }
+            : null
+        }
         onSettingsChange={(newSettings) => {
+          // 更新启用状态
+          if (newSettings.enabled !== undefined) {
+            handleDanmuOperationOptimized(newSettings.enabled);
+          }
+
           // 更新 localStorage
           if (newSettings.fontSize !== undefined) {
             localStorage.setItem('danmaku_fontSize', String(newSettings.fontSize));
