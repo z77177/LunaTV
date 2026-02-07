@@ -1118,27 +1118,16 @@ function PlayPageClient() {
 
       console.log('搜索演员作品:', celebrityName);
 
-      // 使用豆瓣搜索API（通过cmliussss CDN）
-      const searchUrl = `https://movie.douban.cmliussss.net/j/search_subjects?type=movie&tag=${encodeURIComponent(celebrityName)}&sort=recommend&page_limit=20&page_start=0`;
-
-      const response = await fetch(searchUrl);
+      // 使用后端 API（带反爬虫保护）
+      const response = await fetch(`/api/douban/celebrity-works?name=${encodeURIComponent(celebrityName)}&limit=20`);
       const data = await response.json();
 
-      if (data.subjects && data.subjects.length > 0) {
-        const works = data.subjects.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          poster: item.cover,
-          rate: item.rate,
-          year: item.url?.match(/\/subject\/(\d+)\//)?.[1] || '',
-          source: 'douban'
-        }));
-
+      if (data.success && data.works && data.works.length > 0) {
         // 保存到缓存（2小时）
-        await ClientCache.set(cacheKey, works, 2 * 60 * 60);
+        await ClientCache.set(cacheKey, data.works, 2 * 60 * 60);
 
-        setCelebrityWorks(works);
-        console.log(`找到 ${works.length} 部 ${celebrityName} 的作品（豆瓣，已缓存）`);
+        setCelebrityWorks(data.works);
+        console.log(`找到 ${data.works.length} 部 ${celebrityName} 的作品（豆瓣，已缓存）`);
       } else {
         // 豆瓣没有结果，尝试TMDB fallback
         console.log('豆瓣未找到相关作品，尝试TMDB...');
