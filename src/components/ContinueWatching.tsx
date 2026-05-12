@@ -169,12 +169,15 @@ function ContinueWatching({ className }: ContinueWatchingProps) {
 
   // 检查播放记录是否有新集数更新
   const getNewEpisodesCount = (record: PlayRecord & { key: string }): number => {
-    if (!watchingUpdates || !watchingUpdates.updatedSeries) return 0;
+    const updatedSeries = Array.isArray(watchingUpdates?.updatedSeries)
+      ? watchingUpdates.updatedSeries
+      : [];
+    if (updatedSeries.length === 0) return 0;
 
     const { source, id } = parseKey(record.key);
 
     // 在watchingUpdates中查找匹配的剧集
-    const matchedSeries = watchingUpdates.updatedSeries.find(series =>
+    const matchedSeries = updatedSeries.find(series =>
       series.sourceKey === source &&
       series.videoId === id &&
       series.hasNewEpisode
@@ -185,12 +188,15 @@ function ContinueWatching({ className }: ContinueWatchingProps) {
 
   // 获取最新的总集数（用于显示，不修改原始数据）
   const getLatestTotalEpisodes = (record: PlayRecord & { key: string }): number => {
-    if (!watchingUpdates || !watchingUpdates.updatedSeries) return record.total_episodes;
+    const updatedSeries = Array.isArray(watchingUpdates?.updatedSeries)
+      ? watchingUpdates.updatedSeries
+      : [];
+    if (updatedSeries.length === 0) return record.total_episodes;
 
     const { source, id } = parseKey(record.key);
 
     // 在watchingUpdates中查找匹配的剧集
-    const matchedSeries = watchingUpdates.updatedSeries.find(series =>
+    const matchedSeries = updatedSeries.find(series =>
       series.sourceKey === source &&
       series.videoId === id
     );

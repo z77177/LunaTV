@@ -67,6 +67,22 @@ interface ExtendedPlayRecord extends PlayRecord {
 const updateListeners = new Set<(hasUpdates: boolean) => void>();
 
 export async function checkWatchingUpdates(forceRefresh = false): Promise<void> {
+  if (watchingUpdatesCheckPromise) {
+    console.log('追番更新检查正在进行中，复用本次检查');
+    return watchingUpdatesCheckPromise;
+  }
+
+  watchingUpdatesCheckPromise = runWatchingUpdatesCheck(forceRefresh);
+  try {
+    await watchingUpdatesCheckPromise;
+  } finally {
+    watchingUpdatesCheckPromise = null;
+  }
+}
+
+let watchingUpdatesCheckPromise: Promise<void> | null = null;
+
+async function runWatchingUpdatesCheck(forceRefresh = false): Promise<void> {
   try {
     console.log('开始检查追番更新...', forceRefresh ? '(强制刷新)' : '');
 
@@ -86,12 +102,12 @@ export async function checkWatchingUpdates(forceRefresh = false): Promise<void> 
       }
     }
 
-    // 🔧 优化：立即清除缓存并强制从服务器获取最新播放记录
-    console.log('🔄 强制从服务器获取最新播放记录以确保数据同步...');
-    forceRefreshPlayRecordsCache(true);
+    if (forceRefresh) {
+      console.log('🔄 强制从服务器获取最新播放记录以确保数据同步...');
+      forceRefreshPlayRecordsCache(true);
+    }
 
-    // 获取用户的播放记录（强制刷新）
-    const recordsObj = await getAllPlayRecords(true);
+    const recordsObj = await getAllPlayRecords(forceRefresh);
     const records = Object.entries(recordsObj).map(([key, record]) => ({
       ...record,
       id: key
@@ -394,15 +410,12 @@ async function getOriginalEpisodes(record: PlayRecord, videoId: string, recordKe
   // 始终从数据库重新读取最新的 original_episodes
   try {
     console.log(`🔍 从数据库读取最新的原始集数: ${record.title}`);
-    const freshRecordsResponse = await fetch('/api/playrecords');
-    if (freshRecordsResponse.ok) {
-      const freshRecords = await freshRecordsResponse.json();
-      const freshRecord = freshRecords[recordKey];
+    const freshRecords = { [recordKey]: record } as Record<string, PlayRecord>;
+    const freshRecord = freshRecords[recordKey];
 
-      if (freshRecord?.original_episodes && freshRecord.original_episodes > 0) {
-        console.log(`📚 从数据库读取到最新原始集数: ${record.title} = ${freshRecord.original_episodes}集 (当前播放记录: ${record.total_episodes}集)`);
-        return freshRecord.original_episodes;
-      }
+    if (freshRecord?.original_episodes && freshRecord.original_episodes > 0) {
+      console.log(`📚 从数据库读取到最新原始集数: ${record.title} = ${freshRecord.original_episodes}集 (当前播放记录: ${record.total_episodes}集)`);
+      return freshRecord.original_episodes;
     }
   } catch (error) {
     console.warn(`⚠️ 从数据库读取原始集数失败: ${record.title}，使用内存值`, error);
@@ -473,12 +486,13 @@ export function getCachedWatchingUpdates(): boolean {
  */
 function cacheWatchingUpdates(data: WatchingUpdate): void {
   try {
+    const safeUpdatedSeries = Array.isArray(data.updatedSeries) ? data.updatedSeries : [];
     const cacheData: WatchingUpdatesCache = {
       hasUpdates: data.hasUpdates,
       timestamp: data.timestamp,
       updatedCount: data.updatedCount,
       continueWatchingCount: data.continueWatchingCount,
-      updatedSeries: data.updatedSeries
+      updatedSeries: safeUpdatedSeries
     };
     console.log('准备缓存的数据:', cacheData);
 
@@ -586,12 +600,15 @@ export function getDetailedWatchingUpdates(): WatchingUpdate | null {
         return null;
       }
 
+      const updatedSeries = Array.isArray(memoryWatchingUpdatesCache.updatedSeries)
+        ? memoryWatchingUpdatesCache.updatedSeries
+        : [];
       const result = {
         hasUpdates: memoryWatchingUpdatesCache.hasUpdates,
         timestamp: memoryWatchingUpdatesCache.timestamp,
         updatedCount: memoryWatchingUpdatesCache.updatedCount,
         continueWatchingCount: memoryWatchingUpdatesCache.continueWatchingCount,
-        updatedSeries: memoryWatchingUpdatesCache.updatedSeries
+        updatedSeries
       };
       console.log('从内存缓存返回数据:', result);
       return result;
@@ -614,12 +631,13 @@ export function getDetailedWatchingUpdates(): WatchingUpdate | null {
       return null;
     }
 
+    const updatedSeries = Array.isArray(data.updatedSeries) ? data.updatedSeries : [];
     const result = {
       hasUpdates: data.hasUpdates,
       timestamp: data.timestamp,
       updatedCount: data.updatedCount,
       continueWatchingCount: data.continueWatchingCount,
-      updatedSeries: data.updatedSeries
+      updatedSeries
     };
     console.log('返回给页面的数据:', result);
     return result;
@@ -636,11 +654,12 @@ export function markUpdatesAsViewed(): void {
   try {
     const data = getDetailedWatchingUpdates();
     if (data) {
+      const updatedSeries = Array.isArray(data.updatedSeries) ? data.updatedSeries : [];
       const updatedData: WatchingUpdate = {
         ...data,
         hasUpdates: false,
         updatedCount: 0,
-        updatedSeries: data.updatedSeries.map(series => ({
+        updatedSeries: updatedSeries.map(series => ({
           ...series,
           hasNewEpisode: false
         }))

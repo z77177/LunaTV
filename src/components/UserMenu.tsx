@@ -36,14 +36,15 @@ import {
 } from '@/lib/watching-updates';
 import {
   getAllPlayRecords,
+  getAllFavorites,
   forceRefreshPlayRecordsCache,
   type PlayRecord,
-  fetchFromApi,
 } from '@/lib/db.client';
 import type { Favorite } from '@/lib/types';
 
 import { VersionPanel } from './VersionPanel';
 import VideoCard from './VideoCard';
+import { useWatchRoomContextSafe } from './WatchRoomProvider';
 
 interface AuthInfo {
   username?: string;
@@ -73,6 +74,7 @@ export const UserMenu: React.FC = () => {
   const [favorites, setFavorites] = useState<(Favorite & { key: string })[]>([]);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
   const [showWatchRoom, setShowWatchRoom] = useState(false);
+  const watchRoomContext = useWatchRoomContextSafe();
 
   // Body 滚动锁定 - 使用 overflow 方式避免布局问题
   useEffect(() => {
@@ -221,20 +223,11 @@ export const UserMenu: React.FC = () => {
     }
   }, []);
 
-  // 检查观影室功能是否启用
   useEffect(() => {
-    const checkWatchRoomConfig = async () => {
-      try {
-        const data = await fetchFromApi<any>('/api/watch-room/config');
-        setShowWatchRoom(data.enabled === true);
-      } catch (error) {
-        console.error('Failed to check watch room config:', error);
-        setShowWatchRoom(false);
-      }
-    };
-
-    checkWatchRoomConfig();
-  }, []);
+    if (!watchRoomContext?.configLoading) {
+      setShowWatchRoom(Boolean(watchRoomContext?.isEnabled));
+    }
+  }, [watchRoomContext?.configLoading, watchRoomContext?.isEnabled]);
 
   // 从 localStorage 读取设置
   useEffect(() => {
@@ -268,7 +261,7 @@ export const UserMenu: React.FC = () => {
         'doubanImageProxyType'
       );
       const defaultDoubanImageProxyType =
-        (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY_TYPE || 'server';
+        (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY_TYPE || 'img3';
       if (savedDoubanImageProxyType !== null) {
         setDoubanImageProxyType(savedDoubanImageProxyType);
       } else if (defaultDoubanImageProxyType) {
@@ -408,7 +401,7 @@ export const UserMenu: React.FC = () => {
         try {
           // 🔧 修复：直接使用 forceRefresh=true，不再手动操作 localStorage
           // 因为 kvrocks 模式使用内存缓存，删除 localStorage 无效
-          await checkWatchingUpdates(true);
+          await checkWatchingUpdates(false);
 
           // 更新UI
           updateWatchingUpdates();
@@ -428,9 +421,10 @@ export const UserMenu: React.FC = () => {
       }
 
       // 🔧 修复：延迟1秒后在后台执行更新检查，避免阻塞页面初始加载
-      setTimeout(() => {
+      const refreshDelay = cachedUpdates ? 15000 : 3000;
+      const refreshTimer = window.setTimeout(() => {
         forceInitialCheck();
-      }, 1000);
+      }, refreshDelay);
 
       // 订阅更新事件
       const unsubscribe = subscribeToWatchingUpdatesEvent(() => {
@@ -438,7 +432,10 @@ export const UserMenu: React.FC = () => {
         updateWatchingUpdates();
       });
 
-      return unsubscribe;
+      return () => {
+        window.clearTimeout(refreshTimer);
+        unsubscribe();
+      };
     } else {
       console.log('watching-updates 条件不满足，跳过加载');
     }
@@ -529,7 +526,7 @@ export const UserMenu: React.FC = () => {
     if (typeof window !== 'undefined' && authInfo?.username && storageType !== 'localstorage') {
       const loadFavorites = async () => {
         try {
-          const favoritesData = await fetchFromApi<Record<string, Favorite>>('/api/favorites');
+          const favoritesData = await getAllFavorites();
           const favoritesArray = Object.entries(favoritesData).map(([key, favorite]) => ({
             ...(favorite as Favorite),
             key,
@@ -602,17 +599,7 @@ export const UserMenu: React.FC = () => {
     if (willOpen && authInfo?.username && storageType !== 'localstorage') {
       console.log('打开菜单时强制检查更新...');
       try {
-        // 暂时清除缓存时间，强制检查一次
-        const lastCheckTime = localStorage.getItem('moontv_last_update_check');
-        localStorage.removeItem('moontv_last_update_check');
-
-        // 执行检查
         await checkWatchingUpdates();
-
-        // 恢复缓存时间（如果之前有的话）
-        if (lastCheckTime) {
-          localStorage.setItem('moontv_last_update_check', lastCheckTime);
-        }
 
         // 更新UI状态
         const updates = getDetailedWatchingUpdates();
@@ -726,12 +713,15 @@ export const UserMenu: React.FC = () => {
 
   // 检查播放记录是否有新集数更新
   const getNewEpisodesCount = (record: PlayRecord & { key: string }): number => {
-    if (!watchingUpdates || !watchingUpdates.updatedSeries) return 0;
+    const updatedSeries = Array.isArray(watchingUpdates?.updatedSeries)
+      ? watchingUpdates.updatedSeries
+      : [];
+    if (updatedSeries.length === 0) return 0;
 
     const { source, id } = parseKey(record.key);
 
     // 在watchingUpdates中查找匹配的剧集
-    const matchedSeries = watchingUpdates.updatedSeries.find(series =>
+    const matchedSeries = updatedSeries.find(series =>
       series.sourceKey === source &&
       series.videoId === id &&
       series.hasNewEpisode
@@ -950,7 +940,7 @@ export const UserMenu: React.FC = () => {
     const defaultDoubanProxy =
       (window as any).RUNTIME_CONFIG?.DOUBAN_PROXY || '';
     const defaultDoubanImageProxyType =
-      (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY_TYPE || 'server';
+      (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY_TYPE || 'img3';
     const defaultDoubanImageProxyUrl =
       (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY || '';
     const defaultFluidSearch =
@@ -1006,8 +996,12 @@ export const UserMenu: React.FC = () => {
   // 检查是否显示更新提醒按钮（登录用户且非localstorage存储就显示）
   const showWatchingUpdates = authInfo?.username && storageType !== 'localstorage';
 
+  const safeUpdatedSeries = Array.isArray(watchingUpdates?.updatedSeries)
+    ? watchingUpdates.updatedSeries
+    : [];
+
   // 检查是否有实际更新（用于显示红点）- 只检查新剧集更新
-  const hasActualUpdates = watchingUpdates && (watchingUpdates.updatedCount || 0) > 0;
+  const hasActualUpdates = (watchingUpdates?.updatedCount || 0) > 0;
 
   // 计算更新数量（只统计新剧集更新）
   const totalUpdates = watchingUpdates?.updatedCount || 0;
@@ -2184,7 +2178,7 @@ export const UserMenu: React.FC = () => {
               </div>
             )}
             {/* 有新集数的剧集 */}
-            {watchingUpdates && watchingUpdates.updatedSeries.filter(series => series.hasNewEpisode).length > 0 && (
+            {safeUpdatedSeries.filter(series => series.hasNewEpisode).length > 0 && (
               <div>
                 <div className='flex items-center gap-2 mb-4'>
                   <h4 className='text-lg font-semibold text-gray-900 dark:text-white'>
@@ -2193,13 +2187,13 @@ export const UserMenu: React.FC = () => {
                   <div className='flex items-center gap-1'>
                     <div className='w-2 h-2 bg-red-500 rounded-full animate-pulse'></div>
                     <span className='text-sm text-red-500 font-medium'>
-                      {watchingUpdates.updatedSeries.filter(series => series.hasNewEpisode).length}部剧集有更新
+                      {safeUpdatedSeries.filter(series => series.hasNewEpisode).length}部剧集有更新
                     </span>
                   </div>
                 </div>
 
                 <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
-                  {watchingUpdates.updatedSeries
+                  {safeUpdatedSeries
                     .filter(series => series.hasNewEpisode)
                     .map((series, index) => (
                       <div key={`new-${series.title}_${series.year}_${index}`} className='relative group/card'>

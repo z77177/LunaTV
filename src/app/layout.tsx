@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 
 import './globals.css';
@@ -19,7 +18,6 @@ import { DownloadPanel } from '../components/download/DownloadPanel';
 import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
 import QueryProvider from '../components/QueryProvider';
 
-const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
 
 // 动态生成 metadata，支持配置更新后的标题变化
@@ -63,7 +61,7 @@ export default async function RootLayout({
   let doubanProxyType = process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'direct';
   let doubanProxy = process.env.NEXT_PUBLIC_DOUBAN_PROXY || '';
   let doubanImageProxyType =
-    process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'server';
+    process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'img3';
   let doubanImageProxy = process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '';
   let disableYellowFilter =
     process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true';
@@ -131,7 +129,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} min-h-screen bg-white text-gray-900 dark:bg-black dark:text-gray-200`}
+        className='min-h-screen bg-white font-sans text-gray-900 dark:bg-black dark:text-gray-200'
       >
         <ThemeProvider
           attribute='class'

@@ -626,6 +626,60 @@ function fetchWithTimeout(
 /**
  * 通用的 fetch 函数，处理 401 状态码自动跳转登录
  */
+class ApiRateLimitError extends Error {
+  status = 429;
+  retryAfterMs: number;
+
+  constructor(path: string, retryAfterMs: number) {
+    super(`API rate limited: ${path}`);
+    this.name = 'ApiRateLimitError';
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+const rateLimitUntil = new Map<string, number>();
+const DEFAULT_RATE_LIMIT_BACKOFF = 30 * 1000;
+
+function getRateLimitKey(path: string): string {
+  try {
+    return new URL(path, window.location.origin).pathname;
+  } catch {
+    return path.split('?')[0] || path;
+  }
+}
+
+function getRetryAfterMs(res: Response): number {
+  const retryAfter = res.headers.get('Retry-After');
+  if (!retryAfter) return DEFAULT_RATE_LIMIT_BACKOFF;
+
+  const seconds = Number(retryAfter);
+  if (Number.isFinite(seconds)) {
+    return Math.max(seconds * 1000, DEFAULT_RATE_LIMIT_BACKOFF);
+  }
+
+  const retryDate = Date.parse(retryAfter);
+  if (Number.isFinite(retryDate)) {
+    return Math.max(retryDate - Date.now(), DEFAULT_RATE_LIMIT_BACKOFF);
+  }
+
+  return DEFAULT_RATE_LIMIT_BACKOFF;
+}
+
+function rememberRateLimit(path: string, retryAfterMs: number): void {
+  rateLimitUntil.set(getRateLimitKey(path), Date.now() + retryAfterMs);
+}
+
+function assertNotRateLimited(path: string): void {
+  const until = rateLimitUntil.get(getRateLimitKey(path)) || 0;
+  if (until > Date.now()) {
+    throw new ApiRateLimitError(path, until - Date.now());
+  }
+}
+
+function isRateLimitError(error: unknown): error is ApiRateLimitError {
+  return error instanceof ApiRateLimitError;
+}
+
 async function fetchWithAuth(
   url: string,
   options?: any
@@ -649,6 +703,9 @@ async function fetchWithAuth(
       window.location.href = loginUrl.toString();
       throw new Error('用户未授权，已跳转到登录页面');
     }
+    if (res.status === 429) {
+      return res;
+    }
     throw new Error(`请求 ${url} 失败: ${res.status}`);
   }
   return res;
@@ -662,7 +719,7 @@ const pendingRequests = new Map<string, Promise<any>>();
  * 🚀 优化：内置 Single-Flight 机制，防止同一时间重复请求相同接口
  */
 export async function fetchFromApi<T>(path: string, options: RequestInit = {}, retries = 2): Promise<T> {
-  const method = options.method || 'GET';
+  const method = (options.method || 'GET').toUpperCase();
   // 只有 GET 请求且没有特殊 header 时才使用 Single-Flight 合并
   const isCacheable = method === 'GET';
   const requestKey = `${method}:${path}`;
@@ -677,15 +734,14 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
 
     for (let i = 0; i <= retries; i++) {
       try {
+        assertNotRateLimited(path);
         const res = await fetchWithAuth(path, options);
 
         if (res.status === 429) {
-          if (i < retries) {
-            const delay = Math.min(1000 * Math.pow(2, i) + Math.random() * 1000, 10000);
-            console.warn(`[API] 请求失败 (${path}), 触发 429 限制, 将在 ${Math.round(delay)}ms 后重试... (${i + 1}/${retries})`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
+          const retryAfterMs = getRetryAfterMs(res);
+          rememberRateLimit(path, retryAfterMs);
+          console.warn(`[API] ${path} returned 429; pausing this endpoint for ${Math.round(retryAfterMs / 1000)}s`);
+          throw new ApiRateLimitError(path, retryAfterMs);
         }
 
         if (!res.ok) {
@@ -696,6 +752,9 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
         return await res.json();
       } catch (error) {
         lastError = error as Error;
+        if (isRateLimitError(error)) {
+          throw error;
+        }
         if (i < retries) {
           const delay = 500 * Math.pow(2, i);
           await new Promise(resolve => setTimeout(resolve, delay));

@@ -210,7 +210,7 @@ function generateTrustedAuthCookie(request: NextRequest): NextResponse {
   return response;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 处理 /adult/ 路径前缀，重写为实际 API 路径
@@ -400,7 +400,7 @@ function shouldSkipAuth(pathname: string): boolean {
   return skipPaths.some((path) => pathname.startsWith(path));
 }
 
-// 配置middleware匹配规则
+// 配置 proxy 匹配规则
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|login|register|oidc-register|warning|api/login|api/register|api/logout|api/cron|api/server-config|api/tvbox|api/live/merged|api/parse|api/bing-wallpaper|api/proxy/|api/telegram/|api/auth/oidc/|api/watch-room/).*)',

@@ -31,14 +31,21 @@ export function SessionTracker() {
 
         // 检查上次记录的登入时间
         const lastRecordedLogin = localStorage.getItem('lastRecordedLogin');
+        const lastLoginRecordAttempt = localStorage.getItem('lastLoginRecordAttempt');
         const now = Date.now();
         const sessionTimeout = 4 * 60 * 60 * 1000; // 4小时
+        const attemptCooldown = 10 * 60 * 1000; // 10分钟
 
-        const shouldRecordLogin = !lastRecordedLogin ||
-          (now - parseInt(lastRecordedLogin)) > sessionTimeout;
+        const lastRecordedLoginTime = parseInt(lastRecordedLogin || '0', 10);
+        const lastLoginRecordAttemptTime = parseInt(lastLoginRecordAttempt || '0', 10);
+        const shouldRecordLogin = !lastRecordedLoginTime ||
+          (now - lastRecordedLoginTime) > sessionTimeout;
+        const shouldThrottleAttempt = lastLoginRecordAttemptTime > 0 &&
+          (now - lastLoginRecordAttemptTime) < attemptCooldown;
 
-        if (shouldRecordLogin) {
+        if (shouldRecordLogin && !shouldThrottleAttempt) {
           console.log('检测到新会话，记录登入时间');
+          localStorage.setItem('lastLoginRecordAttempt', now.toString());
 
           // 记录新的登入时间
           const response = await fetch('/api/user/my-stats', {
@@ -49,6 +56,7 @@ export function SessionTracker() {
 
           if (response.ok) {
             localStorage.setItem('lastRecordedLogin', now.toString());
+            localStorage.removeItem('lastLoginRecordAttempt');
             console.log('会话恢复登入时间记录成功');
           } else {
             console.warn('会话恢复登入时间记录失败:', response.status);

@@ -10,7 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BangumiCalendarData,
 } from '@/lib/bangumi.client';
-import { cleanExpiredCache, clearRecommendsCache } from '@/lib/shortdrama-cache';
+import { cleanExpiredCache } from '@/lib/shortdrama-cache';
 import { ShortDramaItem, ReleaseCalendarItem } from '@/lib/types';
 // 客户端收藏 API
 import {
@@ -370,9 +370,6 @@ function HomeClient() {
     // 清理过期缓存
     cleanExpiredCache().catch(console.error);
 
-    // 清除可能缓存了空数据的短剧推荐缓存
-    clearRecommendsCache().catch(console.error);
-
     // 🚀 使用 GlobalCacheContext 加载首页数据
     fetchHomeData();
 
@@ -385,14 +382,6 @@ function HomeClient() {
       }
     };
   }, [fetchHomeData]);
-
-  // 如果首页数据加载完成但热门短剧为空，强制刷新（可能之前缓存了空数据）
-  useEffect(() => {
-    if (homeData && homeData.hotShortDramas.length === 0 && !homeLoading) {
-      console.log('[GlobalCache] 热门短剧为空，强制刷新首页数据');
-      fetchHomeData(true);
-    }
-  }, [homeData, homeLoading, fetchHomeData]);
 
   // 🚀 当 GlobalCache 数据加载完成后，延迟加载详情数据
   useEffect(() => {

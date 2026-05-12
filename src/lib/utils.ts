@@ -91,24 +91,14 @@ function getDoubanImageProxyConfig(): {
   proxyUrl: string;
 } {
   // 安全地访问 localStorage（避免服务端渲染报错）
-  let doubanImageProxyType: 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'baidu' | 'custom' = 'server'; // 默认值
+  let doubanImageProxyType: 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'baidu' | 'custom' = 'img3'; // 默认值
   let doubanImageProxy = '';
 
   if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
     const storedType = localStorage.getItem('doubanImageProxyType');
     const runtimeType = (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY_TYPE;
 
-    // 自动修复：如果localStorage或RUNTIME_CONFIG是'direct'，自动改为'server'
-    let effectiveStoredType = storedType;
-    if (storedType === 'direct') {
-      effectiveStoredType = 'server';
-      // 自动更新localStorage，避免下次还是'direct'
-      localStorage.setItem('doubanImageProxyType', 'server');
-    }
-
-    const effectiveRuntimeType = (runtimeType === 'direct') ? 'server' : runtimeType;
-
-    doubanImageProxyType = (effectiveStoredType || effectiveRuntimeType || 'server') as 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'baidu' | 'custom';
+    doubanImageProxyType = (storedType || runtimeType || 'img3') as 'direct' | 'server' | 'img3' | 'cmliussss-cdn-tencent' | 'cmliussss-cdn-ali' | 'baidu' | 'custom';
     doubanImageProxy =
       localStorage.getItem('doubanImageProxyUrl') ||
       (window as any).RUNTIME_CONFIG?.DOUBAN_IMAGE_PROXY ||

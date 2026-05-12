@@ -1,5 +1,7 @@
 'use client';
 
+import { fetchFromApi } from './db.client';
+
 export interface BangumiCalendarData {
   weekday: {
     en: string;
@@ -36,7 +38,11 @@ export interface BangumiCalendarData {
 }
 
 export async function GetBangumiCalendarData(): Promise<BangumiCalendarData[]> {
-  const response = await fetch('/api/proxy/bangumi?path=calendar');
-  const data = await response.json();
-  return data;
+  try {
+    const data = await fetchFromApi<BangumiCalendarData[]>('/api/proxy/bangumi?path=calendar', {}, 0);
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.warn('获取 Bangumi 日历失败:', error);
+    return [];
+  }
 }

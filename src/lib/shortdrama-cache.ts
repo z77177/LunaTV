@@ -20,12 +20,22 @@ function getCacheKey(prefix: string, params: Record<string, any>): string {
   return `shortdrama-${prefix}-${sortedParams}`;
 }
 
+function isEmptyRecommendsCache(key: string, data: any): boolean {
+  return key.startsWith('shortdrama-recommends') && Array.isArray(data) && data.length === 0;
+}
+
 // 统一缓存获取方法
 async function getCache(key: string): Promise<any | null> {
   try {
     // 优先从统一存储获取
     const cached = await ClientCache.get(key);
-    if (cached) return cached;
+    if (cached) {
+      if (isEmptyRecommendsCache(key, cached)) {
+        await ClientCache.delete(key);
+        return null;
+      }
+      return cached;
+    }
 
     // 兜底：从localStorage获取（兼容性）
     if (typeof localStorage !== 'undefined') {
@@ -34,6 +44,10 @@ async function getCache(key: string): Promise<any | null> {
         try {
           const { data, expire } = JSON.parse(localCached);
           if (Date.now() <= expire) {
+            if (isEmptyRecommendsCache(key, data)) {
+              localStorage.removeItem(key);
+              return null;
+            }
             return data;
           }
           localStorage.removeItem(key);
@@ -53,6 +67,8 @@ async function getCache(key: string): Promise<any | null> {
 // 统一缓存设置方法
 async function setCache(key: string, data: any, expireSeconds: number): Promise<void> {
   try {
+    if (isEmptyRecommendsCache(key, data)) return;
+
     // 主要存储：统一存储
     await ClientCache.set(key, data, expireSeconds);
 

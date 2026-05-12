@@ -13,7 +13,6 @@
 
 import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
-import path from 'path';
 import { KvrocksStorage } from './kvrocks.db';
 
 // Kvrocks 客户端单例
@@ -83,8 +82,13 @@ function getCacheKey(videoUrl: string): string {
 /**
  * 获取视频缓存文件路径
  */
+function getVideoCacheFilePath(fileName: string): string {
+  const cacheDir = CACHE_CONFIG.VIDEO_CACHE_DIR.replace(/[\\/]+$/, '');
+  return `${cacheDir}/${fileName}`;
+}
+
 function getVideoCachePath(cacheKey: string): string {
-  return path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, `${cacheKey}.mp4`);
+  return getVideoCacheFilePath(`${cacheKey}.mp4`);
 }
 
 /**
@@ -298,7 +302,7 @@ export async function cleanupExpiredCache(): Promise<void> {
         const meta = await redis.get(metaKey);
         if (!meta) {
           // 元数据不存在，说明已过期，删除文件
-          const filePath = path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, file);
+          const filePath = getVideoCacheFilePath(file);
 
           try {
             const stats = await fs.stat(filePath);
@@ -449,8 +453,8 @@ export async function migrateOldCache(): Promise<void> {
       console.log(`[VideoCache] 迁移缓存: ${oldCacheKey.substring(0, 8)}... → ${newCacheKey}`);
 
       // 重命名文件
-      const oldFilePath = path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, file);
-      const newFilePath = path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, `${newCacheKey}.mp4`);
+      const oldFilePath = getVideoCacheFilePath(file);
+      const newFilePath = getVideoCachePath(newCacheKey);
 
       try {
         await fs.rename(oldFilePath, newFilePath);
@@ -581,7 +585,7 @@ export async function validateCacheSize(): Promise<void> {
       if (!file.endsWith('.mp4')) continue;
 
       try {
-        const filePath = path.join(CACHE_CONFIG.VIDEO_CACHE_DIR, file);
+        const filePath = getVideoCacheFilePath(file);
         const stats = await fs.stat(filePath);
         actualTotalSize += stats.size;
         validFileCount++;
