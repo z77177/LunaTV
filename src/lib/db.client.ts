@@ -701,33 +701,7 @@ export async function fetchFromApi<T>(path: string, retries = 2): Promise<T> {
   return requestPromise;
 }
 
-/**
- * 带重试的 API 请求函数
- */
-async function fetchFromApi<T>(path: string, retries = 2): Promise<T> {
-  let lastError: Error | null = null;
 
-  for (let i = 0; i <= retries; i++) {
-    try {
-      const res = await fetchWithAuth(path);
-      return (await res.json()) as T;
-    } catch (error) {
-      lastError = error as Error;
-      console.warn(`请求失败 (尝试 ${i + 1}/${retries + 1}):`, error);
-
-      // 如果不是最后一次尝试，等待后重试
-      if (i < retries) {
-        // 使用指数退避：第一次重试等待500ms，第二次等待1000ms
-        const delay = 500 * Math.pow(2, i);
-        console.log(`等待 ${delay}ms 后重试...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  // 所有重试都失败，抛出最后一个错误
-  throw lastError || new Error('请求失败');
-}
 
 /**
  * 生成存储key
