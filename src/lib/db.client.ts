@@ -661,43 +661,59 @@ const pendingRequests = new Map<string, Promise<any>>();
  * 带重试的 API 请求函数
  * 🚀 优化：内置 Single-Flight 机制，防止同一时间重复请求相同接口
  */
-export async function fetchFromApi<T>(path: string, retries = 2): Promise<T> {
-  // 如果已有相同路径的请求正在进行，直接复用其 Promise
-  if (pendingRequests.has(path)) {
+export async function fetchFromApi<T>(path: string, options: RequestInit = {}, retries = 2): Promise<T> {
+  const method = options.method || 'GET';
+  // 只有 GET 请求且没有特殊 header 时才使用 Single-Flight 合并
+  const isCacheable = method === 'GET';
+  const requestKey = `${method}:${path}`;
+
+  if (isCacheable && pendingRequests.has(requestKey)) {
     console.log(`[SingleFlight] 复用正在进行的请求: ${path}`);
-    return pendingRequests.get(path);
+    return pendingRequests.get(requestKey);
   }
 
   const requestPromise = (async () => {
     let lastError: Error | null = null;
 
-    try {
-      for (let i = 0; i <= retries; i++) {
-        try {
-          const res = await fetchWithAuth(path);
-          const data = await res.json();
-          return data as T;
-        } catch (error) {
-          lastError = error as Error;
-          const is429 = (error as any).message?.includes('429');
-          
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const res = await fetchWithAuth(path, options);
+
+        if (res.status === 429) {
           if (i < retries) {
-            // 指数退避 + 随机抖动 (Jitter)
             const delay = Math.min(1000 * Math.pow(2, i) + Math.random() * 1000, 10000);
-            console.warn(`[API] 请求失败 (${path}), ${is429 ? '触发 429 限制' : ''}, 将在 ${Math.round(delay)}ms 后重试... (${i + 1}/${retries})`);
+            console.warn(`[API] 请求失败 (${path}), 触发 429 限制, 将在 ${Math.round(delay)}ms 后重试... (${i + 1}/${retries})`);
             await new Promise(resolve => setTimeout(resolve, delay));
             continue;
           }
         }
+
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => 'Unknown error');
+          throw new Error(`请求 ${path} 失败: ${res.status} ${errorText}`);
+        }
+
+        return await res.json();
+      } catch (error) {
+        lastError = error as Error;
+        if (i < retries) {
+          const delay = 500 * Math.pow(2, i);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-      throw lastError || new Error(`请求失败: ${path}`);
-    } finally {
-      // 请求完成后，无论成功失败，都从正在进行的 Map 中移除
-      pendingRequests.delete(path);
     }
+    throw lastError || new Error(`请求失败: ${path}`);
   })();
 
-  pendingRequests.set(path, requestPromise);
+  if (isCacheable) {
+    pendingRequests.set(requestKey, requestPromise);
+    try {
+      return await requestPromise;
+    } finally {
+      pendingRequests.delete(requestKey);
+    }
+  }
+
   return requestPromise;
 }
 
@@ -740,12 +756,10 @@ async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, new
   if (!skipFetch) {
     try {
       console.log(`🔍 从数据库读取最新的 original_episodes (${recordKey})...`);
-      const freshRecordsResponse = await fetch('/api/playrecords');
-      if (freshRecordsResponse.ok) {
-        const freshRecords = await freshRecordsResponse.json();
+      const freshRecords = await fetchFromApi<any>('/api/playrecords');
 
-        // 🔑 关键修复：直接用 recordKey 匹配，确保是同一个 source+id
-        if (freshRecords[recordKey]) {
+      // 🔑 关键修复：直接用 recordKey 匹配，确保是同一个 source+id
+      if (freshRecords[recordKey]) {
           freshRecord = freshRecords[recordKey];
           originalEpisodes = freshRecord.original_episodes || freshRecord.total_episodes;
 
@@ -1868,7 +1882,7 @@ export async function getSkipConfig(
         return null;
       }
 
-      const response = await fetch('/api/skipconfigs', {
+      const data = await fetchFromApi<any>('/api/skipconfigs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1879,12 +1893,6 @@ export async function getSkipConfig(
           username: authInfo.username,
         }),
       });
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const data = await response.json();
       const config = data.config;
 
       // 更新缓存
@@ -1947,7 +1955,7 @@ export async function saveSkipConfig(
         throw new Error('未登录');
       }
 
-      const response = await fetch('/api/skipconfigs', {
+      await fetchFromApi('/api/skipconfigs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1959,10 +1967,6 @@ export async function saveSkipConfig(
           username: authInfo.username,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error('保存跳过配置失败');
-      }
     }
   } catch (err) {
     console.error('保存跳过配置失败:', err);
@@ -2081,7 +2085,7 @@ export async function deleteSkipConfig(
         throw new Error('未登录');
       }
 
-      const response = await fetch('/api/skipconfigs', {
+      await fetchFromApi('/api/skipconfigs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2092,10 +2096,6 @@ export async function deleteSkipConfig(
           username: authInfo.username,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error('删除跳过配置失败');
-      }
     }
   } catch (err) {
     console.error('删除跳过片头片尾配置失败:', err);

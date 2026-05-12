@@ -3,6 +3,7 @@
 import { ClientCache } from './client-cache';
 import { DoubanItem, DoubanResult, DoubanCommentsResult } from './types';
 import { getRandomUserAgent, DEFAULT_USER_AGENT } from './user-agent';
+import { fetchFromApi } from './db.client';
 
 // 🔍 调试工具：在浏览器控制台使用
 if (typeof window !== 'undefined') {
@@ -410,10 +411,9 @@ export async function getDoubanCategories(
       break;
     case 'direct':
     default:
-      const response = await fetch(
+      result = await fetchFromApi<DoubanResult>(
         `/api/douban/categories?kind=${kind}&category=${category}&type=${type}&limit=${pageLimit}&start=${pageStart}`
       );
-      result = await response.json();
       break;
   }
   
@@ -467,10 +467,9 @@ export async function getDoubanList(
       break;
     case 'direct':
     default:
-      const response = await fetch(
+      result = await fetchFromApi<DoubanResult>(
         `/api/douban?tag=${tag}&type=${type}&pageSize=${pageLimit}&pageStart=${pageStart}`
       );
-      result = await response.json();
       break;
   }
   
@@ -613,10 +612,9 @@ export async function getDoubanRecommends(
       break;
     case 'direct':
     default:
-      const response = await fetch(
+      result = await fetchFromApi<DoubanResult>(
         `/api/douban/recommends?kind=${kind}&limit=${pageLimit}&start=${pageStart}&category=${category}&format=${format}&region=${region}&year=${year}&platform=${platform}&sort=${sort}&label=${label}`
       );
-      result = await response.json();
       break;
   }
   
@@ -676,13 +674,7 @@ export async function getDoubanDetails(id: string): Promise<{
 
   try {
     const noCacheParam = isDebugMode ? '&nocache=1' : '';
-    const response = await fetch(`/api/douban/details?id=${id}${noCacheParam}`);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const result = await response.json();
+    const result = await fetchFromApi<any>(`/api/douban/details?id=${id}${noCacheParam}`);
 
     // 🎯 只缓存有效数据（必须有 title）
     if (result.code === 200 && result.data?.title && !isDebugMode) {

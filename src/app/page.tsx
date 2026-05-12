@@ -23,6 +23,7 @@ import { getDoubanDetails } from '@/lib/douban.client';
 import { DoubanItem } from '@/lib/types';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { useGlobalCache } from '@/contexts/GlobalCacheContext';
+import { fetchFromApi } from '@/lib/db.client';
 
 import CapsuleSwitch from '@/components/CapsuleSwitch';
 import ContinueWatching from '@/components/ContinueWatching';
@@ -517,12 +518,9 @@ function HomeClient() {
         Promise.all(
           homeData.hotShortDramas.slice(0, 2).map(async (drama) => {
             try {
-              const response = await fetch(`/api/shortdrama/detail?id=${drama.id}&episode=1`);
-              if (response.ok) {
-                const detailData = await response.json();
-                if (detailData.desc) {
-                  return { id: drama.id, description: detailData.desc };
-                }
+              const detailData = await fetchFromApi<any>(`/api/shortdrama/detail?id=${drama.id}&episode=1`);
+              if (detailData.desc) {
+                return { id: drama.id, description: detailData.desc };
               }
             } catch (error) {
               console.warn(`获取短剧 ${drama.id} 详情失败:`, error);
@@ -545,14 +543,7 @@ function HomeClient() {
     }
 
     // 🔄 异步加载即将上映数据
-    fetch('/api/release-calendar?limit=100')
-      .then(res => {
-        if (!res.ok) {
-          console.error('获取即将上映数据失败，状态码:', res.status);
-          return { items: [] };
-        }
-        return res.json();
-      })
+    fetchFromApi<any>('/api/release-calendar?limit=100')
       .then(upcomingData => {
         if (upcomingData?.items) {
           const releases = upcomingData.items;

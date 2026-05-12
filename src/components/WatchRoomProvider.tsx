@@ -5,6 +5,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useWatchRoom } from '@/hooks/useWatchRoom';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
+import { fetchFromApi } from '@/lib/db.client';
 import type { Room, Member, ChatMessage, LiveState } from '@/types/watch-room.types';
 
 export interface WatchRoomContextType {
@@ -132,42 +133,24 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
     const loadConfig = async (retryCount = 0) => {
       console.log('[WatchRoom] Loading config... (attempt', retryCount + 1, ')');
       try {
-        const response = await fetch('/api/watch-room/config');
-        console.log('[WatchRoom] Config response status:', response.status);
+        const data = await fetchFromApi<any>('/api/watch-room/config');
+        console.log('[WatchRoom] Config loaded:', data);
+        const enabledValue = data.enabled === true;
+        console.log('[WatchRoom] Setting isEnabled to:', enabledValue);
+        setConfig(data);
+        setIsEnabled(enabledValue);
 
-        // 如果 401 且是第一次尝试，延迟后重试一次
-        if (response.status === 401 && retryCount === 0) {
-          console.log('[WatchRoom] Got 401, retrying after delay...');
-          setTimeout(() => loadConfig(1), 500);
-          return;
-        }
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('[WatchRoom] Config loaded:', data);
-          const enabledValue = data.enabled === true;
-          console.log('[WatchRoom] Setting isEnabled to:', enabledValue);
-          setConfig(data);
-          setIsEnabled(enabledValue);
-
-          // 如果需要 authKey，从完整配置API获取
-          if (data.enabled && data.serverUrl) {
-            try {
-              const authResponse = await fetch('/api/watch-room/config', {
-                method: 'POST',
-              });
-              if (authResponse.ok) {
-                const authData = await authResponse.json();
-                setAuthKey(authData.authKey || '');
-                console.log('[WatchRoom] Auth key loaded');
-              }
-            } catch (error) {
-              console.error('[WatchRoom] Failed to load auth key:', error);
-            }
+        // 如果需要 authKey，从完整配置API获取
+        if (data.enabled && data.serverUrl) {
+          try {
+            const authData = await fetchFromApi<any>('/api/watch-room/config', {
+              method: 'POST',
+            });
+            setAuthKey(authData.authKey || '');
+            console.log('[WatchRoom] Auth key loaded');
+          } catch (error) {
+            console.error('[WatchRoom] Failed to load auth key:', error);
           }
-        } else {
-          console.error('[WatchRoom] Failed to load config:', response.status);
-          setIsEnabled(false);
         }
       } catch (error) {
         console.error('[WatchRoom] Error loading config:', error);
