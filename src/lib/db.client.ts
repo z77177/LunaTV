@@ -626,60 +626,6 @@ function fetchWithTimeout(
 /**
  * 通用的 fetch 函数，处理 401 状态码自动跳转登录
  */
-class ApiRateLimitError extends Error {
-  status = 429;
-  retryAfterMs: number;
-
-  constructor(path: string, retryAfterMs: number) {
-    super(`API rate limited: ${path}`);
-    this.name = 'ApiRateLimitError';
-    this.retryAfterMs = retryAfterMs;
-  }
-}
-
-const rateLimitUntil = new Map<string, number>();
-const DEFAULT_RATE_LIMIT_BACKOFF = 30 * 1000;
-
-function getRateLimitKey(path: string): string {
-  try {
-    return new URL(path, window.location.origin).pathname;
-  } catch {
-    return path.split('?')[0] || path;
-  }
-}
-
-function getRetryAfterMs(res: Response): number {
-  const retryAfter = res.headers.get('Retry-After');
-  if (!retryAfter) return DEFAULT_RATE_LIMIT_BACKOFF;
-
-  const seconds = Number(retryAfter);
-  if (Number.isFinite(seconds)) {
-    return Math.max(seconds * 1000, DEFAULT_RATE_LIMIT_BACKOFF);
-  }
-
-  const retryDate = Date.parse(retryAfter);
-  if (Number.isFinite(retryDate)) {
-    return Math.max(retryDate - Date.now(), DEFAULT_RATE_LIMIT_BACKOFF);
-  }
-
-  return DEFAULT_RATE_LIMIT_BACKOFF;
-}
-
-function rememberRateLimit(path: string, retryAfterMs: number): void {
-  rateLimitUntil.set(getRateLimitKey(path), Date.now() + retryAfterMs);
-}
-
-function assertNotRateLimited(path: string): void {
-  const until = rateLimitUntil.get(getRateLimitKey(path)) || 0;
-  if (until > Date.now()) {
-    throw new ApiRateLimitError(path, until - Date.now());
-  }
-}
-
-function isRateLimitError(error: unknown): error is ApiRateLimitError {
-  return error instanceof ApiRateLimitError;
-}
-
 async function fetchWithAuth(
   url: string,
   options?: any
@@ -703,6 +649,7 @@ async function fetchWithAuth(
       window.location.href = loginUrl.toString();
       throw new Error('用户未授权，已跳转到登录页面');
     }
+    // 429 交给 fetchFromApi 的重试逻辑处理，不在这里抛异常
     if (res.status === 429) {
       return res;
     }
@@ -711,16 +658,45 @@ async function fetchWithAuth(
   return res;
 }
 
+// ============ 全局并发控制器 ============
+// 限制同时进行的请求数量，防止平台边缘层因瞬间并发过高触发 429
+const MAX_CONCURRENT_REQUESTS = 3;
+let activeRequestCount = 0;
+const requestQueue: Array<() => void> = [];
+
+function acquireSlot(): Promise<void> {
+  if (activeRequestCount < MAX_CONCURRENT_REQUESTS) {
+    activeRequestCount++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    requestQueue.push(resolve);
+  });
+}
+
+function releaseSlot(): void {
+  if (requestQueue.length > 0) {
+    const next = requestQueue.shift()!;
+    // 交错释放：给平台边缘一点喘息时间
+    setTimeout(next, 50);
+  } else {
+    activeRequestCount--;
+  }
+}
+
 // 正在进行的请求 Map，用于请求合并 (Single-Flight)
 const pendingRequests = new Map<string, Promise<any>>();
 
 /**
  * 带重试的 API 请求函数
- * 🚀 优化：内置 Single-Flight 机制，防止同一时间重复请求相同接口
+ * 🚀 优化点：
+ *   1. Single-Flight 机制 — 相同 GET 路径的并发请求合并为一次网络调用
+ *   2. 全局并发限制 — 最多 MAX_CONCURRENT_REQUESTS 个请求同时在途
+ *   3. 429 指数退避重试 — 收到 429 后等待并重试，而不是立即放弃
  */
-export async function fetchFromApi<T>(path: string, options: RequestInit = {}, retries = 2): Promise<T> {
+export async function fetchFromApi<T>(path: string, options: RequestInit = {}, retries = 3): Promise<T> {
   const method = (options.method || 'GET').toUpperCase();
-  // 只有 GET 请求且没有特殊 header 时才使用 Single-Flight 合并
+  // 只有 GET 请求才使用 Single-Flight 合并
   const isCacheable = method === 'GET';
   const requestKey = `${method}:${path}`;
 
@@ -733,15 +709,29 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
     let lastError: Error | null = null;
 
     for (let i = 0; i <= retries; i++) {
+      // 通过全局并发控制器排队
+      await acquireSlot();
       try {
-        assertNotRateLimited(path);
         const res = await fetchWithAuth(path, options);
 
         if (res.status === 429) {
-          const retryAfterMs = getRetryAfterMs(res);
-          rememberRateLimit(path, retryAfterMs);
-          console.warn(`[API] ${path} returned 429; pausing this endpoint for ${Math.round(retryAfterMs / 1000)}s`);
-          throw new ApiRateLimitError(path, retryAfterMs);
+          // 从 Retry-After 响应头中获取等待时间，没有则使用指数退避
+          const retryAfter = res.headers.get('Retry-After');
+          let delayMs: number;
+          if (retryAfter && Number.isFinite(Number(retryAfter))) {
+            delayMs = Number(retryAfter) * 1000;
+          } else {
+            // 指数退避 + 随机抖动：1s, 2s, 4s, 8s...
+            delayMs = Math.min(1000 * Math.pow(2, i) + Math.random() * 500, 15000);
+          }
+
+          if (i < retries) {
+            console.warn(`[API] ${path} 返回 429，${Math.round(delayMs / 1000)}s 后重试 (${i + 1}/${retries})`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            continue; // 重试
+          }
+          // 最后一次也是 429，抛出错误
+          throw new Error(`请求 ${path} 失败: 429 (已重试 ${retries} 次)`);
         }
 
         if (!res.ok) {
@@ -752,13 +742,13 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
         return await res.json();
       } catch (error) {
         lastError = error as Error;
-        if (isRateLimitError(error)) {
-          throw error;
-        }
-        if (i < retries) {
-          const delay = 500 * Math.pow(2, i);
+        // 非 429 的普通错误也重试（网络抖动等）
+        if (i < retries && !(lastError.message?.includes('429'))) {
+          const delay = 500 * Math.pow(2, i) + Math.random() * 300;
           await new Promise(resolve => setTimeout(resolve, delay));
         }
+      } finally {
+        releaseSlot();
       }
     }
     throw lastError || new Error(`请求失败: ${path}`);
