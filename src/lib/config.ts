@@ -367,63 +367,40 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     const dbUsers = await db.getAllUsers();
     const ownerUser = process.env.USERNAME;
 
-    // 创建用户列表：保留数据库中存在的用户的配置信息
-    const updatedUsers = await Promise.all(dbUsers.map(async username => {
-      // 查找现有配置中是否有这个用户
+    // 🚀 性能优化：一次性获取所有用户信息，避免在循环中重复请求数据库导致 429 错误
+    const allUserInfo = await db.getUsersInfoBatch(dbUsers);
+    const userInfoMap = new Map<string, any>();
+    dbUsers.forEach((name, index) => {
+      if (allUserInfo[index]) {
+        userInfoMap.set(name, allUserInfo[index]);
+      }
+    });
+
+    const updatedUsers = dbUsers.map(username => {
+      const userInfoV2 = userInfoMap.get(username);
       const existingUserConfig = adminConfig.UserConfig.Users.find(u => u.username === username);
 
-      if (existingUserConfig) {
-        // 保留现有配置
-        return existingUserConfig;
-      } else {
-        // 新用户，创建默认配置
-        let createdAt = Date.now();
-        let oidcSub: string | undefined;
-        let tags: string[] | undefined;
-        let role: 'owner' | 'admin' | 'user' = username === ownerUser ? 'owner' : 'user';
-        let banned = false;
-        let enabledApis: string[] | undefined;
+      // 基础属性
+      let createdAt = userInfoV2?.createdAt || existingUserConfig?.createdAt || Date.now();
+      let role = userInfoV2?.role || (username === ownerUser ? 'owner' : 'user');
+      let banned = userInfoV2?.banned || false;
+      let oidcSub = userInfoV2?.oidcSub || existingUserConfig?.oidcSub;
+      let tags = userInfoV2?.tags || existingUserConfig?.tags;
+      let enabledApis = userInfoV2?.enabledApis || existingUserConfig?.enabledApis;
 
-        try {
-          // 从数据库V2获取用户信息（OIDC/新版用户）
-          const userInfoV2 = await db.getUserInfoV2(username);
-          console.log(`=== configSelfCheck: 用户 ${username} 数据库信息 ===`, userInfoV2);
-          if (userInfoV2) {
-            createdAt = userInfoV2.createdAt || Date.now();
-            oidcSub = userInfoV2.oidcSub;
-            tags = userInfoV2.tags;
-            role = userInfoV2.role || role;
-            banned = userInfoV2.banned || false;
-            enabledApis = userInfoV2.enabledApis;
-            console.log(`=== configSelfCheck: 用户 ${username} tags ===`, tags);
-          }
-        } catch (err) {
-          console.warn(`获取用户 ${username} 信息失败:`, err);
-        }
+      const newUserConfig: any = {
+        username,
+        role,
+        banned,
+        createdAt,
+      };
 
-        const newUserConfig: any = {
-          username,
-          role,
-          banned,
-          createdAt,
-        };
+      if (oidcSub) newUserConfig.oidcSub = oidcSub;
+      if (tags && tags.length > 0) newUserConfig.tags = tags;
+      if (enabledApis && enabledApis.length > 0) newUserConfig.enabledApis = enabledApis;
 
-        if (oidcSub) {
-          newUserConfig.oidcSub = oidcSub;
-        }
-        if (tags && tags.length > 0) {
-          newUserConfig.tags = tags;
-          console.log(`=== configSelfCheck: 用户 ${username} 最终配置包含tags ===`, newUserConfig.tags);
-        } else {
-          console.log(`=== configSelfCheck: 用户 ${username} 没有tags (tags=${tags}) ===`);
-        }
-        if (enabledApis && enabledApis.length > 0) {
-          newUserConfig.enabledApis = enabledApis;
-        }
-
-        return newUserConfig;
-      }
-    }));
+      return newUserConfig;
+    });
 
     // 更新用户列表
     adminConfig.UserConfig.Users = updatedUsers;

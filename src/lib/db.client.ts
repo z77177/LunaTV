@@ -628,7 +628,7 @@ function fetchWithTimeout(
  */
 async function fetchWithAuth(
   url: string,
-  options?: RequestInit
+  options?: any
 ): Promise<Response> {
   const res = await fetchWithTimeout(url, options);
   if (!res.ok) {
@@ -652,6 +652,53 @@ async function fetchWithAuth(
     throw new Error(`请求 ${url} 失败: ${res.status}`);
   }
   return res;
+}
+
+// 正在进行的请求 Map，用于请求合并 (Single-Flight)
+const pendingRequests = new Map<string, Promise<any>>();
+
+/**
+ * 带重试的 API 请求函数
+ * 🚀 优化：内置 Single-Flight 机制，防止同一时间重复请求相同接口
+ */
+export async function fetchFromApi<T>(path: string, retries = 2): Promise<T> {
+  // 如果已有相同路径的请求正在进行，直接复用其 Promise
+  if (pendingRequests.has(path)) {
+    console.log(`[SingleFlight] 复用正在进行的请求: ${path}`);
+    return pendingRequests.get(path);
+  }
+
+  const requestPromise = (async () => {
+    let lastError: Error | null = null;
+
+    try {
+      for (let i = 0; i <= retries; i++) {
+        try {
+          const res = await fetchWithAuth(path);
+          const data = await res.json();
+          return data as T;
+        } catch (error) {
+          lastError = error as Error;
+          const is429 = (error as any).message?.includes('429');
+          
+          if (i < retries) {
+            // 指数退避 + 随机抖动 (Jitter)
+            const delay = Math.min(1000 * Math.pow(2, i) + Math.random() * 1000, 10000);
+            console.warn(`[API] 请求失败 (${path}), ${is429 ? '触发 429 限制' : ''}, 将在 ${Math.round(delay)}ms 后重试... (${i + 1}/${retries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+      }
+      throw lastError || new Error(`请求失败: ${path}`);
+    } finally {
+      // 请求完成后，无论成功失败，都从正在进行的 Map 中移除
+      pendingRequests.delete(path);
+    }
+  })();
+
+  pendingRequests.set(path, requestPromise);
+  return requestPromise;
 }
 
 /**
