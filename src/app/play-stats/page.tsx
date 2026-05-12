@@ -633,6 +633,12 @@ const PlayStatsPage: React.FC = () => {
     );
   }
 
+  const safeUpdatedSeries = Array.isArray(watchingUpdates?.updatedSeries)
+    ? watchingUpdates.updatedSeries
+    : [];
+  const newEpisodeSeries = safeUpdatedSeries.filter(series => series.hasNewEpisode);
+  const continueWatchingSeries = safeUpdatedSeries.filter(series => series.hasContinueWatching && !series.hasNewEpisode);
+
   // 管理员统计页面渲染
   if (isAdmin && statsData && userStats) {
     return (
@@ -1392,7 +1398,7 @@ const PlayStatsPage: React.FC = () => {
               )}
 
               {/* 有新集数的剧集 */}
-              {watchingUpdates && watchingUpdates.updatedSeries.filter(series => series.hasNewEpisode).length > 0 && (
+              {newEpisodeSeries.length > 0 && (
                 <div className="mb-8">
                   <div className="flex items-center gap-2 mb-4">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -1401,7 +1407,7 @@ const PlayStatsPage: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                       <span className="text-sm text-red-500 font-medium">
-                        {watchingUpdates.updatedSeries.filter(series => series.hasNewEpisode).length}部剧集有更新
+                        {newEpisodeSeries.length}部剧集有更新
                       </span>
                     </div>
                   </div>
@@ -1409,7 +1415,7 @@ const PlayStatsPage: React.FC = () => {
                   {/* 移动端网格布局 */}
                   <div className="sm:hidden">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-8 pt-4 pb-6">
-                      {watchingUpdates.updatedSeries
+                      {safeUpdatedSeries
                         .filter(series => series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`new-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
@@ -1442,7 +1448,7 @@ const PlayStatsPage: React.FC = () => {
                   {/* 桌面端网格布局 */}
                   <div className="hidden sm:block">
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-x-6 gap-y-10 pt-6 pb-8">
-                      {watchingUpdates.updatedSeries
+                      {safeUpdatedSeries
                         .filter(series => series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`new-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
@@ -1475,7 +1481,7 @@ const PlayStatsPage: React.FC = () => {
               )}
 
               {/* 继续观看的剧集 */}
-              {watchingUpdates && watchingUpdates.updatedSeries.filter(series => series.hasContinueWatching && !series.hasNewEpisode).length > 0 && (
+              {continueWatchingSeries.length > 0 && (
                 <div className="mb-8">
                   <div className="flex items-center gap-2 mb-4">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -1484,7 +1490,7 @@ const PlayStatsPage: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                       <span className="text-sm text-blue-500 font-medium">
-                        {watchingUpdates.updatedSeries.filter(series => series.hasContinueWatching && !series.hasNewEpisode).length}部剧集待续看
+                        {continueWatchingSeries.length}部剧集待续看
                       </span>
                     </div>
                   </div>
@@ -1492,7 +1498,7 @@ const PlayStatsPage: React.FC = () => {
                   {/* 移动端网格布局 */}
                   <div className="sm:hidden">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-8 pt-4 pb-6">
-                      {watchingUpdates.updatedSeries
+                      {safeUpdatedSeries
                         .filter(series => series.hasContinueWatching && !series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`continue-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
@@ -1525,7 +1531,7 @@ const PlayStatsPage: React.FC = () => {
                   {/* 桌面端网格布局 */}
                   <div className="hidden sm:block">
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-x-6 gap-y-10 pt-6 pb-8">
-                      {watchingUpdates.updatedSeries
+                      {safeUpdatedSeries
                         .filter(series => series.hasContinueWatching && !series.hasNewEpisode)
                         .map((series, index) => (
                           <div key={`continue-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
@@ -1991,7 +1997,7 @@ const PlayStatsPage: React.FC = () => {
           )}
 
           {/* 有新集数的剧集 */}
-          {watchingUpdates && watchingUpdates.updatedSeries.filter(series => series.hasNewEpisode).length > 0 && (
+          {newEpisodeSeries.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -2000,7 +2006,7 @@ const PlayStatsPage: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                   <span className="text-sm text-red-500 font-medium">
-                    {watchingUpdates.updatedSeries.filter(series => series.hasNewEpisode).length}部剧集有更新
+                    {newEpisodeSeries.length}部剧集有更新
                   </span>
                 </div>
               </div>
@@ -2008,7 +2014,7 @@ const PlayStatsPage: React.FC = () => {
               {/* 移动端网格布局 */}
               <div className="sm:hidden">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-8 pt-4 pb-6">
-                  {watchingUpdates.updatedSeries
+                  {safeUpdatedSeries
                     .filter(series => series.hasNewEpisode)
                     .map((series, index) => (
                       <div key={`new-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
@@ -2041,7 +2047,7 @@ const PlayStatsPage: React.FC = () => {
               {/* 桌面端网格布局 */}
               <div className="hidden sm:block">
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-x-6 gap-y-10 pt-6 pb-8">
-                  {watchingUpdates.updatedSeries
+                  {safeUpdatedSeries
                     .filter(series => series.hasNewEpisode)
                     .map((series, index) => (
                       <div key={`new-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
@@ -2074,7 +2080,7 @@ const PlayStatsPage: React.FC = () => {
           )}
 
           {/* 继续观看的剧集 */}
-          {watchingUpdates && watchingUpdates.updatedSeries.filter(series => series.hasContinueWatching && !series.hasNewEpisode).length > 0 && (
+          {continueWatchingSeries.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -2083,7 +2089,7 @@ const PlayStatsPage: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                   <span className="text-sm text-blue-500 font-medium">
-                    {watchingUpdates.updatedSeries.filter(series => series.hasContinueWatching && !series.hasNewEpisode).length}部剧集待续看
+                    {continueWatchingSeries.length}部剧集待续看
                   </span>
                 </div>
               </div>
@@ -2091,7 +2097,7 @@ const PlayStatsPage: React.FC = () => {
               {/* 移动端网格布局 */}
               <div className="sm:hidden">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-8 pt-4 pb-6">
-                  {watchingUpdates.updatedSeries
+                  {safeUpdatedSeries
                     .filter(series => series.hasContinueWatching && !series.hasNewEpisode)
                     .map((series, index) => (
                       <div key={`continue-${series.title}_${series.year}_${index}`} className="relative w-full group/card">
@@ -2124,7 +2130,7 @@ const PlayStatsPage: React.FC = () => {
               {/* 桌面端网格布局 */}
               <div className="hidden sm:block">
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-x-6 gap-y-10 pt-6 pb-8">
-                  {watchingUpdates.updatedSeries
+                  {safeUpdatedSeries
                     .filter(series => series.hasContinueWatching && !series.hasNewEpisode)
                     .map((series, index) => (
                       <div key={`continue-${series.title}_${series.year}_${index}`} className="relative w-full group/card">

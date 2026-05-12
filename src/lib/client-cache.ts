@@ -1,51 +1,92 @@
-import { fetchFromApi } from './db.client';
+type LocalCacheEntry = {
+  data: any;
+  expire?: number;
+  created?: number;
+};
+
+function canUseLocalStorage(): boolean {
+  return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+}
+
+function readLocalCache(key: string): any | null {
+  if (!canUseLocalStorage()) return null;
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+
+    const entry = JSON.parse(raw) as LocalCacheEntry;
+    if (entry.expire && Date.now() > entry.expire) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    return entry.data ?? null;
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
+function writeLocalCache(key: string, data: any, expireSeconds?: number): void {
+  if (!canUseLocalStorage()) return;
+
+  try {
+    const entry: LocalCacheEntry = {
+      data,
+      created: Date.now(),
+      expire: expireSeconds ? Date.now() + expireSeconds * 1000 : undefined,
+    };
+    localStorage.setItem(key, JSON.stringify(entry));
+  } catch {
+    // Cache writes are best-effort; localStorage may be full or unavailable.
+  }
+}
+
+function deleteLocalCache(key: string): void {
+  if (!canUseLocalStorage()) return;
+  localStorage.removeItem(key);
+}
+
+function clearExpiredLocalCache(prefix?: string): void {
+  if (!canUseLocalStorage()) return;
+
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || (prefix && !key.startsWith(prefix))) continue;
+
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const entry = JSON.parse(raw) as LocalCacheEntry;
+      if (entry.expire && Date.now() > entry.expire) {
+        keysToRemove.push(key);
+      }
+    } catch {
+      if (!prefix || key.startsWith(prefix)) {
+        keysToRemove.push(key);
+      }
+    }
+  }
+
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
+}
 
 export class ClientCache {
   static async get(key: string): Promise<any | null> {
-    try {
-      const data = await fetchFromApi<{ data: any }>(`/api/cache?key=${encodeURIComponent(key)}`);
-      return data?.data;
-    } catch (error) {
-      console.error('获取缓存失败:', error);
-      return null;
-    }
+    return readLocalCache(key);
   }
 
   static async set(key: string, data: any, expireSeconds?: number): Promise<void> {
-    try {
-      await fetchFromApi('/api/cache', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ key, data, expireSeconds }),
-      });
-    } catch (error) {
-      console.error('设置缓存失败:', error);
-      throw error;
-    }
+    writeLocalCache(key, data, expireSeconds);
   }
 
   static async delete(key: string): Promise<void> {
-    try {
-      await fetchFromApi(`/api/cache?key=${encodeURIComponent(key)}`, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      console.error('删除缓存失败:', error);
-      throw error;
-    }
+    deleteLocalCache(key);
   }
 
   static async clearExpired(prefix?: string): Promise<void> {
-    try {
-      const url = prefix ? `/api/cache?prefix=${encodeURIComponent(prefix)}` : '/api/cache';
-      await fetchFromApi(url, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      console.error('清理过期缓存失败:', error);
-      throw error;
-    }
+    clearExpiredLocalCache(prefix);
   }
 }

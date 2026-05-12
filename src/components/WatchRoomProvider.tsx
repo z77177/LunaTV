@@ -80,6 +80,7 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
 
     let intervalId: NodeJS.Timeout | null = null;
     let checkCount = 0;
+    let resolved = false;
     const maxChecks = 20; // 最多检查20次
     const checkInterval = 500; // 每500ms检查一次
 
@@ -97,12 +98,14 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
         console.log('[WatchRoom] ✓ Username loaded:', username);
         setCurrentUserName(username);
         setUserNameLoaded(true);
+        resolved = true;
         if (intervalId) clearInterval(intervalId);
       } else if (checkCount >= maxChecks) {
         // 达到最大检查次数，放弃
         console.log('[WatchRoom] ✗ Failed to load username after', maxChecks, 'attempts');
         setCurrentUserName('游客');
         setUserNameLoaded(true);
+        resolved = true;
         if (intervalId) clearInterval(intervalId);
       }
     };
@@ -111,7 +114,7 @@ export function WatchRoomProvider({ children }: WatchRoomProviderProps) {
     checkUsername();
 
     // 如果第一次没成功，启动定时器持续检查
-    if (currentUserName === '游客') {
+    if (!resolved) {
       intervalId = setInterval(checkUsername, checkInterval);
     }
 

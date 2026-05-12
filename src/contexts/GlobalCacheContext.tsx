@@ -210,7 +210,7 @@ async function fetchHomeDataFromAPI(): Promise<HomePageData> {
 
   const [moviesResult, tvResult, varietyResult, animeResult, shortDramasResult, bangumiResult] = results;
 
-  return {
+  const homeDataResult = {
     hotMovies:
       moviesResult.status === 'fulfilled' && moviesResult.value.code === 200
         ? moviesResult.value.list
@@ -232,4 +232,18 @@ async function fetchHomeDataFromAPI(): Promise<HomePageData> {
     bangumiCalendar:
       bangumiResult.status === 'fulfilled' ? bangumiResult.value : [],
   };
+
+  const hasAnyHomeData =
+    homeDataResult.hotMovies.length > 0 ||
+    homeDataResult.hotTvShows.length > 0 ||
+    homeDataResult.hotVarietyShows.length > 0 ||
+    homeDataResult.hotAnime.length > 0 ||
+    homeDataResult.hotShortDramas.length > 0 ||
+    homeDataResult.bangumiCalendar.length > 0;
+
+  if (!hasAnyHomeData) {
+    throw new Error('首页数据全部加载失败');
+  }
+
+  return homeDataResult;
 }
