@@ -131,24 +131,30 @@ export function createRedisClient(config: RedisConnectionConfig, globalSymbol: s
       console.log(`${config.clientName} ready`);
     });
 
-    // 初始连接，带重试机制
-    const connectWithRetry = async () => {
+    // 🚀 创建连接 Promise，供后续操作等待
+    const connectionPromise = (async () => {
       try {
         await client!.connect();
         console.log(`${config.clientName} connected successfully`);
       } catch (err) {
         console.error(`${config.clientName} initial connection failed:`, err);
-        console.log('Will retry in 5 seconds...');
-        setTimeout(connectWithRetry, 5000);
+        // 如果失败，后续操作会因为 client 未连接而报错，withRetry 会尝试重连
+        throw err;
       }
-    };
-
-    connectWithRetry();
+    })();
 
     (global as any)[globalSymbol] = client;
+    (global as any)[Symbol.for(`${globalSymbol.description}_promise`)] = connectionPromise;
   }
 
   return client;
+}
+
+/**
+ * 获取连接 Promise
+ */
+export function getRedisConnectionPromise(globalSymbol: symbol): Promise<void> {
+  return (global as any)[Symbol.for(`${globalSymbol.description}_promise`)] || Promise.resolve();
 }
 
 // 抽象基类，包含所有通用的Redis操作逻辑
@@ -156,16 +162,29 @@ export abstract class BaseRedisStorage implements IStorage {
   protected client: RedisClientType;
   protected config: RedisConnectionConfig;
   protected withRetry: <T>(operation: () => Promise<T>, maxRetries?: number) => Promise<T>;
+  private globalSymbol: symbol;
 
   constructor(config: RedisConnectionConfig, globalSymbol: symbol) {
     this.config = config; // 保存配置
+    this.globalSymbol = globalSymbol;
     this.client = createRedisClient(config, globalSymbol);
     this.withRetry = createRetryWrapper(config.clientName, () => this.client);
+  }
+
+  /**
+   * 🚀 确保已连接
+   */
+  protected async ensureConnected(): Promise<void> {
+    await getRedisConnectionPromise(this.globalSymbol);
+    if (!this.client.isOpen) {
+      await this.client.connect();
+    }
   }
 
   // 🚀 使用 SCAN 替代 KEYS，避免阻塞 Redis
   // SCAN 是渐进式遍历，不会阻塞服务器
   protected async scanKeys(pattern: string): Promise<string[]> {
+    await this.ensureConnected();
     const keys = new Set<string>(); // 使用 Set 去重（SCAN 可能返回重复 key）
     let cursor = 0;
 
@@ -482,6 +501,7 @@ export abstract class BaseRedisStorage implements IStorage {
 
   // 验证用户密码（新版本）
   async verifyUserV2(userName: string, password: string): Promise<boolean> {
+    await this.ensureConnected();
     const userInfo = await this.withRetry(() =>
       this.client.hGetAll(this.userInfoKey(userName))
     );
@@ -504,6 +524,7 @@ export abstract class BaseRedisStorage implements IStorage {
     enabledApis?: string[];
     createdAt?: number;
   } | null> {
+    await this.ensureConnected();
     const userInfo = await this.withRetry(() =>
       this.client.hGetAll(this.userInfoKey(userName))
     );
@@ -646,6 +667,7 @@ export abstract class BaseRedisStorage implements IStorage {
   }
 
   async getAdminConfig(): Promise<AdminConfig | null> {
+    await this.ensureConnected();
     const val = await this.withRetry(() => this.client.get(this.adminConfigKey()));
     return val ? (JSON.parse(val) as AdminConfig) : null;
   }
