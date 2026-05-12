@@ -771,14 +771,11 @@ async function checkShouldUpdateOriginalEpisodes(existingRecord: PlayRecord, new
           }
 
           console.log(`📚 从数据库读取到最新 original_episodes: ${existingRecord.title} (${recordKey}) = ${originalEpisodes}集`);
-        } else {
-          console.warn(`⚠️ 数据库中未找到记录: ${recordKey}`);
         }
+      } catch (error) {
+        console.warn('⚠️ 从数据库读取 original_episodes 失败，使用缓存值', error);
       }
-    } catch (error) {
-      console.warn('⚠️ 从数据库读取 original_episodes 失败，使用缓存值', error);
     }
-  }
 
   // 条件1：用户观看进度超过了原始集数（说明用户已经看了新更新的集数）
   const hasWatchedBeyondOriginal = newRecord.index > originalEpisodes;
@@ -875,6 +872,7 @@ export async function getAllPlayRecords(forceRefresh = false): Promise<Record<st
         console.log('📥 缓存为空，从API获取播放记录（带重试机制）');
         const freshData = await fetchFromApi<Record<string, PlayRecord>>(
           `/api/playrecords`,
+          {},
           2 // 最多重试2次
         );
         cacheManager.cachePlayRecords(freshData);
@@ -974,7 +972,7 @@ export async function savePlayRecord(
 
     // 异步同步到数据库
     try {
-      await fetchWithAuth('/api/playrecords', {
+      await fetchFromApi('/api/playrecords', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1075,7 +1073,7 @@ export async function deletePlayRecord(
 
     // 异步同步到数据库
     try {
-      await fetchWithAuth(`/api/playrecords?key=${encodeURIComponent(key)}`, {
+      await fetchFromApi(`/api/playrecords?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
       });
     } catch (err) {
@@ -1202,7 +1200,7 @@ export async function addSearchHistory(keyword: string): Promise<void> {
 
     // 异步同步到数据库
     try {
-      await fetchWithAuth('/api/searchhistory', {
+      await fetchFromApi('/api/searchhistory', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1256,7 +1254,7 @@ export async function clearSearchHistory(): Promise<void> {
 
     // 异步同步到数据库
     try {
-      await fetchWithAuth(`/api/searchhistory`, {
+      await fetchFromApi(`/api/searchhistory`, {
         method: 'DELETE',
       });
     } catch (err) {
@@ -1299,7 +1297,7 @@ export async function deleteSearchHistory(keyword: string): Promise<void> {
 
     // 异步同步到数据库
     try {
-      await fetchWithAuth(
+      await fetchFromApi(
         `/api/searchhistory?keyword=${encodeURIComponent(trimmed)}`,
         {
           method: 'DELETE',
@@ -1422,7 +1420,7 @@ export async function saveFavorite(
 
     // 异步同步到数据库
     try {
-      await fetchWithAuth('/api/favorites', {
+      await fetchFromApi('/api/favorites', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1485,7 +1483,7 @@ export async function deleteFavorite(
 
     // 异步同步到数据库
     try {
-      await fetchWithAuth(`/api/favorites?key=${encodeURIComponent(key)}`, {
+      await fetchFromApi(`/api/favorites?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
       });
     } catch (err) {
@@ -1593,7 +1591,7 @@ export async function clearAllPlayRecords(): Promise<void> {
 
     // 异步同步到数据库
     try {
-      await fetchWithAuth(`/api/playrecords`, {
+      await fetchFromApi(`/api/playrecords`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -1634,7 +1632,7 @@ export async function clearAllFavorites(): Promise<void> {
 
     // 异步同步到数据库
     try {
-      await fetchWithAuth(`/api/favorites`, {
+      await fetchFromApi(`/api/favorites`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -2399,7 +2397,7 @@ export async function updateUserStats(record: PlayRecord): Promise<void> {
       // 数据库存储模式：发送到服务器更新
       if (STORAGE_TYPE !== 'localstorage') {
         try {
-          const response = await fetchWithAuth('/api/user/my-stats', {
+          const responseData = await fetchFromApi<any>('/api/user/my-stats', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -2411,29 +2409,21 @@ export async function updateUserStats(record: PlayRecord): Promise<void> {
             }),
           });
 
-          if (response.ok) {
-            const responseData = await response.json();
-            console.log(`API响应数据:`, responseData);
+          console.log(`API响应数据:`, responseData);
 
-            // 更新localStorage中的上次播放进度和更新时间
-            localStorage.setItem(lastProgressKey, record.play_time.toString());
-            localStorage.setItem(lastUpdateTimeKey, currentTime.toString());
+          // 更新localStorage中的上次播放进度和更新时间
+          localStorage.setItem(lastProgressKey, record.play_time.toString());
+          localStorage.setItem(lastUpdateTimeKey, currentTime.toString());
 
-            // 立即更新缓存中的用户统计数据
-            if (responseData.userStats) {
-              cacheManager.cacheUserStats(responseData.userStats);
-              console.log(`更新用户统计数据缓存:`, responseData.userStats);
+          // 立即更新缓存中的用户统计数据
+          if (responseData.userStats) {
+            cacheManager.cacheUserStats(responseData.userStats);
+            console.log(`更新用户统计数据缓存:`, responseData.userStats);
 
-              // 触发用户统计数据更新事件
-              window.dispatchEvent(new CustomEvent('userStatsUpdated', {
-                detail: responseData.userStats
-              }));
-            }
-          } else {
-            console.error(`更新用户统计数据失败: ${response.status}`);
-            // API调用失败时，仍然更新本地进度记录
-            localStorage.setItem(lastProgressKey, record.play_time.toString());
-            localStorage.setItem(lastUpdateTimeKey, currentTime.toString());
+            // 触发用户统计数据更新事件
+            window.dispatchEvent(new CustomEvent('userStatsUpdated', {
+              detail: responseData.userStats
+            }));
           }
         } catch (error) {
           console.error('统计数据更新请求异常:', error);
@@ -2492,7 +2482,7 @@ export async function clearUserStats(): Promise<void> {
   try {
     if (STORAGE_TYPE !== 'localstorage') {
       // 从服务器清除
-      await fetchWithAuth('/api/user/my-stats', {
+      await fetchFromApi('/api/user/my-stats', {
         method: 'DELETE',
       });
 
