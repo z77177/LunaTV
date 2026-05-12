@@ -264,20 +264,21 @@ export class DbManager {
     return null;
   }
 
-  async getUserInfoV2(userName: string): Promise<{
-    username: string;
-    role: 'owner' | 'admin' | 'user';
-    tags?: string[];
-    enabledApis?: string[];
-    banned?: boolean;
-    createdAt?: number;
-    oidcSub?: string;
-  } | null> {
+  async getUserInfoV2(userName: string): Promise<any> {
     incrementDbQuery();
     if (typeof (this.storage as any).getUserInfoV2 === 'function') {
       return (this.storage as any).getUserInfoV2(userName);
     }
     return null;
+  }
+
+  async getUsersInfoBatch(userNames: string[]): Promise<any[]> {
+    incrementDbQuery();
+    if (typeof (this.storage as any).getUsersInfoBatch === 'function') {
+      return (this.storage as any).getUsersInfoBatch(userNames);
+    }
+    // 回退到逐个获取
+    return Promise.all(userNames.map((u) => this.getUserInfoV2(u)));
   }
 
   // ---------- 搜索历史 ----------
