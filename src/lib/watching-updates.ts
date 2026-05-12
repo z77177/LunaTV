@@ -300,7 +300,7 @@ async function checkSingleRecordUpdate(
     });
 
     // 获取观看时的原始总集数（不会被自动更新影响）
-    const recordKey = generateStorageKey(storageSourceName || record.source_name, videoId);
+    const recordKey = generateStorageKey(record.source_name, videoId);
     const originalTotalEpisodes = await getOriginalEpisodes(record, videoId, recordKey);
 
     console.log(`${record.title} 集数对比:`, {
