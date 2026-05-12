@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronUp } from 'lucide-react';
 
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
+import { fetchFromApi } from '@/lib/db.client';
 import { PlayRecord, ReleaseCalendarItem } from '@/lib/types';
 import {
   getCachedWatchingUpdates,
@@ -146,19 +147,7 @@ const PlayStatsPage: React.FC = () => {
   const fetchAdminStats = useCallback(async () => {
     try {
       console.log('开始获取管理员统计数据...');
-      const response = await fetch('/api/admin/play-stats');
-
-      if (response.status === 401) {
-        router.push('/login');
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await fetchFromApi<PlayStatsResult>('/api/admin/play-stats');
       console.log('管理员统计数据获取成功:', data);
       setStatsData(data);
     } catch (err) {
@@ -167,25 +156,13 @@ const PlayStatsPage: React.FC = () => {
         err instanceof Error ? err.message : '获取播放统计失败';
       setError(errorMessage);
     }
-  }, [router]);
+  }, []);
 
   // 获取用户个人统计数据
   const fetchUserStats = useCallback(async () => {
     try {
       console.log('开始获取用户个人统计数据...');
-      const response = await fetch('/api/user/my-stats');
-
-      if (response.status === 401) {
-        router.push('/login');
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await fetchFromApi<any>('/api/user/my-stats');
       console.log('用户个人统计数据获取成功:', data);
       console.log('个人统计中的注册天数:', data.registrationDays);
       console.log('个人统计中的登录天数:', data.loginDays);
@@ -196,7 +173,7 @@ const PlayStatsPage: React.FC = () => {
         err instanceof Error ? err.message : '获取个人统计失败';
       setError(errorMessage);
     }
-  }, [router]);
+  }, []);
 
   // 根据用户角色获取数据
   const fetchStats = useCallback(async () => {
@@ -289,21 +266,12 @@ const PlayStatsPage: React.FC = () => {
       const twoWeeks = new Date(today);
       twoWeeks.setDate(today.getDate() + 14);
 
-      const response = await fetch(
+      const data = await fetchFromApi<any>(
         `/api/release-calendar?dateFrom=${today.toISOString().split('T')[0]}&dateTo=${twoWeeks.toISOString().split('T')[0]}`
       );
-
-      if (response.ok) {
-        const data = await response.json();
-        const items = data.items || [];
-        setUpcomingReleases(items);
-
-        console.log(`📊 获取到 ${items.length} 条即将上映数据`);
-      } else {
-        console.error('获取即将上映内容失败:', response.status);
-        // API失败时设置空数组，确保UI仍然显示
-        setUpcomingReleases([]);
-      }
+      const items = data.items || [];
+      setUpcomingReleases(items);
+      console.log(`📊 获取到 ${items.length} 条即将上映数据`);
     } catch (error) {
       console.error('获取即将上映内容失败:', error);
       // 网络错误时设置空数组，确保UI仍然显示
