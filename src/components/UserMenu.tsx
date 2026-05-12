@@ -38,6 +38,7 @@ import {
   getAllPlayRecords,
   forceRefreshPlayRecordsCache,
   type PlayRecord,
+  fetchFromApi,
 } from '@/lib/db.client';
 import type { Favorite } from '@/lib/types';
 
@@ -224,9 +225,8 @@ export const UserMenu: React.FC = () => {
   useEffect(() => {
     const checkWatchRoomConfig = async () => {
       try {
-        const response = await fetch('/api/watch-room/config');
-        const config = await response.json();
-        setShowWatchRoom(config.enabled === true);
+        const data = await fetchFromApi<any>('/api/watch-room/config');
+        setShowWatchRoom(data.enabled === true);
       } catch (error) {
         console.error('Failed to check watch room config:', error);
         setShowWatchRoom(false);
@@ -457,7 +457,8 @@ export const UserMenu: React.FC = () => {
 
           // 筛选真正需要继续观看的记录
           const validPlayRecords = recordsArray.filter(record => {
-            const progress = getProgress(record);
+            // @ts-ignore
+            const progress = record.play_time && record.total_time ? (record.play_time / record.total_time) * 100 : 0;
 
             // 播放时间必须超过2分钟
             if (record.play_time < 120) return false;
@@ -529,17 +530,14 @@ export const UserMenu: React.FC = () => {
     if (typeof window !== 'undefined' && authInfo?.username && storageType !== 'localstorage') {
       const loadFavorites = async () => {
         try {
-          const response = await fetch('/api/favorites');
-          if (response.ok) {
-            const favoritesData = await response.json() as Record<string, Favorite>;
-            const favoritesArray = Object.entries(favoritesData).map(([key, favorite]) => ({
-              ...(favorite as Favorite),
-              key,
-            }));
-            // 按保存时间降序排列
-            const sortedFavorites = favoritesArray.sort((a, b) => b.save_time - a.save_time);
-            setFavorites(sortedFavorites);
-          }
+          const favoritesData = await fetchFromApi<Record<string, Favorite>>('/api/favorites');
+          const favoritesArray = Object.entries(favoritesData).map(([key, favorite]) => ({
+            ...(favorite as Favorite),
+            key,
+          }));
+          // 按保存时间降序排列
+          const sortedFavorites = favoritesArray.sort((a, b) => b.save_time - a.save_time);
+          setFavorites(sortedFavorites);
         } catch (error) {
           console.error('加载收藏失败:', error);
         }

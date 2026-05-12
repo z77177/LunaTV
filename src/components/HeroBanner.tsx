@@ -8,6 +8,8 @@ import { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { useAutoplay } from './hooks/useAutoplay';
 import { useSwipeGesture } from './hooks/useSwipeGesture';
 
+import { fetchFromApi } from '@/lib/db.client';
+
 interface BannerItem {
   id: string | number;
   title: string;
@@ -92,14 +94,8 @@ function HeroBanner({
       console.log('[HeroBanner] 检测到trailer URL过期，重新获取:', doubanId);
 
       // 🎯 调用专门的刷新API（不使用缓存，直接调用豆瓣移动端API）
-      const response = await fetch(`/api/douban/refresh-trailer?id=${doubanId}`);
-
-      if (!response.ok) {
-        console.error('[HeroBanner] 刷新trailer URL失败:', response.status);
-        return null;
-      }
-
-      const data = await response.json();
+      const data = await fetchFromApi<any>(`/api/douban/refresh-trailer?id=${doubanId}`);
+      
       if (data.code === 200 && data.data?.trailerUrl) {
         console.log('[HeroBanner] 成功获取新的trailer URL');
 

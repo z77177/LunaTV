@@ -529,28 +529,45 @@ export abstract class BaseRedisStorage implements IStorage {
       this.client.hGetAll(this.userInfoKey(userName))
     );
 
-    if (!userInfo || Object.keys(userInfo).length === 0) {
-      return null;
-    }
+    return this.parseUserInfo(userName, userInfo);
+  }
 
+  /**
+   * 🚀 批量获取用户信息（Upstash 优化，使用 Pipeline 只算1条命令）
+   */
+  async getUsersInfoBatch(userNames: string[]): Promise<any[]> {
+    await this.ensureConnected();
+    const pipeline = this.client.multi();
+    userNames.forEach(name => {
+      pipeline.hGetAll(this.userInfoKey(name));
+    });
+    
+    const results = await this.withRetry(() => pipeline.exec());
+    if (!results) return userNames.map(() => null);
+
+    return results.map((userInfo: any, index: number) => {
+      if (!userInfo || Object.keys(userInfo).length === 0) return null;
+      return this.parseUserInfo(userNames[index], userInfo);
+    });
+  }
+
+  /**
+   * 解析从 Redis 读取的用户原始信息
+   */
+  private parseUserInfo(userName: string, userInfo: any): any {
     // 安全解析 tags 字段
     let parsedTags: string[] | undefined;
     if (userInfo.tags) {
       try {
-        // 如果 tags 已经是数组（某些 Redis 客户端行为），直接使用
         if (Array.isArray(userInfo.tags)) {
           parsedTags = userInfo.tags;
         } else {
-          // 尝试 JSON 解析
           const parsed = JSON.parse(userInfo.tags);
           parsedTags = Array.isArray(parsed) ? parsed : [parsed];
         }
       } catch (e) {
-        // JSON 解析失败，可能是单个字符串值
-        console.warn(`用户 ${userName} tags 解析失败，原始值:`, userInfo.tags);
-        // 如果是逗号分隔的字符串
         if (typeof userInfo.tags === 'string' && userInfo.tags.includes(',')) {
-          parsedTags = userInfo.tags.split(',').map(t => t.trim());
+          parsedTags = userInfo.tags.split(',').map((t: string) => t.trim());
         } else if (typeof userInfo.tags === 'string') {
           parsedTags = [userInfo.tags];
         }
@@ -568,9 +585,8 @@ export abstract class BaseRedisStorage implements IStorage {
           parsedApis = Array.isArray(parsed) ? parsed : [parsed];
         }
       } catch (e) {
-        console.warn(`用户 ${userName} enabledApis 解析失败`);
         if (typeof userInfo.enabledApis === 'string' && userInfo.enabledApis.includes(',')) {
-          parsedApis = userInfo.enabledApis.split(',').map(t => t.trim());
+          parsedApis = userInfo.enabledApis.split(',').map((t: string) => t.trim());
         } else if (typeof userInfo.enabledApis === 'string') {
           parsedApis = [userInfo.enabledApis];
         }
