@@ -457,8 +457,7 @@ export const UserMenu: React.FC = () => {
 
           // 筛选真正需要继续观看的记录
           const validPlayRecords = recordsArray.filter(record => {
-            // @ts-ignore
-            const progress = record.play_time && record.total_time ? (record.play_time / record.total_time) * 100 : 0;
+            const progress = getProgress(record);
 
             // 播放时间必须超过2分钟
             if (record.play_time < 120) return false;

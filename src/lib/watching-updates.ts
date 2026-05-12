@@ -725,7 +725,7 @@ export async function checkVideoUpdate(sourceName: string, videoId: string): Pro
       return;
     }
 
-    const updateInfo = await checkSingleRecordUpdate(targetRecord, videoId, sourceName);
+    const updateInfo = await checkSingleRecordUpdate(targetRecord, videoId);
 
     if (updateInfo.hasUpdate) {
       // 如果发现这个视频有更新，重新检查所有更新状态
