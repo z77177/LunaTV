@@ -291,6 +291,11 @@ async function handleAuthentication(
     return handleAuthFailure(request, pathname);
   }
 
+  // 🚀 访客模式允许通行
+  if (authInfo.isGuest === true && authInfo.username === '访客') {
+    return response || NextResponse.next();
+  }
+
   // localstorage模式：在middleware中完成验证
   if (storageType === 'localstorage') {
     if (!authInfo.password || authInfo.password !== process.env.PASSWORD) {
