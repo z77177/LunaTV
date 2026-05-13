@@ -186,6 +186,21 @@ function RegisterPageClient() {
     }
   };
 
+  // 访客登录处理
+  const handleGuestLogin = () => {
+    const guestAuth = {
+      username: '访客',
+      role: 'user',
+      isGuest: true,
+      loginTime: Date.now(),
+    };
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 3);
+    document.cookie = `user_auth=${encodeURIComponent(JSON.stringify(guestAuth))}; path=/; expires=${expires.toUTCString()}; sameSite=lax`;
+    const redirect = searchParams.get('redirect') || '/';
+    router.replace(redirect);
+  };
+
   if (!shouldShowRegister) {
     return <div>Loading...</div>;
   }
@@ -394,16 +409,26 @@ function RegisterPageClient() {
 
           <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
             <p className='text-center text-gray-600 dark:text-gray-400 text-sm mb-3'>
-              已有账户？
+              或者
             </p>
-            <a
-              href='/login'
-              className='group flex items-center justify-center gap-2 w-full px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400 text-sm font-semibold hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
+            <button
+              type='button'
+              onClick={handleGuestLogin}
+              className='group flex items-center justify-center gap-2 w-full px-6 py-2.5 rounded-lg bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
             >
-              <Lock className='w-4 h-4' />
-              <span>立即登录</span>
-              <span className='inline-block transition-transform group-hover:translate-x-1'>→</span>
-            </a>
+              <User className='w-4 h-4' />
+              <span>以访客身份进入</span>
+            </button>
+
+            <div className='mt-4 flex items-center justify-center gap-2 text-sm'>
+              <p className='text-gray-600 dark:text-gray-400'>已有账户？</p>
+              <a
+                href='/login'
+                className='font-semibold text-blue-600 dark:text-blue-400 hover:underline'
+              >
+                立即登录
+              </a>
+            </div>
           </div>
         </form>
       </div>
