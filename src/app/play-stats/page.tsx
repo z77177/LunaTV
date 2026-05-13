@@ -712,7 +712,7 @@ const PlayStatsPage: React.FC = () => {
               <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-4 mb-8'>
                 <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
                   <div className='text-2xl font-bold text-blue-800 dark:text-blue-300'>
-                    {statsData.totalUsers}
+                    {statsData?.totalUsers || 0}
                   </div>
                   <div className='text-sm text-blue-600 dark:text-blue-400'>
                     总用户数
@@ -720,7 +720,7 @@ const PlayStatsPage: React.FC = () => {
                 </div>
                 <div className='p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800'>
                   <div className='text-2xl font-bold text-green-800 dark:text-green-300'>
-                    {formatTime(statsData.totalWatchTime)}
+                    {formatTime(statsData?.totalWatchTime || 0)}
                   </div>
                   <div className='text-sm text-green-600 dark:text-green-400'>
                     总观看时长
@@ -728,7 +728,7 @@ const PlayStatsPage: React.FC = () => {
                 </div>
                 <div className='p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800'>
                   <div className='text-2xl font-bold text-purple-800 dark:text-purple-300'>
-                    {statsData.totalPlays}
+                    {statsData?.totalPlays || 0}
                   </div>
                   <div className='text-sm text-purple-600 dark:text-purple-400'>
                     总播放次数
@@ -736,7 +736,7 @@ const PlayStatsPage: React.FC = () => {
                 </div>
                 <div className='p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800'>
                   <div className='text-2xl font-bold text-orange-800 dark:text-orange-300'>
-                    {formatTime(statsData.avgWatchTimePerUser)}
+                    {formatTime(statsData?.avgWatchTimePerUser || 0)}
                   </div>
                   <div className='text-sm text-orange-600 dark:text-orange-400'>
                     人均观看时长
@@ -744,7 +744,7 @@ const PlayStatsPage: React.FC = () => {
                 </div>
                 <div className='p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800'>
                   <div className='text-2xl font-bold text-indigo-800 dark:text-indigo-300'>
-                    {Math.round(statsData.avgPlaysPerUser)}
+                    {Math.round(statsData?.avgPlaysPerUser || 0)}
                   </div>
                   <div className='text-sm text-indigo-600 dark:text-indigo-400'>
                     人均播放次数
@@ -776,7 +776,7 @@ const PlayStatsPage: React.FC = () => {
                     近7天播放趋势
                   </h3>
                   <div className='space-y-3'>
-                    {statsData.dailyStats.map((stat) => (
+                    {(statsData?.dailyStats || []).map((stat) => (
                       <div key={stat.date} className='flex items-center justify-between'>
                         <span className='text-sm text-gray-600 dark:text-gray-400'>
                           {formatDate(stat.date)}
@@ -800,7 +800,7 @@ const PlayStatsPage: React.FC = () => {
                     近7天注册趋势
                   </h3>
                   <div className='space-y-3'>
-                    {statsData.registrationStats.registrationTrend.map((stat) => (
+                    {(statsData?.registrationStats?.registrationTrend || []).map((stat) => (
                       <div key={stat.date} className='flex items-center justify-between'>
                         <span className='text-sm text-gray-600 dark:text-gray-400'>
                           {formatDate(stat.date)}
@@ -858,7 +858,7 @@ const PlayStatsPage: React.FC = () => {
                     热门视频来源
                   </h3>
                   <div className='space-y-3'>
-                    {statsData.topSources.map((source, index) => (
+                    {(statsData?.topSources || []).map((source, index) => (
                       <div key={source.source} className='flex items-center justify-between'>
                         <div className='flex items-center space-x-3'>
                           <span className='w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold'>
@@ -883,7 +883,7 @@ const PlayStatsPage: React.FC = () => {
                   用户播放统计
                 </h3>
                 <div className='space-y-4'>
-                  {statsData.userStats.map((userStat) => (
+                  {(statsData?.userStats || []).map((userStat) => (
                     <div
                       key={userStat.username}
                       className='border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800'
@@ -1538,7 +1538,7 @@ const PlayStatsPage: React.FC = () => {
                 </h3>
                 {userStats.recentRecords && userStats.recentRecords.length > 0 ? (
                   <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-                    {userStats.recentRecords.map((record: PlayRecord) => (
+                    {(userStats?.recentRecords || []).map((record: PlayRecord) => (
                       <div
                         key={record.title + record.save_time}
                         className='flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'

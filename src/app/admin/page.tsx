@@ -648,7 +648,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
     // 从用户组获取 API 权限
     if (user.tags && user.tags.length > 0) {
       user.tags.forEach(tagName => {
-        const tag = config.UserConfig.Tags?.find(t => t.name === tagName);
+        const tag = config?.UserConfig?.Tags?.find(t => t.name === tagName);
         if (tag && tag.enabledApis) {
           tagApis.push(...tag.enabledApis);
         }
@@ -1062,7 +1062,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
             {/* 默认用户组设置 */}
             <div className='mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
               <div className='mb-3'>
-                <div className='font-medium text-gray-900 dark:text-gray-100 mb-1'>
+                <div className='font-medium text-gray-900 dark:text-gray-100'>
                   默认用户组
                 </div>
                 <div className='text-sm text-gray-600 dark:text-gray-400'>
@@ -1070,9 +1070,9 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                 </div>
               </div>
 
-              {config.UserConfig.Tags && config.UserConfig.Tags.length > 0 ? (
+              {config?.UserConfig?.Tags && config.UserConfig.Tags.length > 0 ? (
                 <div className='space-y-2'>
-                  {config.UserConfig.Tags.map(tag => (
+                  {(config?.UserConfig?.Tags || []).map(tag => (
                     <label
                       key={tag.name}
                       className='flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-pointer transition-colors'
@@ -1619,7 +1619,7 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
                                 // 从用户组获取 API 权限
                                 if (user.tags && user.tags.length > 0) {
                                   user.tags.forEach(tagName => {
-                                    const tag = config.UserConfig.Tags?.find(t => t.name === tagName);
+                                    const tag = config?.UserConfig?.Tags?.find(t => t.name === tagName);
                                     if (tag && tag.enabledApis) {
                                       tagApis.push(...tag.enabledApis);
                                     }
