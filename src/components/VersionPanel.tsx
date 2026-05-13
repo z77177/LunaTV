@@ -17,6 +17,7 @@ import { createPortal } from 'react-dom';
 
 import { changelog, ChangelogEntry } from '@/lib/changelog';
 import { CURRENT_VERSION } from '@/lib/version';
+import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { compareVersions, UpdateStatus } from '@/lib/version_check';
 
 interface VersionPanelProps {
@@ -556,6 +557,10 @@ export const VersionPanel: React.FC<VersionPanelProps> = ({
 
   // 使用 Portal 渲染到 document.body
   if (!mounted || !isOpen) return null;
+
+  // 安全检查：只有管理员能看到版本面板
+  const auth = getAuthInfoFromBrowserCookie();
+  if (auth?.role !== 'admin' && auth?.role !== 'owner') return null;
 
   return createPortal(versionPanelContent, document.body);
 };

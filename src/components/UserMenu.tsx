@@ -351,6 +351,12 @@ export const UserMenu: React.FC = () => {
 
   // 版本检查
   useEffect(() => {
+    // 只有管理员能看到版本信息
+    if (authInfo?.role !== 'admin' && authInfo?.role !== 'owner') {
+      setIsChecking(false);
+      return;
+    }
+
     const checkUpdate = async () => {
       try {
         const status = await checkForUpdates();
@@ -363,7 +369,7 @@ export const UserMenu: React.FC = () => {
     };
 
     checkUpdate();
-  }, []);
+  }, [authInfo]);
 
   // 获取观看更新信息
   useEffect(() => {
@@ -1209,30 +1215,32 @@ export const UserMenu: React.FC = () => {
           {/* 分割线 */}
           <div className='my-1 border-t border-gray-200 dark:border-gray-700'></div>
 
-          {/* 版本信息 */}
-          <button
-            onClick={() => {
-              setIsVersionPanelOpen(true);
-              handleCloseMenu();
-            }}
-            className='w-full px-3 py-2 text-center flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-xs'
-          >
-            <div className='flex items-center gap-1'>
-              <span className='font-mono'>v{CURRENT_VERSION}</span>
-              {!isChecking &&
-                updateStatus &&
-                updateStatus !== UpdateStatus.FETCH_FAILED && (
-                  <div
-                    className={`w-2 h-2 rounded-full -translate-y-2 ${updateStatus === UpdateStatus.HAS_UPDATE
-                      ? 'bg-yellow-500'
-                      : updateStatus === UpdateStatus.NO_UPDATE
-                        ? 'bg-green-400'
-                        : ''
-                      }`}
-                  ></div>
-                )}
-            </div>
-          </button>
+          {/* 版本信息（仅管理员显示） */}
+          {showAdminPanel && (
+            <button
+              onClick={() => {
+                setIsVersionPanelOpen(true);
+                handleCloseMenu();
+              }}
+              className='w-full px-3 py-2 text-center flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-xs'
+            >
+              <div className='flex items-center gap-1'>
+                <span className='font-mono'>v{CURRENT_VERSION}</span>
+                {!isChecking &&
+                  updateStatus &&
+                  updateStatus !== UpdateStatus.FETCH_FAILED && (
+                    <div
+                      className={`w-2 h-2 rounded-full -translate-y-2 ${updateStatus === UpdateStatus.HAS_UPDATE
+                        ? 'bg-yellow-500'
+                        : updateStatus === UpdateStatus.NO_UPDATE
+                          ? 'bg-green-400'
+                          : ''
+                        }`}
+                    ></div>
+                  )}
+              </div>
+            </button>
+          )}
         </div>
       </div>
     </>
@@ -2481,8 +2489,8 @@ export const UserMenu: React.FC = () => {
 
           <User className='w-full h-full relative z-10 group-hover:scale-110 transition-transform duration-300' />
         </button>
-        {/* 统一更新提醒点：版本更新或剧集更新都显示橙色点 */}
-        {((updateStatus === UpdateStatus.HAS_UPDATE) || (hasUnreadUpdates && totalUpdates > 0)) && (
+        {/* 统一更新提醒点：版本更新（仅管理员）或剧集更新都显示橙色点 */}
+        {((updateStatus === UpdateStatus.HAS_UPDATE && (authInfo?.role === 'admin' || authInfo?.role === 'owner')) || (hasUnreadUpdates && totalUpdates > 0)) && (
           <div className='absolute top-[2px] right-[2px] w-2 h-2 bg-yellow-500 rounded-full animate-pulse shadow-lg shadow-yellow-500/50'></div>
         )}
       </div>
