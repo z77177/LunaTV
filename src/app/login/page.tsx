@@ -11,6 +11,7 @@ import { checkForUpdates, UpdateStatus } from '@/lib/version_check';
 
 import { useSite } from '@/components/SiteProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { OIDCProviderLogo, detectProvider, getProviderButtonStyle, getProviderButtonText } from '@/components/OIDCProviderLogos';
 
 // 版本显示组件
@@ -19,6 +20,14 @@ function VersionDisplay() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    // 只有管理员能看到版本信息
+    const auth = getAuthInfoFromBrowserCookie();
+    const isAdmin = auth?.role === 'admin' || auth?.role === 'owner';
+    if (!isAdmin) {
+      setIsChecking(false);
+      return;
+    }
+
     const checkUpdate = async () => {
       try {
         const status = await checkForUpdates();
@@ -32,6 +41,10 @@ function VersionDisplay() {
 
     checkUpdate();
   }, []);
+
+  const auth = getAuthInfoFromBrowserCookie();
+  const isAdmin = auth?.role === 'admin' || auth?.role === 'owner';
+  if (!isAdmin) return null;
 
   return (
     <div
@@ -262,7 +275,7 @@ function LoginPageClient() {
     expires.setDate(expires.getDate() + 3);
     document.cookie = `user_auth=${encodeURIComponent(JSON.stringify(guestAuth))}; path=/; expires=${expires.toUTCString()}; sameSite=lax`;
     const redirect = searchParams.get('redirect') || '/';
-    router.replace(redirect);
+    window.location.href = redirect;
   };
 
   return (

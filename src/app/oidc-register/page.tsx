@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { CURRENT_VERSION } from '@/lib/version';
 
+import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { useSite } from '@/components/SiteProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -177,10 +178,18 @@ export default function OIDCRegisterPage() {
           </div>
         </form>
 
-        {/* 版本信息 */}
-        <div className='mt-6 sm:mt-8 text-center text-[11px] sm:text-xs text-gray-500 dark:text-gray-400'>
-          v{CURRENT_VERSION}
-        </div>
+        {/* 版本信息（仅管理员显示） */}
+        {(() => {
+          const auth = getAuthInfoFromBrowserCookie();
+          if (auth?.role === 'admin' || auth?.role === 'owner') {
+            return (
+              <div className='mt-6 sm:mt-8 text-center text-[11px] sm:text-xs text-gray-500 dark:text-gray-400'>
+                v{CURRENT_VERSION}
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
     </div>
   );

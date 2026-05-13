@@ -9,6 +9,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { CURRENT_VERSION } from '@/lib/version';
 import { checkForUpdates, UpdateStatus } from '@/lib/version_check';
 
+import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { useSite } from '@/components/SiteProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -18,6 +19,14 @@ function VersionDisplay() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    // 只有管理员能看到版本信息
+    const auth = getAuthInfoFromBrowserCookie();
+    const isAdmin = auth?.role === 'admin' || auth?.role === 'owner';
+    if (!isAdmin) {
+      setIsChecking(false);
+      return;
+    }
+
     const checkUpdate = async () => {
       try {
         const status = await checkForUpdates();
@@ -31,6 +40,10 @@ function VersionDisplay() {
 
     checkUpdate();
   }, []);
+
+  const auth = getAuthInfoFromBrowserCookie();
+  const isAdmin = auth?.role === 'admin' || auth?.role === 'owner';
+  if (!isAdmin) return null;
 
   return (
     <div
@@ -198,7 +211,7 @@ function RegisterPageClient() {
     expires.setDate(expires.getDate() + 3);
     document.cookie = `user_auth=${encodeURIComponent(JSON.stringify(guestAuth))}; path=/; expires=${expires.toUTCString()}; sameSite=lax`;
     const redirect = searchParams.get('redirect') || '/';
-    router.replace(redirect);
+    window.location.href = redirect;
   };
 
   if (!shouldShowRegister) {
