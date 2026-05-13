@@ -250,6 +250,21 @@ function LoginPageClient() {
 
 
 
+  // 访客登录处理
+  const handleGuestLogin = () => {
+    const guestAuth = {
+      username: '访客',
+      role: 'user',
+      isGuest: true,
+      loginTime: Date.now(),
+    };
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 3);
+    document.cookie = `user_auth=${encodeURIComponent(JSON.stringify(guestAuth))}; path=/; expires=${expires.toUTCString()}; sameSite=lax`;
+    const redirect = searchParams.get('redirect') || '/';
+    router.replace(redirect);
+  };
+
   return (
     <div className='relative min-h-screen flex items-center justify-center px-3 sm:px-4 py-8 sm:py-0 overflow-hidden'>
       {/* Bing 每日壁纸背景 */}
@@ -374,6 +389,18 @@ function LoginPageClient() {
               </a>
             </div>
           )}
+
+          {/* 访客登录按钮 */}
+          <div className='mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700'>
+            <button
+              type='button'
+              onClick={handleGuestLogin}
+              className='group flex items-center justify-center gap-1.5 sm:gap-2 w-full px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
+            >
+              <User className='w-3.5 h-3.5 sm:w-4 sm:h-4' />
+              <span>以访客身份进入</span>
+            </button>
+          </div>
         </form>
 
         {/* Telegram Magic Link 登录 */}

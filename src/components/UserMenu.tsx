@@ -986,15 +986,15 @@ export const UserMenu: React.FC = () => {
   const showAdminPanel =
     authInfo?.role === 'owner' || authInfo?.role === 'admin';
 
-  // 检查是否显示修改密码按钮
+  // 检查是否显示修改密码按钮（访客不显示）
   const showChangePassword =
-    authInfo?.role !== 'owner' && storageType !== 'localstorage';
+    authInfo?.role !== 'owner' && storageType !== 'localstorage' && !(authInfo as any)?.isGuest;
 
-  // 检查是否显示播放统计按钮（所有登录用户，且非localstorage存储）
-  const showPlayStats = authInfo?.username && storageType !== 'localstorage';
+  // 检查是否显示播放统计按钮（访客不显示）
+  const showPlayStats = authInfo?.username && storageType !== 'localstorage' && !(authInfo as any)?.isGuest;
 
-  // 检查是否显示更新提醒按钮（登录用户且非localstorage存储就显示）
-  const showWatchingUpdates = authInfo?.username && storageType !== 'localstorage';
+  // 检查是否显示更新提醒按钮（访客不显示）
+  const showWatchingUpdates = authInfo?.username && storageType !== 'localstorage' && !(authInfo as any)?.isGuest;
 
   const safeUpdatedSeries = Array.isArray(watchingUpdates?.updatedSeries)
     ? watchingUpdates.updatedSeries
@@ -1161,14 +1161,16 @@ export const UserMenu: React.FC = () => {
             <span className='font-medium'>上映日程</span>
           </button>
 
-          {/* TVBox配置按钮 */}
-          <button
-            onClick={handleTVBoxConfig}
-            className='w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-[background-color] duration-150 ease-in-out text-sm'
-          >
-            <Tv className='w-4 h-4 text-gray-500 dark:text-gray-400' />
-            <span className='font-medium'>TVBox 配置</span>
-          </button>
+          {/* TVBox配置按钮（访客不显示） */}
+          {!(authInfo as any)?.isGuest && (
+            <button
+              onClick={handleTVBoxConfig}
+              className='w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-[background-color] duration-150 ease-in-out text-sm'
+            >
+              <Tv className='w-4 h-4 text-gray-500 dark:text-gray-400' />
+              <span className='font-medium'>TVBox 配置</span>
+            </button>
+          )}
 
           {/* 观影室按钮 */}
           {showWatchRoom && (

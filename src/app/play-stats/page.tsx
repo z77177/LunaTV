@@ -89,7 +89,7 @@ const PlayStatsPage: React.FC = () => {
   // 检查用户权限
   useEffect(() => {
     const auth = getAuthInfoFromBrowserCookie();
-    if (!auth || !auth.username) {
+    if (!auth || !auth.username || auth.isGuest) {
       router.push('/login');
       return;
     }

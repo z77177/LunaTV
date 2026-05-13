@@ -1,8 +1,10 @@
 'use client';
 
 import { AlertTriangle, Monitor, Shield, Smartphone, Tv, Activity, Heart, Wrench, Globe, Zap, CheckCircle2, XCircle, Clock, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import PageLayout from '@/components/PageLayout';
 
 interface SecurityConfig {
@@ -140,9 +142,18 @@ interface JarFixResult {
 }
 
 export default function TVBoxConfigPage() {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [format, setFormat] = useState<'json' | 'base64'>('json');
   const [configMode, setConfigMode] = useState<'standard' | 'safe' | 'fast' | 'yingshicang'>('standard');
+
+  // 访客重定向
+  useEffect(() => {
+    const auth = getAuthInfoFromBrowserCookie();
+    if (auth?.isGuest) {
+      router.push('/');
+    }
+  }, [router]);
 
   // 🎯 智能搜索和过滤控制
   const [enableAdultFilter, setEnableAdultFilter] = useState(true); // 默认启用过滤

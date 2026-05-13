@@ -10,9 +10,9 @@ export const dynamic = 'force-dynamic'; // 强制动态渲染
 // 只返回 TVBox 安全配置，不返回完整的管理配置
 export async function GET(request: NextRequest) {
   try {
-    // 检查用户是否登录
+    // 检查用户是否登录（访客不允许访问）
     const authInfo = getAuthInfoFromCookie(request);
-    if (!authInfo || !authInfo.username) {
+    if (!authInfo || !authInfo.username || authInfo.isGuest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
