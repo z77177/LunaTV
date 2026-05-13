@@ -1024,6 +1024,7 @@ export const UserMenu: React.FC = () => {
 
   // 角色中文映射
   const getRoleText = (role?: string) => {
+    if ((authInfo as any)?.isGuest) return '访客模式';
     switch (role) {
       case 'owner':
         return '站长';
@@ -1048,30 +1049,28 @@ export const UserMenu: React.FC = () => {
       {/* 菜单面板 */}
       <div className='fixed top-14 right-4 w-56 bg-white dark:bg-gray-900 rounded-lg shadow-xl z-1001 border border-gray-200/50 dark:border-gray-700/50 overflow-hidden select-none'>
         {/* 用户信息区域 */}
-        <div className='px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-linear-to-r from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/50'>
-          <div className='space-y-1'>
+        <div className='px-4 py-4 border-b border-gray-200 dark:border-gray-700 bg-linear-to-b from-gray-50/50 to-white dark:from-gray-800/50 dark:to-gray-900'>
+          <div className='space-y-2'>
             <div className='flex items-center justify-between'>
-              <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                当前用户
+              <span className='text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]'>
+                当前身份
               </span>
               <span
-                className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${(authInfo?.role || 'user') === 'owner'
+                className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${(authInfo?.role || 'user') === 'owner'
                   ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
                   : (authInfo?.role || 'user') === 'admin'
                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                    : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                    : (authInfo as any)?.isGuest
+                      ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                      : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                   }`}
               >
                 {getRoleText(authInfo?.role || 'user')}
               </span>
             </div>
-            <div className='flex items-center justify-between'>
-              <div className='font-semibold text-gray-900 dark:text-gray-100 text-sm truncate'>
-                {authInfo?.username || 'default'}
-              </div>
-              <div className='text-[10px] text-gray-400 dark:text-gray-500'>
-                数据存储：
-                {storageType === 'localstorage' ? '本地' : storageType}
+            <div className='flex items-center'>
+              <div className='font-bold text-gray-900 dark:text-gray-100 text-xl tracking-tight truncate'>
+                {authInfo?.username || 'Guest'}
               </div>
             </div>
           </div>
