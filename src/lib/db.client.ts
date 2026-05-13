@@ -659,28 +659,28 @@ async function fetchWithAuth(
 }
 
 // ============ 全局并发控制器 ============
-// 限制同时进行的请求数量，防止平台边缘层因瞬间并发过高触发 429
-const MAX_CONCURRENT_REQUESTS = 3;
-let activeRequestCount = 0;
-const requestQueue: Array<() => void> = [];
+// 限制同时在途的网络请求数量，防止平台边缘层因突发并发触发 429
+const MAX_CONCURRENT = 2;
+let activeSlots = 0;
+const waitQueue: Array<() => void> = [];
 
 function acquireSlot(): Promise<void> {
-  if (activeRequestCount < MAX_CONCURRENT_REQUESTS) {
-    activeRequestCount++;
+  if (activeSlots < MAX_CONCURRENT) {
+    activeSlots++;
     return Promise.resolve();
   }
   return new Promise<void>((resolve) => {
-    requestQueue.push(resolve);
+    waitQueue.push(resolve);
   });
 }
 
 function releaseSlot(): void {
-  if (requestQueue.length > 0) {
-    const next = requestQueue.shift()!;
-    // 交错释放：给平台边缘一点喘息时间
-    setTimeout(next, 50);
+  if (waitQueue.length > 0) {
+    const next = waitQueue.shift()!;
+    // 交错释放：给平台边缘层 150ms 喘息窗口
+    setTimeout(next, 150);
   } else {
-    activeRequestCount--;
+    activeSlots--;
   }
 }
 
@@ -689,14 +689,13 @@ const pendingRequests = new Map<string, Promise<any>>();
 
 /**
  * 带重试的 API 请求函数
- * 🚀 优化点：
- *   1. Single-Flight 机制 — 相同 GET 路径的并发请求合并为一次网络调用
- *   2. 全局并发限制 — 最多 MAX_CONCURRENT_REQUESTS 个请求同时在途
- *   3. 429 指数退避重试 — 收到 429 后等待并重试，而不是立即放弃
+ * 🚀 设计要点：
+ *   1. Single-Flight — 相同 GET 路径的并发请求合并为一次网络调用
+ *   2. 全局并发限制 — 最多 MAX_CONCURRENT 个请求同时在途
+ *   3. 429 指数退避 — 收到 429 后**释放 slot**再等待，不阻塞其他请求
  */
-export async function fetchFromApi<T>(path: string, options: RequestInit = {}, retries = 3): Promise<T> {
+export async function fetchFromApi<T>(path: string, options: RequestInit = {}, retries = 5): Promise<T> {
   const method = (options.method || 'GET').toUpperCase();
-  // 只有 GET 请求才使用 Single-Flight 合并
   const isCacheable = method === 'GET';
   const requestKey = `${method}:${path}`;
 
@@ -709,46 +708,54 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
     let lastError: Error | null = null;
 
     for (let i = 0; i <= retries; i++) {
-      // 通过全局并发控制器排队
+      // ---- 排队获取并发 slot ----
       await acquireSlot();
+
+      let got429 = false;
+      let retryDelayMs = 0;
+
       try {
         const res = await fetchWithAuth(path, options);
 
         if (res.status === 429) {
-          // 从 Retry-After 响应头中获取等待时间，没有则使用指数退避
-          const retryAfter = res.headers.get('Retry-After');
-          let delayMs: number;
-          if (retryAfter && Number.isFinite(Number(retryAfter))) {
-            delayMs = Number(retryAfter) * 1000;
+          got429 = true;
+          // 解析 Retry-After，否则指数退避（基数 2s）
+          const ra = res.headers.get('Retry-After');
+          if (ra && Number.isFinite(Number(ra))) {
+            retryDelayMs = Math.max(Number(ra) * 1000, 1000);
           } else {
-            // 指数退避 + 随机抖动：1s, 2s, 4s, 8s...
-            delayMs = Math.min(1000 * Math.pow(2, i) + Math.random() * 500, 15000);
+            retryDelayMs = Math.min(2000 * Math.pow(2, i) + Math.random() * 1500, 30000);
           }
-
-          if (i < retries) {
-            console.warn(`[API] ${path} 返回 429，${Math.round(delayMs / 1000)}s 后重试 (${i + 1}/${retries})`);
-            await new Promise(resolve => setTimeout(resolve, delayMs));
-            continue; // 重试
-          }
-          // 最后一次也是 429，抛出错误
-          throw new Error(`请求 ${path} 失败: 429 (已重试 ${retries} 次)`);
-        }
-
-        if (!res.ok) {
+        } else if (!res.ok) {
           const errorText = await res.text().catch(() => 'Unknown error');
           throw new Error(`请求 ${path} 失败: ${res.status} ${errorText}`);
+        } else {
+          // ✅ 成功
+          return await res.json();
         }
-
-        return await res.json();
       } catch (error) {
         lastError = error as Error;
-        // 非 429 的普通错误也重试（网络抖动等）
-        if (i < retries && !(lastError.message?.includes('429'))) {
-          const delay = 500 * Math.pow(2, i) + Math.random() * 300;
-          await new Promise(resolve => setTimeout(resolve, delay));
+        if (!got429 && i < retries) {
+          retryDelayMs = 500 * Math.pow(2, i) + Math.random() * 300;
         }
       } finally {
+        // 🔑 关键：无论成功/失败/429，立即释放 slot
         releaseSlot();
+      }
+
+      // ---- slot 已释放，在 slot 外等待后再重试 ----
+      if (got429) {
+        if (i < retries) {
+          console.warn(`[API] ${path} → 429, ${(retryDelayMs / 1000).toFixed(1)}s 后重试 (${i + 1}/${retries})`);
+          await new Promise(r => setTimeout(r, retryDelayMs));
+          continue;
+        }
+        throw new Error(`请求 ${path} 失败: 429 (已重试 ${retries} 次)`);
+      }
+
+      // 非 429 错误的重试等待
+      if (retryDelayMs > 0 && i < retries) {
+        await new Promise(r => setTimeout(r, retryDelayMs));
       }
     }
     throw lastError || new Error(`请求失败: ${path}`);
