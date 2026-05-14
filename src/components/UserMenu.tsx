@@ -642,7 +642,9 @@ export const UserMenu: React.FC = () => {
     } catch (error) {
       console.error('注销请求失败:', error);
     }
-    window.location.href = '/';
+    // 清除客户端 cookie 并跳转登录页（避免被中间件自动分配访客会话）
+    document.cookie = 'user_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    window.location.href = '/login';
   };
 
   const handleAdminPanel = () => {
@@ -1208,7 +1210,15 @@ export const UserMenu: React.FC = () => {
 
           {/* 登出/登录按钮 */}
           <button
-            onClick={handleLogout}
+            onClick={() => {
+              if ((authInfo as any)?.isGuest) {
+                // 访客点"登录"：清除访客cookie后跳转登录页
+                document.cookie = 'user_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                window.location.href = '/login';
+              } else {
+                handleLogout();
+              }
+            }}
             className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-[background-color] duration-150 ease-in-out text-sm ${(authInfo as any)?.isGuest ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
           >
             {(authInfo as any)?.isGuest ? (
