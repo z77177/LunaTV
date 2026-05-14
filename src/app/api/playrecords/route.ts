@@ -145,12 +145,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(errorResponse, { status: 401 });
     }
 
+    let username = authInfo.username;
+    const isGuest = (authInfo as any).isGuest === true;
+
+    // 方案A：访客模式下，统一汇总到一个虚拟账号
+    if (isGuest) {
+      username = '访客(匿名汇总)';
+    }
+
     const config = await getConfig();
-    if (authInfo.username !== process.env.USERNAME) {
-      // 非站长，检查用户存在或被封禁
-      const user = config.UserConfig.Users.find(
-        (u) => u.username === authInfo.username
-      );
+    // 如果是访客，跳过用户列表检查
+    if (!isGuest && username !== process.env.USERNAME) {
+      // 非站长且非访客，检查用户存在或被封禁
+      const user = config.UserConfig.Users.find((u) => u.username === username);
       if (!user) {
         const errorResponse = { error: '用户不存在' };
         const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
@@ -254,7 +261,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取现有播放记录以保持原始集数
-    const existingRecord = await db.getPlayRecord(authInfo.username, source, id);
+    const existingRecord = await db.getPlayRecord(username, source, id);
 
     // 🔑 关键修复：信任客户端传来的 original_episodes（已经过 checkShouldUpdateOriginalEpisodes 验证）
     // 只有在客户端没有提供时，才使用数据库中的值作为 fallback
@@ -273,12 +280,12 @@ export async function POST(request: NextRequest) {
       original_episodes: originalEpisodes,
     } as PlayRecord;
 
-    await db.savePlayRecord(authInfo.username, source, id, finalRecord);
+    await db.savePlayRecord(username, source, id, finalRecord);
 
     // 更新播放统计（如果存储类型支持）
     if (db.isStatsSupported()) {
       await db.updatePlayStatistics(
-        authInfo.username,
+        username,
         source,
         id,
         finalRecord.play_time
