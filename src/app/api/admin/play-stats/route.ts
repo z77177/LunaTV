@@ -238,6 +238,75 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // --- 方案A：额外获取访客汇总数据 ---
+    try {
+      const guestUsername = '访客(匿名汇总)';
+      const guestRecordsMap = await storage.getAllPlayRecords(guestUsername);
+      const guestRecords = Object.values(guestRecordsMap);
+
+      if (guestRecords.length > 0) {
+        let guestWatchTime = 0;
+        let guestLastPlayTime = 0;
+        const guestSourceCount: Record<string, number> = {};
+
+        guestRecords.forEach((record) => {
+          guestWatchTime += record.play_time || 0;
+          if (record.save_time > guestLastPlayTime) {
+            guestLastPlayTime = record.save_time;
+          }
+
+          const sourceName = record.source_name || '未知来源';
+          guestSourceCount[sourceName] = (guestSourceCount[sourceName] || 0) + 1;
+          sourceCount[sourceName] = (sourceCount[sourceName] || 0) + 1;
+
+          // 统计近7天数据
+          const recordDate = new Date(record.save_time);
+          if (recordDate >= sevenDaysAgo) {
+            const dateKey = recordDate.toISOString().split('T')[0];
+            if (!dailyData[dateKey]) {
+              dailyData[dateKey] = { watchTime: 0, plays: 0 };
+            }
+            dailyData[dateKey].watchTime += record.play_time || 0;
+            dailyData[dateKey].plays += 1;
+          }
+        });
+
+        // 获取最近播放记录（最多10条）
+        const recentRecords = guestRecords
+          .sort((a, b) => (b.save_time || 0) - (a.save_time || 0))
+          .slice(0, 10);
+
+        // 找出最常观看的来源
+        let mostWatchedSource = '';
+        let maxCount = 0;
+        for (const [source, count] of Object.entries(guestSourceCount)) {
+          if (count > maxCount) {
+            maxCount = count;
+            mostWatchedSource = source;
+          }
+        }
+
+        userStats.push({
+          username: guestUsername,
+          totalWatchTime: guestWatchTime,
+          totalPlays: guestRecords.length,
+          lastPlayTime: guestLastPlayTime,
+          recentRecords,
+          avgWatchTime: guestWatchTime / guestRecords.length,
+          mostWatchedSource,
+          registrationDays: 0,
+          lastLoginTime: guestLastPlayTime,
+          loginCount: 0,
+          createdAt: 0,
+        });
+
+        totalWatchTime += guestWatchTime;
+        totalPlays += guestRecords.length;
+      }
+    } catch (e) {
+      console.warn('获取访客汇总数据失败:', e);
+    }
+
     // 按观看时间降序排序
     userStats.sort((a, b) => b.totalWatchTime - a.totalWatchTime);
 
