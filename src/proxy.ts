@@ -210,6 +210,24 @@ function generateTrustedAuthCookie(request: NextRequest): NextResponse {
   return response;
 }
 
+// 生成访客自动登录 cookie
+function generateGuestAuthCookie(request: NextRequest): NextResponse {
+  const response = NextResponse.next();
+  const guestAuth = {
+    username: '访客',
+    role: 'user',
+    isGuest: true,
+    loginTime: Date.now(),
+  };
+  response.cookies.set('user_auth', JSON.stringify(guestAuth), {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 3 * 24 * 60 * 60, // 3 天
+  });
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -288,7 +306,9 @@ async function handleAuthentication(
   const authInfo = getAuthInfoFromCookie(request);
 
   if (!authInfo) {
-    return handleAuthFailure(request, pathname);
+    // 🔥 如果没有认证信息，自动生成一个访客会话，实现“首页即访客落地页”
+    console.log(`[Middleware] Auto-generating guest session for path: ${pathname}`);
+    return generateGuestAuthCookie(request);
   }
 
   // 🚀 访客模式允许通行
