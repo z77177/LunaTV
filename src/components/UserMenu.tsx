@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Heart,
   KeyRound,
+  LogIn,
   LogOut,
   PlayCircle,
   Settings,
@@ -380,7 +381,7 @@ export const UserMenu: React.FC = () => {
       'storageType !== localstorage': storageType !== 'localstorage'
     });
 
-    if (typeof window !== 'undefined' && authInfo?.username && storageType !== 'localstorage') {
+    if (typeof window !== 'undefined' && authInfo?.username && (storageType !== 'localstorage' || (authInfo as any)?.isGuest)) {
       console.log('开始加载 watching-updates 数据...');
 
       const updateWatchingUpdates = () => {
@@ -529,7 +530,7 @@ export const UserMenu: React.FC = () => {
 
   // 加载收藏数据
   useEffect(() => {
-    if (typeof window !== 'undefined' && authInfo?.username && storageType !== 'localstorage') {
+    if (typeof window !== 'undefined' && authInfo?.username && (storageType !== 'localstorage' || (authInfo as any)?.isGuest)) {
       const loadFavorites = async () => {
         try {
           const favoritesData = await getAllFavorites();
@@ -1002,6 +1003,9 @@ export const UserMenu: React.FC = () => {
   // 检查是否显示更新提醒按钮（访客不显示）
   const showWatchingUpdates = authInfo?.username && storageType !== 'localstorage' && !(authInfo as any)?.isGuest;
 
+  // 检查是否显示历史和收藏（登录用户或访客均显示）
+  const showHistoryAndFavorites = !!authInfo?.username;
+
   const safeUpdatedSeries = Array.isArray(watchingUpdates?.updatedSeries)
     ? watchingUpdates.updatedSeries
     : [];
@@ -1106,7 +1110,7 @@ export const UserMenu: React.FC = () => {
           )}
 
           {/* 继续观看按钮 */}
-          {showWatchingUpdates && (
+          {showHistoryAndFavorites && (
             <button
               onClick={handleContinueWatching}
               className='w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-[background-color] duration-150 ease-in-out text-sm relative'
@@ -1120,7 +1124,7 @@ export const UserMenu: React.FC = () => {
           )}
 
           {/* 我的收藏按钮 */}
-          {showWatchingUpdates && (
+          {showHistoryAndFavorites && (
             <button
               onClick={handleFavorites}
               className='w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-[background-color] duration-150 ease-in-out text-sm relative'
@@ -1202,13 +1206,22 @@ export const UserMenu: React.FC = () => {
           {/* 分割线 */}
           <div className='my-1 border-t border-gray-200 dark:border-gray-700'></div>
 
-          {/* 登出按钮 */}
+          {/* 登出/登录按钮 */}
           <button
             onClick={handleLogout}
-            className='w-full px-3 py-2 text-left flex items-center gap-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-[background-color] duration-150 ease-in-out text-sm'
+            className={`w-full px-3 py-2 text-left flex items-center gap-2.5 transition-[background-color] duration-150 ease-in-out text-sm ${(authInfo as any)?.isGuest ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
           >
-            <LogOut className='w-4 h-4' />
-            <span className='font-medium'>登出</span>
+            {(authInfo as any)?.isGuest ? (
+              <>
+                <LogIn className='w-4 h-4' />
+                <span className='font-medium'>登录</span>
+              </>
+            ) : (
+              <>
+                <LogOut className='w-4 h-4' />
+                <span className='font-medium'>登出</span>
+              </>
+            )}
           </button>
 
           {/* 分割线 */}
