@@ -19,7 +19,13 @@ export function getAuthInfoFromCookie(request: NextRequest): {
   }
 
   try {
-    const decoded = decodeURIComponent(authCookie.value);
+    // 处理可能的双重编码
+    let decoded = decodeURIComponent(authCookie.value);
+    
+    if (decoded.includes('%')) {
+      decoded = decodeURIComponent(decoded);
+    }
+
     const authData = JSON.parse(decoded);
     return authData;
   } catch (error) {

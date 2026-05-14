@@ -306,13 +306,19 @@ async function handleAuthentication(
   const authInfo = getAuthInfoFromCookie(request);
 
   if (!authInfo) {
-    // 🔥 如果没有认证信息，自动生成一个访客会话，实现“首页即访客落地页”
-    console.log(`[Middleware] Auto-generating guest session for path: ${pathname}`);
-    return generateGuestAuthCookie(request);
+    // 🔥 如果没有认证信息，自动生成一个访客会话（排除管理后台路径）
+    if (!pathname.startsWith('/admin') && !pathname.startsWith('/api/admin')) {
+      console.log(`[Middleware] Auto-generating guest session for path: ${pathname}`);
+      return generateGuestAuthCookie(request);
+    }
+    return handleAuthFailure(request, pathname);
   }
 
-  // 🚀 访客模式允许通行
+  // 🚀 访客模式允许通行 (但不能进入管理后台)
   if (authInfo.isGuest === true && authInfo.username === '访客') {
+    if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+      return handleAuthFailure(request, pathname);
+    }
     return response || NextResponse.next();
   }
 
