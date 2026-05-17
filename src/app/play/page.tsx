@@ -3666,9 +3666,10 @@ function PlayPageClient() {
     }
 
     try {
-      // 🌟 读取并重置前一次暂存的播放/暂停状态，决定初始化时是否自动播放
-      const shouldAutoplay = !wasPausedRef.current;
-      wasPausedRef.current = false;
+      // 🌟 从 localStorage 读取前一次暂存的播放/暂停状态，决定初始化时是否自动播放
+      // 此处不立即清除，防止 React 异步重新初始化或开发模式下的多重渲染导致状态丢失！
+      const wasPausedStr = localStorage.getItem('blockad_was_paused');
+      const shouldAutoplay = wasPausedStr !== 'true';
 
       // 使用动态导入的 Artplayer
       const Artplayer = (window as any).DynamicArtplayer;
@@ -3872,8 +3873,8 @@ function PlayPageClient() {
               try {
                 localStorage.setItem('enable_blockad', String(newVal));
                 if (artPlayerRef.current) {
-                  // 🌟 暂存前一次的播放/暂停状态，避免重建后强行自动播放
-                  wasPausedRef.current = artPlayerRef.current.paused;
+                  // 🌟 暂存前一次的播放/暂停状态，使用 localStorage 存储，确保在防抖和多重重渲染下绝对安全稳定！
+                  localStorage.setItem('blockad_was_paused', String(artPlayerRef.current.paused));
                   resumeTimeRef.current = artPlayerRef.current.currentTime;
                   if (artPlayerRef.current.video.hls) {
                     artPlayerRef.current.video.hls.destroy();
@@ -4225,6 +4226,11 @@ function PlayPageClient() {
       artPlayerRef.current.on('ready', async () => {
         setError(null);
         setPlayerReady(true); // 标记播放器已就绪，启用观影室同步
+
+        // 🌟 播放器加载成功后，安全清除暂存状态
+        try {
+          localStorage.removeItem('blockad_was_paused');
+        } catch (_) {}
 
         // ⚙️ 齿轮设置菜单悬停自动弹出与零延迟启动、0.5秒延迟隐藏逻辑
         (() => {
@@ -5305,8 +5311,9 @@ function PlayPageClient() {
         }
         resumeTimeRef.current = null;
 
-        // iOS设备自动播放回退机制：如果自动播放失败，尝试用户交互触发播放
-        if ((isIOS || isSafari) && artPlayerRef.current.paused) {
+        // iOS设备自动播放回退机制：如果先前决定自动播放（autoplay配置为true）但由于限制未播放，才尝试自动播放回退
+        const autoplaySetting = artPlayerRef.current.option.autoplay;
+        if ((isIOS || isSafari) && autoplaySetting && artPlayerRef.current.paused) {
           console.log('iOS设备检测到视频未自动播放，准备交互触发机制');
           
           const tryAutoPlay = async () => {
