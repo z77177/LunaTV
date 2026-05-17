@@ -10,7 +10,7 @@ const IS_FEATURE_DISABLED = process.env.NEXT_PUBLIC_ENABLE_IMMERSIVE_PLAYER === 
 
 const DEFAULT_SETTINGS: ImmersiveSettings = {
   enabled: !IS_FEATURE_DISABLED,
-  opacity: 0.85, // 85% opacity by default, won't go below 0.2 (20%)
+  opacity: 0.85, // 85% opacity by default, won't go below 0.05 (5%)
   hideTimeout: 3000, // 3 seconds by default
 };
 
@@ -27,7 +27,7 @@ export function useImmersiveMode() {
           const parsed = JSON.parse(stored);
           setSettings({
             enabled: IS_FEATURE_DISABLED ? false : (parsed.enabled ?? DEFAULT_SETTINGS.enabled),
-            opacity: parsed.opacity !== undefined ? Math.max(0.2, Math.min(1, parsed.opacity)) : DEFAULT_SETTINGS.opacity,
+            opacity: parsed.opacity !== undefined ? Math.max(0.05, Math.min(1, parsed.opacity)) : DEFAULT_SETTINGS.opacity,
             hideTimeout: parsed.hideTimeout ?? DEFAULT_SETTINGS.hideTimeout,
           });
         } else if (IS_FEATURE_DISABLED) {
@@ -67,7 +67,7 @@ export function useImmersiveMode() {
       
       // Enforce bounds
       if (key === 'opacity') {
-        newSettings.opacity = Math.max(0.2, Math.min(1, newSettings.opacity as number));
+        newSettings.opacity = Math.max(0.05, Math.min(1, newSettings.opacity as number));
       }
       if (key === 'hideTimeout') {
         newSettings.hideTimeout = Math.max(1000, Math.min(10000, newSettings.hideTimeout as number));
