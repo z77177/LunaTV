@@ -5319,16 +5319,18 @@ function PlayPageClient() {
               </div>
             </div>
 
-            {/* 选集和换源 - 在移动端始终显示，在 lg 及以上可折叠 */}
-            <div
-              className={`h-[300px] lg:h-full md:overflow-hidden transition-all duration-300 ease-in-out ${
-                isEpisodeSelectorCollapsed || (immersiveSettings.enabled && isPlayerFullscreen)
-                ? 'md:col-span-1 hidden lg:opacity-0 lg:scale-95'
-                : 'md:col-span-1 lg:opacity-100 lg:scale-100'
-                }`}
-            >
-              {episodeSelectorContent}
-            </div>
+            {/* 选集和换源 - 在移动端始终显示，在 lg 及以上可折叠。当处于沉浸模式全屏时，完全卸载以免同时渲染两个导致状态冲突 */}
+            {!(immersiveSettings.enabled && isPlayerFullscreen) && (
+              <div
+                className={`h-[300px] lg:h-full md:overflow-hidden transition-all duration-300 ease-in-out ${
+                  isEpisodeSelectorCollapsed
+                  ? 'md:col-span-1 hidden lg:opacity-0 lg:scale-95'
+                  : 'md:col-span-1 lg:opacity-100 lg:scale-100'
+                  }`}
+              >
+                {episodeSelectorContent}
+              </div>
+            )}
           </div>
 
         </div>
@@ -5723,34 +5725,14 @@ function PlayPageClient() {
       {isMobileDevice && (
         <MobileEpisodeDrawer
           isOpen={isMobileDrawerOpen}
+          onOpen={() => setIsMobileDrawerOpen(true)}
           onClose={() => setIsMobileDrawerOpen(false)}
           artPlayerRef={artPlayerRef}
           isFullscreen={isPlayerFullscreen && immersiveSettings.enabled}
+          opacity={immersiveSettings.opacity}
         >
           {episodeSelectorContent}
         </MobileEpisodeDrawer>
-      )}
-
-      {/* 移动端沉浸模式全屏呼出按钮 */}
-      {isMobileDevice && isPlayerFullscreen && immersiveSettings.enabled && artPlayerRef.current?.template?.$player && createPortal(
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-[400]">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsMobileDrawerOpen(true);
-            }}
-            className="bg-black/50 text-white p-2 rounded-l-lg hover:bg-black/70 backdrop-blur shadow-lg border border-white/10 border-r-0 transition-all pointer-events-auto"
-            style={{ opacity: immersiveSettings.opacity }}
-          >
-            <div className="flex flex-col items-center justify-center gap-1">
-              <span className="w-1 h-1 rounded-full bg-white/70"></span>
-              <span className="w-1 h-1 rounded-full bg-white/70"></span>
-              <span className="w-1 h-1 rounded-full bg-white/70"></span>
-              <span className="text-[10px] mt-1 text-white/90" style={{ writingMode: 'vertical-rl' }}>选集</span>
-            </div>
-          </button>
-        </div>,
-        artPlayerRef.current.template.$player
       )}
     </>
   );

@@ -21,6 +21,7 @@ interface DraggableWidgetProps {
 
 const DraggableWidget: React.FC<DraggableWidgetProps> = ({ id, defaultPosition = { x: 20, y: 20 }, opacity, children, containerRef }) => {
   const [position, setPosition] = useState(defaultPosition);
+  const nodeRef = useRef<HTMLDivElement>(null);
 
   // Load saved position
   useEffect(() => {
@@ -46,12 +47,14 @@ const DraggableWidget: React.FC<DraggableWidgetProps> = ({ id, defaultPosition =
 
   return (
     <Draggable
+      nodeRef={nodeRef}
       bounds="parent"
       handle=".drag-handle"
       position={position}
       onStop={handleStop}
     >
       <div 
+        ref={nodeRef}
         className="absolute z-[999] shadow-2xl rounded-2xl overflow-hidden transition-opacity duration-300 pointer-events-auto"
         style={{ 
           backgroundColor: `rgba(20, 20, 25, ${opacity})`,
