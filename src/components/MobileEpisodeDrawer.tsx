@@ -6,6 +6,8 @@ interface MobileEpisodeDrawerProps {
   onClose: () => void;
   artPlayerRef: React.MutableRefObject<any>;
   isFullscreen: boolean;
+  opacity?: number;
+  onOpen?: () => void;
   children: React.ReactNode;
 }
 
@@ -14,6 +16,8 @@ export const MobileEpisodeDrawer: React.FC<MobileEpisodeDrawerProps> = ({
   onClose,
   artPlayerRef,
   isFullscreen,
+  opacity = 0.85,
+  onOpen,
   children
 }) => {
   const [targetNode, setTargetNode] = useState<HTMLElement | null>(null);
@@ -58,12 +62,35 @@ export const MobileEpisodeDrawer: React.FC<MobileEpisodeDrawerProps> = ({
   }
 
   return createPortal(
-    <div className={`absolute inset-0 z-[1000] pointer-events-none transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-      {/* 遮罩层 */}
-      <div 
-        className={`absolute inset-0 bg-black/50 pointer-events-auto transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
-        onClick={onClose}
-      />
+    <>
+      {/* 呼出按钮 - 总是可见，只要 targetNode 存在 */}
+      {!isOpen && onOpen && (
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-[400]">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+            className="bg-black/50 text-white p-2 rounded-l-lg hover:bg-black/70 backdrop-blur shadow-lg border border-white/10 border-r-0 transition-all pointer-events-auto"
+            style={{ opacity: opacity }}
+          >
+            <div className="flex flex-col items-center justify-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-white/70"></span>
+              <span className="w-1 h-1 rounded-full bg-white/70"></span>
+              <span className="w-1 h-1 rounded-full bg-white/70"></span>
+              <span className="text-[10px] mt-1 text-white/90" style={{ writingMode: 'vertical-rl' }}>选集</span>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* 抽屉层 */}
+      <div className={`absolute inset-0 z-[1000] pointer-events-none transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
+        {/* 遮罩层 */}
+        <div 
+          className={`absolute inset-0 bg-black/50 pointer-events-auto transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
+          onClick={onClose}
+        />
       
       {/* 右侧抽屉 */}
       <div 
@@ -89,9 +116,10 @@ export const MobileEpisodeDrawer: React.FC<MobileEpisodeDrawerProps> = ({
         </div>
         <div className="p-2 pb-8">
           {children}
+          </div>
         </div>
       </div>
-    </div>,
+    </>,
     targetNode
   );
 };
