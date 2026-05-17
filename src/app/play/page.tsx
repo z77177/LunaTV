@@ -4487,7 +4487,7 @@ function PlayPageClient() {
                 
               if (active && isCurrentlyShown) return;
 
-              hoverTimer = setTimeout(() => {
+              if (enterDelay === 0) {
                 active = true;
                 if (showClass) {
                   panel.classList.add(showClass);
@@ -4495,7 +4495,17 @@ function PlayPageClient() {
                 if (customShow) {
                   customShow();
                 }
-              }, enterDelay);
+              } else {
+                hoverTimer = setTimeout(() => {
+                  active = true;
+                  if (showClass) {
+                    panel.classList.add(showClass);
+                  }
+                  if (customShow) {
+                    customShow();
+                  }
+                }, enterDelay);
+              }
             };
 
             const triggerHide = () => {
@@ -4584,8 +4594,8 @@ function PlayPageClient() {
               art.setting.show = false;
             }
           },
-          enterDelay: 500,
-          leaveDelay: 1000
+          enterDelay: 0,
+          leaveDelay: 500
         });
 
         // 🔊 2. 注册音量面板悬停延迟控制
@@ -4593,8 +4603,8 @@ function PlayPageClient() {
           buttonSelector: '.art-control-volume',
           panelSelector: '.art-volume-panel',
           showClass: 'art-volume-show',
-          enterDelay: 500,
-          leaveDelay: 1000
+          enterDelay: 0,
+          leaveDelay: 500
         });
 
         // 💬 3. 注册弹幕设置面板悬停延迟控制
@@ -4602,8 +4612,8 @@ function PlayPageClient() {
           buttonSelector: '.artplayer-plugin-danmuku .apd-config',
           panelSelector: '.artplayer-plugin-danmuku .apd-config-panel',
           showClass: 'apd-panel-show',
-          enterDelay: 500,
-          leaveDelay: 1000
+          enterDelay: 0,
+          leaveDelay: 500
         });
 
         // 🎨 4. 注册弹幕类型面板悬停延迟控制
@@ -4611,8 +4621,8 @@ function PlayPageClient() {
           buttonSelector: '.artplayer-plugin-danmuku .apd-style',
           panelSelector: '.artplayer-plugin-danmuku .apd-style-panel',
           showClass: 'apd-panel-show',
-          enterDelay: 500,
-          leaveDelay: 1000
+          enterDelay: 0,
+          leaveDelay: 500
         });
 
         // 使用ArtPlayer layers API添加分辨率徽章（带渐变和发光效果）
