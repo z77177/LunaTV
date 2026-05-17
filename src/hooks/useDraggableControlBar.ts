@@ -13,10 +13,6 @@ export function useDraggableControlBar(
     startY: 0,
     currentX: 0,
     currentY: 0,
-    minX: -Infinity,
-    maxX: Infinity,
-    minY: -Infinity,
-    maxY: Infinity,
   });
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -91,54 +87,52 @@ export function useDraggableControlBar(
       bottomNode.addEventListener('mouseleave', handleBottomMouseLeave);
       showBar(); // 初始化时显示
 
-      // 2. 注入拖拽手柄，确保每次重新执行 effect 时都创建一个全新且带有正确闭包事件监听器的手柄，彻底防止旧闭包残留和重复累积监听器！
-      if (dragHandle) {
-        dragHandle.remove();
-      }
+      // 2. 注入拖拽手柄
+      if (!dragHandle) {
+        dragHandle = document.createElement('div');
+        dragHandle.className = 'art-custom-drag-handle';
+        dragHandle.innerHTML = '<span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);"></span>';
+        dragHandle.style.position = 'absolute';
+        dragHandle.style.left = '10px';
+        dragHandle.style.top = '10px';
+        dragHandle.style.bottom = '10px';
+        dragHandle.style.width = '24px';
+        dragHandle.style.display = 'flex';
+        dragHandle.style.flexDirection = 'column';
+        dragHandle.style.alignItems = 'center';
+        dragHandle.style.justifyContent = 'center';
+        dragHandle.style.cursor = 'move';
+        dragHandle.style.borderRight = '1px solid rgba(255, 255, 255, 0.05)';
+        dragHandle.style.zIndex = '999';
+        dragHandle.style.pointerEvents = 'auto';
+        dragHandle.style.touchAction = 'none'; // 防止移动端拖拽时滚动屏幕
+        dragHandle.style.borderRadius = '4px';
+        
+        // 鼠标悬停抓手时的特效
+        dragHandle.addEventListener('mouseenter', () => {
+          dragHandle.style.backgroundColor = 'rgba(255,255,255,0.1)';
+        });
+        dragHandle.addEventListener('mouseleave', () => {
+          dragHandle.style.backgroundColor = 'transparent';
+        });
 
-      dragHandle = document.createElement('div');
-      dragHandle.className = 'art-custom-drag-handle';
-      dragHandle.innerHTML = '<span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);"></span>';
-      dragHandle.style.position = 'absolute';
-      dragHandle.style.left = '10px';
-      dragHandle.style.top = '10px';
-      dragHandle.style.bottom = '10px';
-      dragHandle.style.width = '24px';
-      dragHandle.style.display = 'flex';
-      dragHandle.style.flexDirection = 'column';
-      dragHandle.style.alignItems = 'center';
-      dragHandle.style.justifyContent = 'center';
-      dragHandle.style.cursor = 'move';
-      dragHandle.style.borderRight = '1px solid rgba(255, 255, 255, 0.05)';
-      dragHandle.style.zIndex = '999';
-      dragHandle.style.pointerEvents = 'auto';
-      dragHandle.style.touchAction = 'none'; // 防止移动端拖拽时滚动屏幕
-      dragHandle.style.borderRadius = '4px';
-      
-      // 鼠标悬停抓手时的特效
-      dragHandle.addEventListener('mouseenter', () => {
-        dragHandle.style.backgroundColor = 'rgba(255,255,255,0.1)';
-      });
-      dragHandle.addEventListener('mouseleave', () => {
-        dragHandle.style.backgroundColor = 'transparent';
-      });
-
-      if (liquidGlass) {
-        liquidGlass.appendChild(dragHandle);
-      } else {
-        bottomNode.appendChild(dragHandle);
-      }
-
-      // 恢复位置
-      try {
-        const saved = localStorage.getItem('art_bottom_pos');
-        if (saved) {
-          const pos = JSON.parse(saved);
-          dragState.current.currentX = pos.x;
-          dragState.current.currentY = pos.y;
-          syncTransforms(pos.x, pos.y);
+        if (liquidGlass) {
+          liquidGlass.appendChild(dragHandle);
+        } else {
+          bottomNode.appendChild(dragHandle);
         }
-      } catch(e) {}
+
+        // 恢复位置
+        try {
+          const saved = localStorage.getItem('art_bottom_pos');
+          if (saved) {
+            const pos = JSON.parse(saved);
+            dragState.current.currentX = pos.x;
+            dragState.current.currentY = pos.y;
+            syncTransforms(pos.x, pos.y);
+          }
+        } catch(e) {}
+      }
 
       // 3. 拖拽核心逻辑
       const onMouseMove = (e: MouseEvent | TouchEvent) => {
@@ -150,14 +144,10 @@ export function useDraggableControlBar(
         const dx = clientX - dragState.current.startX;
         const dy = clientY - dragState.current.startY;
 
-        const rawX = dragState.current.currentX + dx;
-        const rawY = dragState.current.currentY + dy;
+        const newX = dragState.current.currentX + dx;
+        const newY = dragState.current.currentY + dy;
 
-        // 🚀 对 X 和 Y 平移坐标进行高精度夹逼边界限制，限制不能移出播放器屏幕之外
-        const constrainedX = Math.max(dragState.current.minX, Math.min(dragState.current.maxX, rawX));
-        const constrainedY = Math.max(dragState.current.minY, Math.min(dragState.current.maxY, rawY));
-
-        syncTransforms(constrainedX, constrainedY);
+        syncTransforms(newX, newY);
       };
 
       const onMouseUp = (e: MouseEvent | TouchEvent) => {
@@ -168,20 +158,14 @@ export function useDraggableControlBar(
         const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
         const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
 
-        const rawX = dragState.current.currentX + (clientX - dragState.current.startX);
-        const rawY = dragState.current.currentY + (clientY - dragState.current.startY);
-
-        const constrainedX = Math.max(dragState.current.minX, Math.min(dragState.current.maxX, rawX));
-        const constrainedY = Math.max(dragState.current.minY, Math.min(dragState.current.maxY, rawY));
-
-        dragState.current.currentX = constrainedX;
-        dragState.current.currentY = constrainedY;
+        dragState.current.currentX += clientX - dragState.current.startX;
+        dragState.current.currentY += clientY - dragState.current.startY;
 
         // 保存位置
         try {
           localStorage.setItem('art_bottom_pos', JSON.stringify({
-            x: constrainedX,
-            y: constrainedY
+            x: dragState.current.currentX,
+            y: dragState.current.currentY
           }));
         } catch(err) {}
 
@@ -191,66 +175,8 @@ export function useDraggableControlBar(
         document.removeEventListener('touchend', onMouseUp);
       };
 
-      // 🚀 超强兼容性的 CSS 变换矩阵正则解析器，100% 避免 DOMMatrix 的 API 缺失或解析报错！
-      const parseTransform = (el: HTMLElement) => {
-        const style = window.getComputedStyle(el);
-        const transform = style.transform;
-        if (!transform || transform === 'none') {
-          return { x: 0, y: 0 };
-        }
-        
-        const matrixMatch = transform.match(/^matrix\((.+)\)$/);
-        if (matrixMatch) {
-          const values = matrixMatch[1].split(',').map(parseFloat);
-          if (values.length >= 6) {
-            return { x: values[4], y: values[5] };
-          }
-        }
-        
-        const matrix3dMatch = transform.match(/^matrix3d\((.+)\)$/);
-        if (matrix3dMatch) {
-          const values = matrix3dMatch[1].split(',').map(parseFloat);
-          if (values.length >= 16) {
-            return { x: values[12], y: values[13] };
-          }
-        }
-        
-        return { x: 0, y: 0 };
-      };
-
       const onMouseDown = (e: MouseEvent | TouchEvent) => {
         e.preventDefault(); // 阻止选中文本
-        
-        // 🚀 使用百分之百安全、兼容全系浏览器的正则解析器读取变换坐标，避免 DOMMatrix 的异常崩溃
-        const { x: currentX, y: currentY } = parseTransform(bottomNode);
-
-        // 同步 React ref 内部的值，确保后续 move / up 阶段的所有求和与本地缓存完全精准同步
-        dragState.current.currentX = currentX;
-        dragState.current.currentY = currentY;
-
-        const playerRect = playerNode.getBoundingClientRect();
-        const currentRect = bottomNode.getBoundingClientRect();
-
-        let minX = playerRect.left - currentRect.left + currentX;
-        let maxX = playerRect.right - currentRect.right + currentX;
-        let minY = playerRect.top - currentRect.top + currentY;
-        let maxY = playerRect.bottom - currentRect.bottom + currentY;
-
-        // 🚀 终极数学漏洞堵漏：如果控制栏宽度与播放器等宽（或由于 safetyMargin 导致 minX >= maxX），则在 X 轴上锁定其绝对不可横向拖动，防止 Math.max(minX, Math.min(maxX, ...)) 数学模型折叠锁死！
-        if (minX >= maxX) {
-          minX = currentX;
-          maxX = currentX;
-        }
-
-        // 🚀 加上 5 像素的底部安全内缩边距，确保控制栏底端永远不贴死屏幕边缘，保留抓取区域。并使用 Math.max 确保绝对不会小于 minY
-        const safetyMargin = 5;
-        maxY = Math.max(minY, maxY - safetyMargin);
-
-        dragState.current.minX = minX;
-        dragState.current.maxX = maxX;
-        dragState.current.minY = minY;
-        dragState.current.maxY = maxY;
-
         dragState.current.isDragging = true;
         dragState.current.startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         dragState.current.startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -275,16 +201,6 @@ export function useDraggableControlBar(
         playerNode.removeEventListener('touchstart', handlePlayerMouseMove);
         bottomNode.removeEventListener('mouseleave', handleBottomMouseLeave);
         if (timerRef.current) clearTimeout(timerRef.current);
-        
-        // 🚀 终极清理：不仅注销主监听器，还必须将拖拽手柄彻底移除，并注销 document 全局拖拽事件以绝对防止内存泄漏与闭包污染！
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('touchmove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        document.removeEventListener('touchend', onMouseUp);
-
-        if (dragHandle) {
-          dragHandle.remove();
-        }
       };
     } else {
       // 还原 ArtPlayer 原生样式
