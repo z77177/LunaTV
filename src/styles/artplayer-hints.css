@@ -53,12 +53,7 @@
   backdrop-filter: blur(8px);
 }
 
-/* Dark mode support */
-.dark .art-video-player [class*='hint--']:after {
-  background: rgba(255, 255, 255, 0.9);
-  color: rgba(0, 0, 0, 0.87);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
+
 
 /* Content from attributes */
 .art-video-player [class*='hint--'][aria-label]:after {
@@ -83,9 +78,6 @@
   margin-bottom: -11px;
 }
 
-.dark .art-video-player .hint--top:before {
-  border-top-color: rgba(255, 255, 255, 0.9);
-}
 
 .art-video-player .hint--top:before,
 .art-video-player .hint--top:after {
@@ -115,9 +107,6 @@
   margin-top: -11px;
 }
 
-.dark .art-video-player .hint--bottom:before {
-  border-bottom-color: rgba(255, 255, 255, 0.9);
-}
 
 .art-video-player .hint--bottom:before,
 .art-video-player .hint--bottom:after {
@@ -148,9 +137,6 @@
   margin-bottom: -6px;
 }
 
-.dark .art-video-player .hint--left:before {
-  border-left-color: rgba(255, 255, 255, 0.9);
-}
 
 .art-video-player .hint--left:after {
   margin-bottom: -14px;
@@ -177,9 +163,6 @@
   margin-bottom: -6px;
 }
 
-.dark .art-video-player .hint--right:before {
-  border-right-color: rgba(255, 255, 255, 0.9);
-}
 
 .art-video-player .hint--right:after {
   margin-bottom: -14px;
@@ -280,4 +263,10 @@
   .art-video-player [class*='hint--']:after {
     transition: none;
   }
+}
+
+/* 🚫 彻底禁用齿轮设置按钮的文字提示气泡 */
+.art-video-player .art-control-setting:before,
+.art-video-player .art-control-setting:after {
+  display: none !important;
 }
