@@ -4668,23 +4668,7 @@ function PlayPageClient() {
               transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
             }
 
-            /* 隐藏自带的输入发射器以及其对应的 .art-control 容器占位 */
-            .art-control.apd-emitter,
-            .art-control:has(.apd-emitter),
-            .artplayer-plugin-danmuku .apd-emitter {
-              display: none !important;
-            }
-
-            /* 🎯 收紧弹幕独立控制群组按钮之间的间距，使其紧凑美观 */
-            .art-control.apd-toggle,
-            .art-control:has(.apd-toggle),
-            .art-control.apd-config,
-            .art-control:has(.apd-config),
-            .art-control:has(.art-control-danmaku-btn) {
-              min-width: auto !important;
-              padding: 0 2px !important;
-              margin: 0 !important;
-            }
+            /* 弹幕独立控制群组按钮的超紧凑间距与隐藏发射器占位由 src/styles/artplayer-liquid-glass.css 静态加载处理，保证极高的 Specificity 与渲染优先级 */
 
             /* ⚙️ 弹幕配置按钮呼吸动画与微动 */
             .artplayer-plugin-danmuku .apd-config {
