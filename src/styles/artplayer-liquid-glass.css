@@ -128,6 +128,18 @@
   transform: translateX(-50%) translateY(0) !important;
 }
 
+/* 🚫 取消点击齿轮按钮时，齿轮图标本身的任何旋转、缩放、跳动等动态反馈特效，同时保留设置面板自身的渐变出场动画 */
+.artplayer-plugin-liquid-glass .art-control-setting .art-icon,
+.artplayer-plugin-liquid-glass .art-control-setting svg,
+.artplayer-plugin-liquid-glass .art-control-setting:active .art-icon,
+.artplayer-plugin-liquid-glass .art-control-setting:active svg,
+.artplayer-plugin-liquid-glass .art-control-setting:hover .art-icon,
+.artplayer-plugin-liquid-glass .art-control-setting:hover svg {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
 /* 💬 弹幕发送面板全新 DOM 内置静态定位与过渡 */
 .artplayer-plugin-liquid-glass .art-control .apd-danmaku-emitter {
   position: absolute !important;

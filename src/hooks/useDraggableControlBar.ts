@@ -192,20 +192,18 @@ export function useDraggableControlBar(
       const onMouseDown = (e: MouseEvent | TouchEvent) => {
         e.preventDefault(); // 阻止选中文本
         
-        // 🚀 每次开始拖拽前，动态且高精度地计算当前播放器容器(playerNode)和控制栏(bottomNode)在视口内的实际尺寸与边界
+        // 🚀 极致稳定性与代数级精准优化：直接用代数逆向关系计算出无 transform 的天然位置，彻底杜绝 transform 临时清除导致 DOM 重排、浏览器无法同步渲染及在边缘拖拽锁死卡住的问题！
         const playerRect = playerNode.getBoundingClientRect();
-        
-        // 临时取下当前的 transform，以便精准地读取 bottomNode 本身在 DOM 树中的无位移“天然”渲染区域
-        const originalTransform = bottomNode.style.transform;
-        bottomNode.style.transform = 'none';
-        const naturalRect = bottomNode.getBoundingClientRect();
-        bottomNode.style.transform = originalTransform;
+        const currentRect = bottomNode.getBoundingClientRect();
 
-        // X/Y 轴分别计算能向上/下/左/右平移的最大极限偏移量
-        dragState.current.minX = playerRect.left - naturalRect.left;
-        dragState.current.maxX = playerRect.right - naturalRect.right;
-        dragState.current.minY = playerRect.top - naturalRect.top;
-        dragState.current.maxY = playerRect.bottom - naturalRect.bottom;
+        const currentX = dragState.current.currentX;
+        const currentY = dragState.current.currentY;
+
+        // X/Y 轴分别计算能向上/下/左/右平移的最大极限偏移量（代数逆向计算法）
+        dragState.current.minX = playerRect.left - currentRect.left + currentX;
+        dragState.current.maxX = playerRect.right - currentRect.right + currentX;
+        dragState.current.minY = playerRect.top - currentRect.top + currentY;
+        dragState.current.maxY = playerRect.bottom - currentRect.bottom + currentY;
 
         dragState.current.isDragging = true;
         dragState.current.startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
