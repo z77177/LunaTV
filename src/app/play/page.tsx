@@ -4210,19 +4210,22 @@ function PlayPageClient() {
           // 🚀 简单弹幕发送按钮（仅Web端显示）
           ...(isMobile ? [] : [{
             position: 'right',
-            html: '<span>弹</span>',
+            html: '<span class="art-control-danmaku-btn">弹</span>',
             tooltip: '发送弹幕',
             click: function () {
-              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                // 手动弹出输入框发送弹幕
-                const text = prompt('请输入弹幕内容', '');
-                if (text && text.trim()) {
-                  artPlayerRef.current.plugins.artplayerPluginDanmuku.emit({
-                    text: text.trim(),
-                    time: artPlayerRef.current.currentTime,
-                    color: '#FFFFFF',
-                    mode: 0,
-                  });
+              // 🚀 切换自定义弹幕面板的显示隐藏状态，并自动聚焦输入框！
+              const art = artPlayerRef.current;
+              if (!art || !art.template) return;
+              
+              const danmakuPanel = art.template.$bottom?.querySelector('.apd-danmaku-emitter') as HTMLElement;
+              const input = danmakuPanel?.querySelector('.apd-danmaku-input') as HTMLInputElement;
+              
+              if (danmakuPanel && input) {
+                const isVisible = danmakuPanel.classList.toggle('apd-emitter-visible');
+                if (isVisible) {
+                  // 自动聚焦并选中，提升打字体验
+                  input.focus();
+                  input.select();
                 }
               }
             },
@@ -4514,6 +4517,112 @@ function PlayPageClient() {
             settingPanel.addEventListener('mouseenter', showSettings);
             settingPanel.addEventListener('mouseleave', hideSettings);
           }
+        })();
+
+        // 💬 自定义毛玻璃弹幕发送悬浮面板初始化与交互绑定
+        (() => {
+          const art = artPlayerRef.current;
+          if (!art || !art.template) return;
+
+          const danmakuBtnSpan = art.template.$bottom?.querySelector('.art-control-danmaku-btn');
+          const danmakuBtn = danmakuBtnSpan?.closest('.art-control') as HTMLElement;
+          if (!danmakuBtn) return;
+
+          // 1. 创建并构建自定义弹幕面板的 DOM 结构
+          const danmakuPanel = document.createElement('div');
+          danmakuPanel.className = 'apd-danmaku-emitter';
+          danmakuPanel.innerHTML = `
+            <div class="apd-danmaku-colors">
+              <span class="apd-color-dot active" data-color="#FFFFFF" style="background: #FFFFFF;"></span>
+              <span class="apd-color-dot" data-color="#FF4081" style="background: #FF4081;"></span>
+              <span class="apd-color-dot" data-color="#FFEB3B" style="background: #FFEB3B;"></span>
+              <span class="apd-color-dot" data-color="#00E5FF" style="background: #00E5FF;"></span>
+              <span class="apd-color-dot" data-color="#00FF66" style="background: #00FF66;"></span>
+              <span class="apd-color-dot" data-color="#E040FB" style="background: #E040FB;"></span>
+            </div>
+            <div class="apd-danmaku-input-wrap">
+              <input type="text" class="apd-danmaku-input" placeholder="发个弹幕呗..." maxLength="50" />
+              <button class="apd-danmaku-send-btn">发送</button>
+            </div>
+          `;
+
+          // 2. 将弹幕面板添加到弹幕控制按钮内部，实现一致的物理定位！
+          danmakuBtn.style.position = 'relative';
+          danmakuBtn.appendChild(danmakuPanel);
+
+          const input = danmakuPanel.querySelector('.apd-danmaku-input') as HTMLInputElement;
+          const sendBtn = danmakuPanel.querySelector('.apd-danmaku-send-btn') as HTMLButtonElement;
+          const colorDots = danmakuPanel.querySelectorAll('.apd-color-dot');
+          
+          let selectedColor = '#FFFFFF';
+
+          // 3. 选色器事件绑定
+          colorDots.forEach((dot) => {
+            dot.addEventListener('click', (e) => {
+              e.stopPropagation();
+              colorDots.forEach((d) => d.classList.remove('active'));
+              dot.classList.add('active');
+              
+              const color = dot.getAttribute('data-color') || '#FFFFFF';
+              selectedColor = color;
+              
+              // 🎨 同步修改输入框文字颜色，给用户极致变色视觉反馈！
+              if (input) {
+                input.style.color = color;
+                input.style.borderColor = color === '#FFFFFF' ? 'rgba(255, 255, 255, 0.2)' : color;
+              }
+            });
+          });
+
+          // 4. 发送弹幕逻辑
+          const sendDanmaku = () => {
+            const text = input.value.trim();
+            if (!text) return;
+
+            if (art.plugins?.artplayerPluginDanmuku) {
+              art.plugins.artplayerPluginDanmuku.emit({
+                text: text,
+                time: art.currentTime,
+                color: selectedColor,
+                mode: 0,
+              });
+            }
+
+            input.value = '';
+            danmakuPanel.classList.remove('apd-emitter-visible');
+          };
+
+          // 点击发送按钮
+          sendBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sendDanmaku();
+          });
+
+          // 回车键发送
+          input.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') {
+              sendDanmaku();
+            }
+          });
+
+          // 阻止面板内部一切点击事件向上传播
+          danmakuPanel.addEventListener('click', (e) => {
+            e.stopPropagation();
+          });
+
+          // 5. 点击外部任何地方自动隐藏面板 (Click-away close)
+          const handleGlobalClick = (e: MouseEvent) => {
+            if (!danmakuBtn.contains(e.target as Node)) {
+              danmakuPanel.classList.remove('apd-emitter-visible');
+            }
+          };
+          document.addEventListener('click', handleGlobalClick);
+
+          // 页面销毁时移除全局点击事件
+          art.on('destroy', () => {
+            document.removeEventListener('click', handleGlobalClick);
+          });
         })();
 
         // 使用ArtPlayer layers API添加分辨率徽章（带渐变和发光效果）
