@@ -4812,8 +4812,8 @@ function PlayPageClient() {
             }
 
             /* 🚫 彻底禁用弹幕设置面板的默认瞬时 hover 弹出 */
-            .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-            .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
+            .artplayer-plugin-danmuku .apd-config-panel,
+            .artplayer-plugin-danmuku .apd-style-panel {
               display: none !important;
             }
 
