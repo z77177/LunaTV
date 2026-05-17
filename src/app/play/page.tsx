@@ -4534,6 +4534,7 @@ function PlayPageClient() {
           if (!danmakuBtn) return;
 
           const playerContainer = art.template.$container;
+          const playerEl = art.template.$player;
 
           // 1. 创建并构建自定义弹幕面板 of DOM 结构
           const danmakuPanel = document.createElement('div');
@@ -4600,9 +4601,8 @@ function PlayPageClient() {
 
             input.value = '';
             inputHasFocus = false; // 🚀 重置输入框焦点状态
-            if (playerContainer) {
-              playerContainer.classList.remove('apd-lock-controls');
-            }
+            if (playerContainer) playerContainer.classList.remove('apd-lock-controls');
+            if (playerEl) playerEl.classList.remove('apd-lock-controls');
             danmakuPanel.classList.remove('apd-emitter-visible');
             
             // 🚀 发送成功关闭后，恢复提示气泡
@@ -4672,9 +4672,8 @@ function PlayPageClient() {
           // ⌨️ 输入框焦点状态监测，确保光标聚焦时面板维持显示，且锁定控制栏不隐藏！
           input.addEventListener('focus', () => {
             inputHasFocus = true;
-            if (playerContainer) {
-              playerContainer.classList.add('apd-lock-controls');
-            }
+            if (playerContainer) playerContainer.classList.add('apd-lock-controls');
+            if (playerEl) playerEl.classList.add('apd-lock-controls');
             art.controls.show = true;
             if (danmakuHoverTimer) {
               clearTimeout(danmakuHoverTimer);
@@ -4684,14 +4683,21 @@ function PlayPageClient() {
 
           input.addEventListener('blur', () => {
             inputHasFocus = false;
-            if (playerContainer) {
-              playerContainer.classList.remove('apd-lock-controls');
-            }
+            if (playerContainer) playerContainer.classList.remove('apd-lock-controls');
+            if (playerEl) playerEl.classList.remove('apd-lock-controls');
             // 🚀 当失去焦点时，如果鼠标已经在面板和按钮外部，立即触发 500ms 退出延迟收起！
             if (!mouseInside) {
               hideDanmaku();
             }
           });
+
+          // 🔄 监听控制栏的隐显状态，如果弹幕框有光标聚焦，强行锁定控制栏处于展示状态，不予自动隐藏！
+          const handleControlChange = (show: boolean) => {
+            if (!show && inputHasFocus) {
+              art.controls.show = true;
+            }
+          };
+          art.on('control', handleControlChange);
 
           // 点击发送按钮
           sendBtn.addEventListener('click', (e) => {
@@ -4717,9 +4723,8 @@ function PlayPageClient() {
             if (!danmakuBtn.contains(e.target as Node)) {
               if (danmakuPanel.classList.contains('apd-emitter-visible')) {
                 inputHasFocus = false; // 🚀 重置输入框焦点状态
-                if (playerContainer) {
-                  playerContainer.classList.remove('apd-lock-controls');
-                }
+                if (playerContainer) playerContainer.classList.remove('apd-lock-controls');
+                if (playerEl) playerEl.classList.remove('apd-lock-controls');
                 danmakuPanel.classList.remove('apd-emitter-visible');
                 
                 // 🚀 恢复提示气泡
@@ -4733,6 +4738,7 @@ function PlayPageClient() {
           // 页面销毁时移除全局点击事件
           art.on('destroy', () => {
             document.removeEventListener('click', handleGlobalClick);
+            art.off('control', handleControlChange);
           });
         })();
 

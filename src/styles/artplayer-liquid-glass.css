@@ -171,8 +171,15 @@
   visibility: hidden !important;
 }
 
-/* 🔒 当用户聚焦输入框时，强行锁定控制栏为 100% 不透明、完全可见状态，拒绝任何超时自动隐藏！ */
-.artplayer-plugin-liquid-glass.apd-lock-controls .art-bottom {
+/* 🔒 当用户聚焦输入框时，强行锁定控制底栏、子容器及进度条为 100% 不透明、完全可见状态，并保持光标可见，拒绝任何隐藏！ */
+.apd-lock-controls,
+.artplayer-plugin-liquid-glass.apd-lock-controls {
+  cursor: auto !important;
+}
+
+.apd-lock-controls .art-controls,
+.apd-lock-controls .art-bottom,
+.apd-lock-controls .art-progress {
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
