@@ -192,18 +192,26 @@ export function useDraggableControlBar(
       const onMouseDown = (e: MouseEvent | TouchEvent) => {
         e.preventDefault(); // 阻止选中文本
         
-        // 🚀 极致稳定性与代数级精准优化：直接用代数逆向关系计算出无 transform 的天然位置，彻底杜绝 transform 临时清除导致 DOM 重排、浏览器无法同步渲染及在边缘拖拽锁死卡住的问题！
+        // 🚀 终极可靠方案：直接解析底层的 DOMMatrix 二维/三维变换矩阵，获取 DOM 元素当前真实、实时的平移值。这百分之百解决了 React state、localStorage 或播放器第三方框架在重置控制栏样式时所产生的状态失步问题！
+        const style = window.getComputedStyle(bottomNode);
+        const matrix = style.transform && style.transform !== 'none' ? new DOMMatrix(style.transform) : new DOMMatrix();
+        const currentX = matrix.m41;
+        const currentY = matrix.m42;
+
+        // 同步 React ref 内部的值，确保后续 move / up 阶段的所有求和与本地缓存完全精准同步
+        dragState.current.currentX = currentX;
+        dragState.current.currentY = currentY;
+
         const playerRect = playerNode.getBoundingClientRect();
         const currentRect = bottomNode.getBoundingClientRect();
 
-        const currentX = dragState.current.currentX;
-        const currentY = dragState.current.currentY;
+        // 🚀 加上 5 像素的安全内缩边距，确保控制栏永远保留尊贵悬浮感，并且拖拽手柄绝对不会贴死边缘导致鼠标失焦无法重新抓取！
+        const safetyMargin = 5;
 
-        // X/Y 轴分别计算能向上/下/左/右平移的最大极限偏移量（代数逆向计算法）
-        dragState.current.minX = playerRect.left - currentRect.left + currentX;
-        dragState.current.maxX = playerRect.right - currentRect.right + currentX;
-        dragState.current.minY = playerRect.top - currentRect.top + currentY;
-        dragState.current.maxY = playerRect.bottom - currentRect.bottom + currentY;
+        dragState.current.minX = playerRect.left - currentRect.left + currentX + safetyMargin;
+        dragState.current.maxX = playerRect.right - currentRect.right + currentX - safetyMargin;
+        dragState.current.minY = playerRect.top - currentRect.top + currentY + safetyMargin;
+        dragState.current.maxY = playerRect.bottom - currentRect.bottom + currentY - safetyMargin;
 
         dragState.current.isDragging = true;
         dragState.current.startX = 'touches' in e ? e.touches[0].clientX : e.clientX;

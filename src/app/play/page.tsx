@@ -4470,6 +4470,11 @@ function PlayPageClient() {
 
             // 🚀 核心拦截：当齿轮按钮被点击时，阻止原生开关关闭的行为（用户由于面板已通过悬停展示，点击不应使其关闭）
             settingBtn.addEventListener('click', (e) => {
+              // 🚨 如果点击事件发生在地下的设置面板(settingPanel)内部，绝对不能进行抢先拦截，确保面板内选项能够正常被点击和滑动修改！
+              if (settingPanel.contains(e.target as Node)) {
+                return;
+              }
+
               e.preventDefault();
               e.stopPropagation();
               e.stopImmediatePropagation(); // 抢先阻断，防止执行 ArtPlayer 的原生 toggle 逻辑！
