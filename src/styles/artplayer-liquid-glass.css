@@ -128,74 +128,44 @@
   transform: translateX(-50%) translateY(0) !important;
 }
 
-/* 💬 弹幕发送面板独立悬浮定位与过渡（不加 !important，以便 JS 动态拖拽定位生效） */
-.artplayer-plugin-liquid-glass .apd-danmaku-emitter {
-  position: absolute;
-  bottom: 80px;
-  right: 60px;
-  left: auto;
-  width: 280px;
-  padding: 12px;
-  border-radius: 12px;
+/* 💬 弹幕发送面板全新 DOM 内置静态定位与过渡 */
+.artplayer-plugin-liquid-glass .art-control .apd-danmaku-emitter {
+  position: absolute !important;
+  bottom: 45px !important;
+  left: 50% !important;
+  right: auto !important;
+  width: 280px !important;
+  padding: 12px !important;
+  border-radius: 12px !important;
   
   /* 🪄 高端毛玻璃与发光边框 */
-  background-color: rgba(20, 20, 25, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 229, 255, 0.1);
-  z-index: 99999;
+  background-color: rgba(20, 20, 25, 0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 229, 255, 0.1) !important;
+  z-index: 99999 !important;
 
   /* 过渡状态 */
-  display: block;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateY(10px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+  display: block !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(6px) !important;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease !important;
 }
 
 /* 💬 激活时显示 */
-.artplayer-plugin-liquid-glass .apd-danmaku-emitter.apd-emitter-visible {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-/* 💬 弹幕面板头部拖动条、标题和关闭按钮 */
-.apd-danmaku-header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  margin-bottom: 10px !important;
-  padding-bottom: 6px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  cursor: move !important; /* 提示用户可拖拽 */
-  user-select: none !important;
-}
-
-.apd-danmaku-title {
-  font-size: 12px !important;
-  color: rgba(255, 255, 255, 0.6) !important;
-  font-weight: bold !important;
-}
-
-.apd-danmaku-close {
-  font-size: 16px !important;
-  color: rgba(255, 255, 255, 0.4) !important;
-  cursor: pointer !important;
-  line-height: 1 !important;
-  transition: color 0.15s ease !important;
-}
-
-.apd-danmaku-close:hover {
-  color: #FF4081 !important; /* 悬浮桃花粉 */
+.artplayer-plugin-liquid-glass .art-control .apd-danmaku-emitter.apd-emitter-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) !important;
 }
 
 /* 当弹幕发射器面板处于可见状态时，隐藏该按钮上的原生/自定义 tooltip 气泡 */
-.artplayer-plugin-liquid-glass:has(.apd-emitter-visible) .art-control:has(.art-control-danmaku-btn):before,
-.artplayer-plugin-liquid-glass:has(.apd-emitter-visible) .art-control:has(.art-control-danmaku-btn):after {
+.art-control:has(.apd-emitter-visible):before,
+.art-control:has(.apd-emitter-visible):after {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
@@ -276,4 +246,12 @@
 
 .apd-danmaku-send-btn:active {
   transform: translateY(1px) !important;
+}
+
+/* 🚀 极致体验加固：当用户鼠标悬浮于进度条面板/控制栏，或弹幕输入框正在被聚焦使用时，强制控制栏（.art-bottom）保持显示，完全屏蔽自动隐藏！ */
+.artplayer-plugin-liquid-glass:has(.art-bottom:hover) .art-bottom,
+.artplayer-plugin-liquid-glass:has(.apd-danmaku-input:focus) .art-bottom {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }

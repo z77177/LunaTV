@@ -57,7 +57,12 @@ export function useDraggableControlBar(
         bottomNode.style.visibility = 'visible';
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => {
-          if (!dragState.current.isDragging) {
+          // 🚀 额外防护：当弹幕输入框处于聚焦状态，或者鼠标悬停在控制栏/进度条区域上，或者正在拖拽时，绝对不能隐藏控制栏！
+          const danmakuInput = bottomNode.querySelector('.apd-danmaku-input') as HTMLInputElement;
+          const isInputFocused = danmakuInput && document.activeElement === danmakuInput;
+          const isBottomHovered = bottomNode.matches(':hover');
+
+          if (!dragState.current.isDragging && !isBottomHovered && !isInputFocused) {
             bottomNode.style.opacity = '0';
             bottomNode.style.visibility = 'hidden';
             // 同步关闭设置菜单
@@ -72,8 +77,14 @@ export function useDraggableControlBar(
         showBar();
       };
 
+      const handleBottomMouseLeave = () => {
+        // 当鼠标移出控制栏区域时，重新触发 showBar 以再次计时 hideTimeout 并顺利在延时后隐藏控制栏
+        showBar();
+      };
+
       playerNode.addEventListener('mousemove', handlePlayerMouseMove);
       playerNode.addEventListener('touchstart', handlePlayerMouseMove, { passive: true });
+      bottomNode.addEventListener('mouseleave', handleBottomMouseLeave);
       showBar(); // 初始化时显示
 
       // 2. 注入拖拽手柄
@@ -188,6 +199,7 @@ export function useDraggableControlBar(
       return () => {
         playerNode.removeEventListener('mousemove', handlePlayerMouseMove);
         playerNode.removeEventListener('touchstart', handlePlayerMouseMove);
+        bottomNode.removeEventListener('mouseleave', handleBottomMouseLeave);
         if (timerRef.current) clearTimeout(timerRef.current);
       };
     } else {
