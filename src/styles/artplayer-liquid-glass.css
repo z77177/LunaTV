@@ -58,14 +58,14 @@
 
 /* 🎯 弹幕独立控制按钮群组间距深度收紧与隐藏占位优化 */
 .artplayer-plugin-liquid-glass .art-control.apd-emitter,
-.artplayer-plugin-liquid-glass .art-control:has(.apd-emitter),
-.artplayer-plugin-liquid-glass .art-control.apd-style,
-.artplayer-plugin-liquid-glass .art-control:has(.apd-style) {
+.artplayer-plugin-liquid-glass .art-control:has(.apd-emitter) {
   display: none !important;
 }
 
 .artplayer-plugin-liquid-glass .art-control.apd-toggle,
 .artplayer-plugin-liquid-glass .art-control:has(.apd-toggle),
+.artplayer-plugin-liquid-glass .art-control.apd-style,
+.artplayer-plugin-liquid-glass .art-control:has(.apd-style),
 .artplayer-plugin-liquid-glass .art-control.apd-config,
 .artplayer-plugin-liquid-glass .art-control:has(.apd-config),
 .artplayer-plugin-liquid-glass .art-control:has(.art-control-danmaku-btn) {
