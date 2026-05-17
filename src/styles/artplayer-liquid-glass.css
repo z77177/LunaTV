@@ -58,7 +58,9 @@
 
 /* 🎯 弹幕独立控制按钮群组间距深度收紧与隐藏占位优化 */
 .artplayer-plugin-liquid-glass .art-control.apd-emitter,
-.artplayer-plugin-liquid-glass .art-control:has(.apd-emitter) {
+.artplayer-plugin-liquid-glass .art-control:has(.apd-emitter),
+.artplayer-plugin-liquid-glass .art-control.apd-style,
+.artplayer-plugin-liquid-glass .art-control:has(.apd-style) {
   display: none !important;
 }
 
