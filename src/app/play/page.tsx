@@ -4454,6 +4454,11 @@ function PlayPageClient() {
               settingPanel.style.top = '';
               settingPanel.style.bottom = '';
             }
+
+            // 🛑 阻止设置面板内部的一切点击事件向上冒泡到齿轮按钮，防止触发 ArtPlayer 原生的开关关闭逻辑！
+            settingPanel.addEventListener('click', (e) => {
+              e.stopPropagation();
+            });
           }
 
           const showSettings = () => {
