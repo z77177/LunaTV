@@ -31,18 +31,19 @@
     pointer-events: auto;
   }
 
-  /* 按钮或面板hover时显示音量面板 */
-  .art-control-volume:hover .art-volume-panel,
-  .art-volume-panel:hover {
+  /* 按钮或面板hover时显示音量面板 - 改为由JS管理的 art-volume-show 类控制 */
+  .art-volume-panel.art-volume-show {
     opacity: 1 !important;
     transform: translateY(0) !important;
     pointer-events: auto !important;
-    transition: opacity 0.15s ease 0.1s, transform 0.15s ease 0.1s !important;
   }
 
-  /* 音量面板默认隐藏状态 */
+  /* 音量面板默认隐藏状态与过渡动画 */
   .art-volume-panel {
-    transition: opacity 0.15s ease 0.3s, transform 0.15s ease 0.3s !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(10px) !important;
+    transition: opacity 0.2s ease, transform 0.2s ease !important;
   }
 }
 

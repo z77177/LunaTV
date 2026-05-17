@@ -4434,35 +4434,123 @@ function PlayPageClient() {
         setError(null);
         setPlayerReady(true); // 标记播放器已就绪，启用观影室同步
 
-        // ⚙️ 齿轮设置菜单悬停自动弹出与隐藏逻辑
-        (() => {
+        // 🚀 通用延迟悬停显示与隐藏管理器 (支持动态轮询等待 DOM 元素生成，进入延迟 500ms，离开延迟 1000ms)
+        const registerHoverDelayPanel = (options: {
+          buttonSelector: string;
+          panelSelector: string;
+          showClass?: string;
+          customShow?: () => void;
+          customHide?: () => void;
+          enterDelay?: number;
+          leaveDelay?: number;
+        }) => {
+          const {
+            buttonSelector,
+            panelSelector,
+            showClass,
+            customShow,
+            customHide,
+            enterDelay = 500,
+            leaveDelay = 1000,
+          } = options;
+
           const art = artPlayerRef.current;
           if (!art || !art.template) return;
-          
-          const settingBtn = art.template.$bottom?.querySelector('.art-control-setting') as HTMLElement;
-          const settingPanel = art.template.$setting as HTMLElement;
-          let settingHoverTimer: NodeJS.Timeout | null = null;
 
-          const showSettings = () => {
-            if (settingHoverTimer) {
-              clearTimeout(settingHoverTimer);
-              settingHoverTimer = null;
+          let retryCount = 0;
+          const maxRetries = 50; // 50 * 200ms = 10秒
+
+          const tryBind = () => {
+            const button = art.template.$player.querySelector(buttonSelector) as HTMLElement;
+            const panel = art.template.$player.querySelector(panelSelector) as HTMLElement;
+
+            if (!button || !panel) {
+              if (retryCount < maxRetries) {
+                retryCount++;
+                setTimeout(tryBind, 200);
+              }
+              return;
             }
+
+            let hoverTimer: NodeJS.Timeout | null = null;
+            let active = false;
+
+            const triggerShow = () => {
+              if (hoverTimer) {
+                clearTimeout(hoverTimer);
+                hoverTimer = null;
+              }
+              
+              const isCurrentlyShown = customShow 
+                ? art.setting.show 
+                : (showClass ? panel.classList.contains(showClass) : active);
+                
+              if (active && isCurrentlyShown) return;
+
+              hoverTimer = setTimeout(() => {
+                active = true;
+                if (showClass) {
+                  panel.classList.add(showClass);
+                }
+                if (customShow) {
+                  customShow();
+                }
+              }, enterDelay);
+            };
+
+            const triggerHide = () => {
+              if (hoverTimer) {
+                clearTimeout(hoverTimer);
+              }
+
+              hoverTimer = setTimeout(() => {
+                active = false;
+                if (showClass) {
+                  panel.classList.remove(showClass);
+                }
+                if (customHide) {
+                  customHide();
+                }
+              }, leaveDelay);
+            };
+
+            button.addEventListener('mouseenter', triggerShow);
+            button.addEventListener('mouseleave', triggerHide);
+            panel.addEventListener('mouseenter', triggerShow);
+            panel.addEventListener('mouseleave', triggerHide);
+          };
+
+          tryBind();
+        };
+
+        // ⚙️ 1. 注册齿轮设置面板悬停延迟控制
+        registerHoverDelayPanel({
+          buttonSelector: '.art-control-setting',
+          panelSelector: '.art-settings',
+          customShow: () => {
+            const art = artPlayerRef.current;
+            if (!art || !art.template) return;
+
             if (!art.setting.show) {
               art.setting.show = true;
             }
 
-            // 1. 确保名称/提示始终叫“设置”而非“隐藏设置”
+            const settingBtn = art.template.$bottom?.querySelector('.art-control-setting') as HTMLElement;
+            const settingPanel = art.template.$setting as HTMLElement;
+            
+            // 确保名称/提示始终叫“设置”而非“隐藏设置”
             requestAnimationFrame(() => {
               if (settingBtn) {
                 settingBtn.setAttribute('aria-label', '设置');
               }
             });
 
-            // 2. 动态定位，使其精确居中对齐齿轮按钮（排除 transform 干扰）
+            // 动态定位，使其精确居中对齐齿轮按钮（排除 transform 干扰）
             try {
               const bottomNode = art.template.$bottom as HTMLElement;
               const playerNode = art.template.$player as HTMLElement;
+              if (!settingBtn || !settingPanel || !bottomNode || !playerNode) return;
+
               const panelWidth = settingPanel.offsetWidth || 250;
 
               // 计算 settingBtn 相对于 bottomNode 的 untransformed offsetLeft
@@ -4489,27 +4577,43 @@ function PlayPageClient() {
             } catch (e) {
               console.error('Failed to position settings panel:', e);
             }
-          };
-
-          const hideSettings = () => {
-            if (settingHoverTimer) {
-              clearTimeout(settingHoverTimer);
+          },
+          customHide: () => {
+            const art = artPlayerRef.current;
+            if (art && art.setting.show) {
+              art.setting.show = false;
             }
-            settingHoverTimer = setTimeout(() => {
-              if (art.setting.show) {
-                art.setting.show = false;
-              }
-            }, 300); // 300毫秒缓冲时间，确保鼠标移动极其顺滑
-          };
+          },
+          enterDelay: 500,
+          leaveDelay: 1000
+        });
 
-          if (settingBtn && settingPanel) {
-            settingBtn.addEventListener('mouseenter', showSettings);
-            settingBtn.addEventListener('mouseleave', hideSettings);
-            
-            settingPanel.addEventListener('mouseenter', showSettings);
-            settingPanel.addEventListener('mouseleave', hideSettings);
-          }
-        })();
+        // 🔊 2. 注册音量面板悬停延迟控制
+        registerHoverDelayPanel({
+          buttonSelector: '.art-control-volume',
+          panelSelector: '.art-volume-panel',
+          showClass: 'art-volume-show',
+          enterDelay: 500,
+          leaveDelay: 1000
+        });
+
+        // 💬 3. 注册弹幕设置面板悬停延迟控制
+        registerHoverDelayPanel({
+          buttonSelector: '.artplayer-plugin-danmuku .apd-config',
+          panelSelector: '.artplayer-plugin-danmuku .apd-config-panel',
+          showClass: 'apd-panel-show',
+          enterDelay: 500,
+          leaveDelay: 1000
+        });
+
+        // 🎨 4. 注册弹幕类型面板悬停延迟控制
+        registerHoverDelayPanel({
+          buttonSelector: '.artplayer-plugin-danmuku .apd-style',
+          panelSelector: '.artplayer-plugin-danmuku .apd-style-panel',
+          showClass: 'apd-panel-show',
+          enterDelay: 500,
+          leaveDelay: 1000
+        });
 
         // 使用ArtPlayer layers API添加分辨率徽章（带渐变和发光效果）
         const video = artPlayerRef.current.video as HTMLVideoElement;
@@ -4704,6 +4808,20 @@ function PlayPageClient() {
             
             /* 确保全屏模式下弹幕面板内部元素可点击 */
             .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-config-panel * {
+              pointer-events: auto !important;
+            }
+
+            /* 🚫 彻底禁用弹幕设置面板的默认瞬时 hover 弹出 */
+            .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+            .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel {
+              display: none !important;
+            }
+
+            /* ✅ 只有在 JS 添加 apd-panel-show 时才强制显示 */
+            .artplayer-plugin-danmuku .apd-config-panel.apd-panel-show,
+            .artplayer-plugin-danmuku .apd-style-panel.apd-panel-show {
+              display: block !important;
+              opacity: 1 !important;
               pointer-events: auto !important;
             }
           `;
