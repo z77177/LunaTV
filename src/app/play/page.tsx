@@ -4700,7 +4700,18 @@ function PlayPageClient() {
               /* 确保面板可以接收点击事件 */
               pointer-events: auto !important;
               
-              /* 🌟 极致美学：流光毛玻璃质感，与主设置面板完美统一 */
+              /* 🌟 外层作为事件悬浮容器与定位锚点，本身不设任何多余的背景与边框，杜绝双层嵌套边框！ */
+              background: transparent !important;
+              border: none !important;
+              box-shadow: none !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
+              padding: 0 !important;
+              transition: opacity 0.2s ease, transform 0.2s ease !important;
+            }
+
+            .artplayer-plugin-danmuku .apd-config-panel-inner {
+              /* 🌟 将流光毛玻璃质感与布局内边距精确应用在真正容纳内容的内层卡片上 */
               background: rgba(20, 20, 25, 0.82) !important;
               border: 1px solid rgba(255, 255, 255, 0.12) !important;
               backdrop-filter: blur(25px) !important;
@@ -4708,7 +4719,8 @@ function PlayPageClient() {
               border-radius: 12px !important;
               box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55) !important;
               padding: 16px !important;
-              transition: opacity 0.2s ease, transform 0.2s ease !important;
+              width: 100% !important;
+              box-sizing: border-box !important;
             }
             
             /* 全屏模式下的特殊优化 */
@@ -4758,6 +4770,18 @@ function PlayPageClient() {
               position: absolute !important;
               z-index: 2147483647 !important;
               pointer-events: auto !important;
+              /* 🌟 外层作为事件悬浮容器与定位锚点，本身不设任何多余的背景与边框，杜绝双层嵌套边框！ */
+              background: transparent !important;
+              border: none !important;
+              box-shadow: none !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
+              padding: 0 !important;
+              transition: opacity 0.2s ease, transform 0.2s ease !important;
+            }
+
+            .artplayer-plugin-danmuku .apd-style-panel-inner {
+              /* 🌟 将流光毛玻璃质感与布局内边距精确应用在真正容纳内容的内层卡片上 */
               background: rgba(20, 20, 25, 0.82) !important;
               border: 1px solid rgba(255, 255, 255, 0.12) !important;
               backdrop-filter: blur(25px) !important;
@@ -4765,7 +4789,8 @@ function PlayPageClient() {
               border-radius: 12px !important;
               box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55) !important;
               padding: 16px !important;
-              transition: opacity 0.2s ease, transform 0.2s ease !important;
+              width: 100% !important;
+              box-sizing: border-box !important;
             }
             
             .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-style-panel {
