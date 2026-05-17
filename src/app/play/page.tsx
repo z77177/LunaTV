@@ -4561,6 +4561,8 @@ function PlayPageClient() {
           
           let selectedColor = '#FFFFFF';
           let danmakuHoverTimer: NodeJS.Timeout | null = null;
+          let inputHasFocus = false;
+          let mouseInside = false;
 
           // 3. 选色器事件绑定
           colorDots.forEach((dot) => {
@@ -4595,6 +4597,7 @@ function PlayPageClient() {
             }
 
             input.value = '';
+            inputHasFocus = false; // 🚀 重置输入框焦点状态
             danmakuPanel.classList.remove('apd-emitter-visible');
             
             // 🚀 发送成功关闭后，恢复提示气泡
@@ -4604,6 +4607,7 @@ function PlayPageClient() {
 
           // 5. 极致统一的悬停显示隐藏延迟逻辑 (对齐设置面板：100ms 开启 / 500ms 关闭)
           const showDanmaku = () => {
+            mouseInside = true;
             if (danmakuHoverTimer) {
               clearTimeout(danmakuHoverTimer);
               danmakuHoverTimer = null;
@@ -4631,9 +4635,15 @@ function PlayPageClient() {
           };
 
           const hideDanmaku = () => {
+            mouseInside = false;
             if (danmakuHoverTimer) {
               clearTimeout(danmakuHoverTimer);
               danmakuHoverTimer = null;
+            }
+
+            // 🚀 如果输入框当前持有焦点（光标在输入框内），绝不自动收起面板，保障极致打字观感！
+            if (inputHasFocus) {
+              return;
             }
 
             // 🚀 500 毫秒退出延迟
@@ -4653,6 +4663,23 @@ function PlayPageClient() {
 
           danmakuPanel.addEventListener('mouseenter', showDanmaku);
           danmakuPanel.addEventListener('mouseleave', hideDanmaku);
+
+          // ⌨️ 输入框焦点状态监测，确保光标聚焦时面板维持显示
+          input.addEventListener('focus', () => {
+            inputHasFocus = true;
+            if (danmakuHoverTimer) {
+              clearTimeout(danmakuHoverTimer);
+              danmakuHoverTimer = null;
+            }
+          });
+
+          input.addEventListener('blur', () => {
+            inputHasFocus = false;
+            // 🚀 当失去焦点时，如果鼠标已经在面板和按钮外部，立即触发 500ms 退出延迟收起！
+            if (!mouseInside) {
+              hideDanmaku();
+            }
+          });
 
           // 点击发送按钮
           sendBtn.addEventListener('click', (e) => {
@@ -4677,6 +4704,7 @@ function PlayPageClient() {
           const handleGlobalClick = (e: MouseEvent) => {
             if (!danmakuBtn.contains(e.target as Node)) {
               if (danmakuPanel.classList.contains('apd-emitter-visible')) {
+                inputHasFocus = false; // 🚀 重置输入框焦点状态
                 danmakuPanel.classList.remove('apd-emitter-visible');
                 
                 // 🚀 恢复提示气泡
