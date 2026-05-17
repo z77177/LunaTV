@@ -103,6 +103,14 @@
   }
 }
 
+/* 🚀 取消齿轮设置按钮点击时的缩小放大（Active）特效，防止控制栏按钮及子图标缩放 */
+.artplayer-plugin-liquid-glass .art-control-setting:active,
+.artplayer-plugin-liquid-glass .art-control-setting:active i,
+.artplayer-plugin-liquid-glass .art-control-setting:active svg,
+.artplayer-plugin-liquid-glass .art-control-setting:active .art-icon {
+  transform: none !important;
+}
+
 /* ⚙️ 齿轮设置菜单全新 DOM 内置静态定位，机制完全对齐音量/弹幕面板 */
 .artplayer-plugin-liquid-glass .art-control-setting .art-settings {
   position: absolute !important;
