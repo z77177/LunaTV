@@ -1,15 +1,20 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Eye, Maximize, Clock, Settings2 } from 'lucide-react';
 import { useImmersiveMode } from '@/hooks/useImmersiveMode';
 
 interface UISettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  playerContainer?: HTMLElement | null;
+  isFullscreen?: boolean;
 }
 
 export const UISettingsPanel = memo(function UISettingsPanel({
   isOpen,
   onClose,
+  playerContainer,
+  isFullscreen = false,
 }: UISettingsPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -70,11 +75,11 @@ export const UISettingsPanel = memo(function UISettingsPanel({
 
   if (isFeatureDisabled) return null;
 
-  return (
+  const panelContent = (
     <div
       ref={panelRef}
       className={`absolute right-4 bottom-14 w-[320px] bg-gray-900/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden transition-all duration-300 origin-bottom-right z-[100] custom-scrollbar
-        ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4 pointer-events-none'}
+        ${isOpen ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' : 'opacity-0 scale-95 translate-y-4 pointer-events-none'}
       `}
     >
       <div className='p-4 sm:p-5 max-h-[70vh] overflow-y-auto scrollbar-hide'>
@@ -182,6 +187,12 @@ export const UISettingsPanel = memo(function UISettingsPanel({
       </div>
     </div>
   );
+
+  if (isFullscreen && playerContainer) {
+    return createPortal(panelContent, playerContainer);
+  }
+
+  return panelContent;
 });
 
 export default UISettingsPanel;
