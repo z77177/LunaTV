@@ -84,3 +84,21 @@
 .artplayer-plugin-liquid-glass .apd-style-panel {
   z-index: 9999 !important;
 }
+
+/* ⚙️ 齿轮悬停桥接区，在悬停模式下确保鼠标向上滑动到面板时绝对顺滑不消失 */
+@media (hover: hover) {
+  .artplayer-plugin-liquid-glass .art-control-setting {
+    position: relative !important;
+  }
+  
+  .artplayer-plugin-liquid-glass .art-control-setting::before {
+    content: '';
+    position: absolute;
+    top: -24px;
+    left: -5px;
+    right: -5px;
+    bottom: -3px;
+    z-index: -1;
+    pointer-events: auto;
+  }
+}
