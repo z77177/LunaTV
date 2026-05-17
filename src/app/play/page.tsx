@@ -4443,6 +4443,19 @@ function PlayPageClient() {
           const settingPanel = art.template.$setting as HTMLElement;
           let settingHoverTimer: NodeJS.Timeout | null = null;
 
+          if (settingBtn && settingPanel) {
+            // 🚀 将设置面板移动到齿轮按钮内部，使其物理定位机制与音量、弹幕面板完全一致！
+            if (settingPanel.parentNode !== settingBtn) {
+              settingBtn.appendChild(settingPanel);
+              // 清空任何历史内联定位，让设置面板完全依赖 CSS 进行静态定位和水平绝对居中对齐
+              settingPanel.style.transform = '';
+              settingPanel.style.left = '';
+              settingPanel.style.right = '';
+              settingPanel.style.top = '';
+              settingPanel.style.bottom = '';
+            }
+          }
+
           const showSettings = () => {
             if (settingHoverTimer) {
               clearTimeout(settingHoverTimer);
@@ -4452,44 +4465,12 @@ function PlayPageClient() {
               art.setting.show = true;
             }
 
-            // 1. 确保名称/提示始终叫“设置”而非“隐藏设置”
+            // 确保名称/提示始终叫“设置”而非“隐藏设置”
             requestAnimationFrame(() => {
               if (settingBtn) {
                 settingBtn.setAttribute('aria-label', '设置');
               }
             });
-
-            // 2. 动态定位，使其精确居中对齐齿轮按钮（排除 transform 干扰）
-            try {
-              const bottomNode = art.template.$bottom as HTMLElement;
-              const playerNode = art.template.$player as HTMLElement;
-              if (!settingBtn || !settingPanel || !bottomNode || !playerNode) return;
-              const panelWidth = settingPanel.offsetWidth || 250;
-
-              // 计算 settingBtn 相对于 bottomNode 的 untransformed offsetLeft
-              let btnOffsetLeft = 0;
-              let curr: HTMLElement | null = settingBtn;
-              while (curr && curr !== bottomNode) {
-                btnOffsetLeft += curr.offsetLeft;
-                curr = curr.offsetParent as HTMLElement;
-              }
-
-              // 按钮中心点相对于播放器左侧的 untransformed 坐标
-              const btnCenterX = bottomNode.offsetLeft + btnOffsetLeft + settingBtn.offsetWidth / 2;
-
-              // 计算面板的 left 值，使其中心与按钮中心重合
-              let targetLeft = btnCenterX - panelWidth / 2;
-
-              // 边界防护：防止面板超出播放器左侧或右侧
-              const maxLeft = playerNode.clientWidth - panelWidth - 10;
-              if (targetLeft < 10) targetLeft = 10;
-              if (targetLeft > maxLeft) targetLeft = maxLeft;
-
-              settingPanel.style.left = `${targetLeft}px`;
-              settingPanel.style.right = 'auto';
-            } catch (e) {
-              console.error('Failed to position settings panel:', e);
-            }
           };
 
           const hideSettings = () => {

@@ -43,7 +43,6 @@ export function useDraggableControlBar(
       const syncTransforms = (x: number, y: number) => {
         const transform = `translate(${x}px, ${y}px)`;
         bottomNode.style.transform = transform;
-        if (art.template.$setting) art.template.$setting.style.transform = transform;
         if (art.template.$info) art.template.$info.style.transform = transform;
         
         const contextMenu = playerNode.querySelector('.art-contextmenu') as HTMLElement;
@@ -202,7 +201,6 @@ export function useDraggableControlBar(
         liquidGlass.style.pointerEvents = '';
         liquidGlass.style.paddingLeft = '';
       }
-      if (art.template.$setting) art.template.$setting.style.transform = '';
       if (art.template.$info) art.template.$info.style.transform = '';
       const contextMenu = playerNode.querySelector('.art-contextmenu') as HTMLElement;
       if (contextMenu) contextMenu.style.transform = '';

@@ -102,3 +102,13 @@
     pointer-events: auto;
   }
 }
+
+/* ⚙️ 齿轮设置菜单全新 DOM 内置静态定位，机制完全对齐音量/弹幕面板 */
+.artplayer-plugin-liquid-glass .art-control-setting .art-settings {
+  position: absolute !important;
+  bottom: 45px !important; /* 悬浮于齿轮按钮上方 */
+  left: 50% !important;
+  transform: translateX(-50%) !important; /* 完美的物理水平绝对居中对齐 */
+  right: auto !important;
+  top: auto !important;
+}
