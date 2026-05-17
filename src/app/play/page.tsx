@@ -4043,6 +4043,7 @@ function PlayPageClient() {
                 visible: localStorage.getItem('danmaku_visible') !== 'false',
                 emitter: false,
                 setting: false, // 🚀 彻底禁止在齿轮设置菜单里自动注册任何弹幕相关菜单项，保持菜单极其干净！
+                settings: false,
                 maxLength: 50,
                 lockTime: 1, // 🎯 进一步减少锁定时间，提升进度跳转响应
                 theme: 'dark' as const,
@@ -4262,6 +4263,12 @@ function PlayPageClient() {
                 settingPanel.classList.remove('art-settings-visible');
               }
             });
+
+            // 🛑 彻底删除设置菜单里的内置“弹幕”入口，保持齿轮设置菜单极致纯净，全权交由控制栏右侧的弹幕控制组来管理！
+            const danmukuSettingIndex = art.setting.option.findIndex((item: any) => item.name === 'danmuku' || item.html === '弹幕');
+            if (danmukuSettingIndex !== -1) {
+              art.setting.option.splice(danmukuSettingIndex, 1);
+            }
           }
 
           const showSettings = () => {

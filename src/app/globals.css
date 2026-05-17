@@ -292,29 +292,25 @@ div[data-media-provider] video {
   transition: all 0.3s ease-in-out;
 }
 
-/* 移动端隐藏弹幕配置与样式按钮 - 使用设置面板简化配置 */
-/* 桌面端保留完整配置与样式按钮 - 提供更多高级选项 */
+/* 移动端隐藏弹幕配置按钮 - 使用设置面板简化配置 */
+/* 桌面端保留完整配置按钮 - 提供更多高级选项 */
 @media (max-width: 1080px), (hover: none) {
-  .artplayer-plugin-danmuku .apd-config,
-  .artplayer-plugin-danmuku .apd-style {
+  .artplayer-plugin-danmuku .apd-config {
     display: none !important;
   }
 }
 
-/* 修复桌面端弹幕配置/样式弹窗hover不稳定问题 */
+/* 修复桌面端弹幕配置弹窗hover不稳定问题 */
 @media (min-width: 1081px) and (hover: hover) {
   /* 扩大按钮的实际hover区域，但不影响视觉 */
-  .artplayer-plugin-danmuku .apd-config,
-  .artplayer-plugin-danmuku .apd-style {
+  .artplayer-plugin-danmuku .apd-config {
     position: relative;
     padding: 3px; /* 增加一点内边距扩大hover区域 */
   }
 
   /* 按钮或面板hover时都显示面板 */
   .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
-  .artplayer-plugin-danmuku .apd-config .apd-config-panel:hover,
-  .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel,
-  .artplayer-plugin-danmuku .apd-style .apd-style-panel:hover {
+  .artplayer-plugin-danmuku .apd-config .apd-config-panel:hover {
     opacity: 1 !important;
     pointer-events: auto !important;
     visibility: visible !important;
@@ -322,8 +318,7 @@ div[data-media-provider] video {
   }
 
   /* 确保面板默认状态是隐藏的，隐藏时有延迟 */
-  .artplayer-plugin-danmuku .apd-config-panel,
-  .artplayer-plugin-danmuku .apd-style-panel {
+  .artplayer-plugin-danmuku .apd-config-panel {
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
@@ -331,14 +326,12 @@ div[data-media-provider] video {
   }
 
   /* 面板内部元素在显示时可交互 */
-  .artplayer-plugin-danmuku .apd-config-panel *,
-  .artplayer-plugin-danmuku .apd-style-panel * {
+  .artplayer-plugin-danmuku .apd-config-panel * {
     pointer-events: auto;
   }
 
   /* 防止进度条拖拽时弹窗干扰 */
-  .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-config-panel,
-  .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-style-panel {
+  .artplayer[data-dragging="true"] .artplayer-plugin-danmuku .apd-config-panel {
     opacity: 0 !important;
     pointer-events: none !important;
     visibility: hidden !important;
