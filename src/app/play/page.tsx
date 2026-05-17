@@ -4674,7 +4674,12 @@ function PlayPageClient() {
             inputHasFocus = true;
             if (playerContainer) playerContainer.classList.add('apd-lock-controls');
             if (playerEl) playerEl.classList.add('apd-lock-controls');
-            art.controls.show = true;
+            
+            // 🚀 仅当控制栏处于隐藏状态时，才强制显示，避免高频点击时产生不必要的布局重构
+            if (!art.controls.show) {
+              art.controls.show = true;
+            }
+
             if (danmakuHoverTimer) {
               clearTimeout(danmakuHoverTimer);
               danmakuHoverTimer = null;
@@ -4713,9 +4718,12 @@ function PlayPageClient() {
             }
           });
 
-          // 阻止面板内部一切点击事件向上传播
-          danmakuPanel.addEventListener('click', (e) => {
-            e.stopPropagation();
+          // 🚀 阻止面板内部一切鼠标、触控和指针事件向上传播，防止 ArtPlayer 误截获并执行播放暂停/焦点夺取！
+          const stopEvents = ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'];
+          stopEvents.forEach((eventName) => {
+            danmakuPanel.addEventListener(eventName, (e) => {
+              e.stopPropagation();
+            });
           });
 
           // 6. 点击外部任何地方自动隐藏面板 (Click-away close)
