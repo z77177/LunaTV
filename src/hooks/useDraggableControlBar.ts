@@ -31,20 +31,47 @@ export function useDraggableControlBar(
       bottomNode.style.width = 'calc(100% - 80px)';
       bottomNode.style.left = '40px';
       bottomNode.style.bottom = '40px';
-      bottomNode.style.borderRadius = '16px';
-      bottomNode.style.backgroundColor = `rgba(20, 20, 25, ${opacity})`;
-      bottomNode.style.backdropFilter = 'blur(16px)';
-      bottomNode.style.setProperty('-webkit-backdrop-filter', 'blur(16px)');
-      bottomNode.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-      bottomNode.style.paddingLeft = '30px'; // 为拖拽手柄留出空间
-      bottomNode.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
       bottomNode.style.top = 'auto';
       bottomNode.style.height = 'auto';
       bottomNode.style.minHeight = '50px';
       bottomNode.style.paddingTop = '0px';
+      bottomNode.style.paddingLeft = '0px'; // reset base padding
       bottomNode.style.zIndex = '999';
-      bottomNode.style.pointerEvents = 'auto';
+      bottomNode.style.pointerEvents = 'none'; // let children handle clicks
       
+      // 使用独立的 bgNode 处理毛玻璃，避免 backdrop-filter 裁剪内部绝对定位元素（如 tooltip 提示词）
+      let bgNode = bottomNode.querySelector('.art-custom-glass-bg') as HTMLElement;
+      if (!bgNode) {
+        bgNode = document.createElement('div');
+        bgNode.className = 'art-custom-glass-bg';
+        bottomNode.insertBefore(bgNode, bottomNode.firstChild);
+      }
+      bgNode.style.position = 'absolute';
+      bgNode.style.top = '0';
+      bgNode.style.bottom = '0';
+      bgNode.style.left = '0';
+      bgNode.style.right = '0';
+      bgNode.style.backgroundColor = `rgba(20, 20, 25, ${opacity})`;
+      bgNode.style.backdropFilter = 'blur(16px)';
+      bgNode.style.setProperty('-webkit-backdrop-filter', 'blur(16px)');
+      bgNode.style.borderRadius = '16px';
+      bgNode.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+      bgNode.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
+      bgNode.style.zIndex = '-1';
+      bgNode.style.pointerEvents = 'auto'; // 遮挡底部视频点击
+      
+      // 调整内部元素的 padding，给最左侧拖拽手柄留出精确空间，并对齐玻璃背景
+      const progress = bottomNode.querySelector('.art-progress') as HTMLElement;
+      const controls = bottomNode.querySelector('.art-controls') as HTMLElement;
+      if (progress) {
+        progress.style.paddingLeft = '45px';
+        progress.style.paddingRight = '15px';
+      }
+      if (controls) {
+        controls.style.paddingLeft = '45px';
+        controls.style.paddingRight = '15px';
+      }
+
       const syncTransforms = (x: number, y: number) => {
         const transform = `translate(${x}px, ${y}px)`;
         bottomNode.style.transform = transform;
@@ -66,6 +93,10 @@ export function useDraggableControlBar(
           if (!dragState.current.isDragging) {
             bottomNode.style.opacity = '0';
             bottomNode.style.visibility = 'hidden';
+            // 同步关闭设置菜单
+            if (art.setting && art.setting.show) {
+              art.setting.show = false;
+            }
           }
         }, hideTimeout);
       };
@@ -84,10 +115,10 @@ export function useDraggableControlBar(
         dragHandle.className = 'art-custom-drag-handle';
         dragHandle.innerHTML = '<span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);"></span>';
         dragHandle.style.position = 'absolute';
-        dragHandle.style.left = '0';
+        dragHandle.style.left = '10px';
         dragHandle.style.top = '0';
         dragHandle.style.bottom = '0';
-        dragHandle.style.width = '30px';
+        dragHandle.style.width = '24px';
         dragHandle.style.display = 'flex';
         dragHandle.style.flexDirection = 'column';
         dragHandle.style.alignItems = 'center';
@@ -207,6 +238,20 @@ export function useDraggableControlBar(
       bottomNode.style.zIndex = '';
       bottomNode.style.pointerEvents = '';
       bottomNode.style.transform = '';
+      
+      const bgNode = bottomNode.querySelector('.art-custom-glass-bg');
+      if (bgNode) bgNode.remove();
+      
+      const progress = bottomNode.querySelector('.art-progress') as HTMLElement;
+      const controls = bottomNode.querySelector('.art-controls') as HTMLElement;
+      if (progress) {
+        progress.style.paddingLeft = '';
+        progress.style.paddingRight = '';
+      }
+      if (controls) {
+        controls.style.paddingLeft = '';
+        controls.style.paddingRight = '';
+      }
       if (art.template.$setting) art.template.$setting.style.transform = '';
       if (art.template.$info) art.template.$info.style.transform = '';
       const contextMenu = playerNode.querySelector('.art-contextmenu') as HTMLElement;
