@@ -4533,10 +4533,7 @@ function PlayPageClient() {
           const danmakuBtn = danmakuBtnSpan?.closest('.art-control') as HTMLElement;
           if (!danmakuBtn) return;
 
-          const playerContainer = art.template.$container;
-          const playerEl = art.template.$player;
-
-          // 1. 创建并构建自定义弹幕面板 of DOM 结构
+          // 1. 创建并构建自定义弹幕面板的 DOM 结构
           const danmakuPanel = document.createElement('div');
           danmakuPanel.className = 'apd-danmaku-emitter';
           danmakuPanel.innerHTML = `
@@ -4564,8 +4561,7 @@ function PlayPageClient() {
           
           let selectedColor = '#FFFFFF';
           let danmakuHoverTimer: NodeJS.Timeout | null = null;
-          let inputHasFocus = false;
-          let mouseInside = false;
+          let isMouseOver = false;
 
           // 3. 选色器事件绑定
           colorDots.forEach((dot) => {
@@ -4600,9 +4596,6 @@ function PlayPageClient() {
             }
 
             input.value = '';
-            inputHasFocus = false; // 🚀 重置输入框焦点状态
-            if (playerContainer) playerContainer.classList.remove('apd-lock-controls');
-            if (playerEl) playerEl.classList.remove('apd-lock-controls');
             danmakuPanel.classList.remove('apd-emitter-visible');
             
             // 🚀 发送成功关闭后，恢复提示气泡
@@ -4612,7 +4605,7 @@ function PlayPageClient() {
 
           // 5. 极致统一的悬停显示隐藏延迟逻辑 (对齐设置面板：100ms 开启 / 500ms 关闭)
           const showDanmaku = () => {
-            mouseInside = true;
+            isMouseOver = true;
             if (danmakuHoverTimer) {
               clearTimeout(danmakuHoverTimer);
               danmakuHoverTimer = null;
@@ -4640,20 +4633,20 @@ function PlayPageClient() {
           };
 
           const hideDanmaku = () => {
-            mouseInside = false;
+            isMouseOver = false;
             if (danmakuHoverTimer) {
               clearTimeout(danmakuHoverTimer);
               danmakuHoverTimer = null;
             }
 
-            // 🚀 如果输入框当前持有焦点（光标在输入框内），绝不自动收起面板，保障极致打字观感！
-            if (inputHasFocus) {
-              return;
-            }
-
             // 🚀 500 毫秒退出延迟
             danmakuHoverTimer = setTimeout(() => {
               if (danmakuPanel.classList.contains('apd-emitter-visible')) {
+                // 🚀 如果输入框当前正处于焦点状态（用户正在打字），绝不隐藏面板！
+                if (document.activeElement === input) {
+                  return;
+                }
+
                 danmakuPanel.classList.remove('apd-emitter-visible');
                 
                 // 🚀 恢复提示气泡
@@ -4669,40 +4662,17 @@ function PlayPageClient() {
           danmakuPanel.addEventListener('mouseenter', showDanmaku);
           danmakuPanel.addEventListener('mouseleave', hideDanmaku);
 
-          // ⌨️ 输入框焦点状态监测，确保光标聚焦时面板维持显示，且锁定控制栏不隐藏！
-          input.addEventListener('focus', () => {
-            inputHasFocus = true;
-            if (playerContainer) playerContainer.classList.add('apd-lock-controls');
-            if (playerEl) playerEl.classList.add('apd-lock-controls');
-            
-            // 🚀 仅当控制栏处于隐藏状态时，才强制显示，避免高频点击时产生不必要的布局重构
-            if (!art.controls.show) {
-              art.controls.show = true;
-            }
-
-            if (danmakuHoverTimer) {
-              clearTimeout(danmakuHoverTimer);
-              danmakuHoverTimer = null;
-            }
-          });
-
+          // 🚀 监听输入框失去焦点事件：当失去焦点且鼠标不在面板上时，立即隐藏
           input.addEventListener('blur', () => {
-            inputHasFocus = false;
-            if (playerContainer) playerContainer.classList.remove('apd-lock-controls');
-            if (playerEl) playerEl.classList.remove('apd-lock-controls');
-            // 🚀 当失去焦点时，如果鼠标已经在面板和按钮外部，立即触发 500ms 退出延迟收起！
-            if (!mouseInside) {
-              hideDanmaku();
-            }
+            setTimeout(() => {
+              if (!isMouseOver && danmakuPanel.classList.contains('apd-emitter-visible')) {
+                danmakuPanel.classList.remove('apd-emitter-visible');
+                
+                const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
+                danmakuBtn.setAttribute('aria-label', backup);
+              }
+            }, 100);
           });
-
-          // 🔄 监听控制栏的隐显状态，如果弹幕框有光标聚焦，强行锁定控制栏处于展示状态，不予自动隐藏！
-          const handleControlChange = (show: boolean) => {
-            if (!show && inputHasFocus) {
-              art.controls.show = true;
-            }
-          };
-          art.on('control', handleControlChange);
 
           // 点击发送按钮
           sendBtn.addEventListener('click', (e) => {
@@ -4718,33 +4688,21 @@ function PlayPageClient() {
             }
           });
 
-          // 🚀 阻止面板内部一切鼠标、触控和指针事件向上传播，防止 ArtPlayer 误截获并执行播放暂停/焦点夺取！
-          const stopEvents = ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'];
-          stopEvents.forEach((eventName) => {
-            danmakuPanel.addEventListener(eventName, (e) => {
-              e.stopPropagation();
-            });
+          // 阻止面板内部一切点击事件向上传播
+          danmakuPanel.addEventListener('click', (e) => {
+            e.stopPropagation();
           });
 
           // 6. 点击外部任何地方自动隐藏面板 (Click-away close)
           const handleGlobalClick = (e: MouseEvent) => {
-            const target = e.target as HTMLElement;
-            if (!target) return;
-
-            // 🚀 如果点击的是弹幕面板或按钮内的任何元素，绝对不要触发关闭，即使 DOM 处于临时重绘状态！
-            if (target.closest('.apd-danmaku-emitter') || target.closest('.art-control-danmaku-btn')) {
-              return;
-            }
-
-            if (danmakuPanel.classList.contains('apd-emitter-visible')) {
-              inputHasFocus = false; // 🚀 重置输入框焦点状态
-              if (playerContainer) playerContainer.classList.remove('apd-lock-controls');
-              if (playerEl) playerEl.classList.remove('apd-lock-controls');
-              danmakuPanel.classList.remove('apd-emitter-visible');
-              
-              // 🚀 恢复提示气泡
-              const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
-              danmakuBtn.setAttribute('aria-label', backup);
+            if (!danmakuBtn.contains(e.target as Node)) {
+              if (danmakuPanel.classList.contains('apd-emitter-visible')) {
+                danmakuPanel.classList.remove('apd-emitter-visible');
+                
+                // 🚀 恢复提示气泡
+                const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
+                danmakuBtn.setAttribute('aria-label', backup);
+              }
             }
           };
           document.addEventListener('click', handleGlobalClick);
@@ -4752,7 +4710,6 @@ function PlayPageClient() {
           // 页面销毁时移除全局点击事件
           art.on('destroy', () => {
             document.removeEventListener('click', handleGlobalClick);
-            art.off('control', handleControlChange);
           });
         })();
 

@@ -171,29 +171,6 @@
   visibility: hidden !important;
 }
 
-/* 🔒 当弹幕面板显示或用户聚焦输入框时，强行锁定控制底栏、子容器及进度条为 100% 不透明、完全可见状态，并保持光标可见，拒绝任何隐藏！ */
-.apd-lock-controls,
-.artplayer-plugin-liquid-glass.apd-lock-controls,
-.artplayer-plugin-liquid-glass:has(.apd-emitter-visible),
-.art-video-player:has(.apd-emitter-visible) {
-  cursor: auto !important;
-}
-
-.apd-lock-controls .art-controls,
-.apd-lock-controls .art-bottom,
-.apd-lock-controls .art-progress,
-.artplayer-plugin-liquid-glass:has(.apd-emitter-visible) .art-controls,
-.artplayer-plugin-liquid-glass:has(.apd-emitter-visible) .art-bottom,
-.artplayer-plugin-liquid-glass:has(.apd-emitter-visible) .art-progress,
-.art-video-player:has(.apd-emitter-visible) .art-controls,
-.art-video-player:has(.apd-emitter-visible) .art-bottom,
-.art-video-player:has(.apd-emitter-visible) .art-progress {
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-  transform: translateY(0) !important;
-}
-
 /* 🎨 颜色小圆点容器 */
 .apd-danmaku-colors {
   display: flex !important;
