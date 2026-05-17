@@ -169,7 +169,6 @@ function PlayPageClient() {
     return true;
   });
   const blockAdEnabledRef = useRef(blockAdEnabled);
-  const wasPausedRef = useRef(false); // 🌟 追踪去广告刷新前的视频播放/暂停状态，防止非预期自动播放
 
   // 自定义去广告代码
   const [customAdFilterCode, setCustomAdFilterCode] = useState<string>('');
@@ -3666,11 +3665,6 @@ function PlayPageClient() {
     }
 
     try {
-      // 🌟 从 localStorage 读取前一次暂存的播放/暂停状态，决定初始化时是否自动播放
-      // 此处不立即清除，防止 React 异步重新初始化或开发模式下的多重渲染导致状态丢失！
-      const wasPausedStr = localStorage.getItem('blockad_was_paused');
-      const shouldAutoplay = wasPausedStr !== 'true';
-
       // 使用动态导入的 Artplayer
       const Artplayer = (window as any).DynamicArtplayer;
       const artplayerPluginDanmuku = (window as any).DynamicArtplayerPluginDanmuku;
@@ -3690,7 +3684,7 @@ function PlayPageClient() {
         isLive: false,
         // iOS设备需要静音才能自动播放，参考ArtPlayer源码处理
         muted: isIOS || isSafari,
-        autoplay: shouldAutoplay,
+        autoplay: true,
         pip: true,
         autoSize: false,
         autoMini: false,
@@ -3873,8 +3867,6 @@ function PlayPageClient() {
               try {
                 localStorage.setItem('enable_blockad', String(newVal));
                 if (artPlayerRef.current) {
-                  // 🌟 暂存前一次的播放/暂停状态，使用 localStorage 存储，确保在防抖和多重重渲染下绝对安全稳定！
-                  localStorage.setItem('blockad_was_paused', String(artPlayerRef.current.paused));
                   resumeTimeRef.current = artPlayerRef.current.currentTime;
                   if (artPlayerRef.current.video.hls) {
                     artPlayerRef.current.video.hls.destroy();
@@ -3909,45 +3901,69 @@ function PlayPageClient() {
           },
           ...(webGPUSupported ? [
             {
-              name: 'Anime4K超分',
-              html: 'Anime4K超分',
-              tooltip: '', // 🌟 空白提示，只保留开关按钮！
-              switch: anime4kEnabledRef.current,
-              onSwitch: async function (item: any) {
-                const newVal = !item.switch;
-                await toggleAnime4K(newVal);
-                return newVal;
-              },
-            },
-            {
-              name: '超分模式',
-              html: '超分模式',
+              name: 'Anime4K',
+              html: 'Anime4K设置',
+              icon: '<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 11px; font-weight: bold; color: #fff; background: rgba(255, 255, 255, 0.15); border-radius: 4px;">4K</span>',
               selector: [
-                { html: 'ModeA (快速)', value: 'ModeA', default: anime4kModeRef.current === 'ModeA' },
-                { html: 'ModeB (标准)', value: 'ModeB', default: anime4kModeRef.current === 'ModeB' },
-                { html: 'ModeC (高质)', value: 'ModeC', default: anime4kModeRef.current === 'ModeC' },
-                { html: 'ModeAA (极速)', value: 'ModeAA', default: anime4kModeRef.current === 'ModeAA' },
-                { html: 'ModeBB (平衡)', value: 'ModeBB', default: anime4kModeRef.current === 'ModeBB' },
-                { html: 'ModeCA (优质)', value: 'ModeCA', default: anime4kModeRef.current === 'ModeCA' },
-              ],
-              onSelect: async function (item: any) {
-                await changeAnime4KMode(item.value);
-                return item.html;
-              },
-            },
-            {
-              name: '超分倍数',
-              html: '超分倍数',
-              selector: [
-                { html: '1.5x', value: '1.5', default: anime4kScaleRef.current === 1.5 },
-                { html: '2.0x', value: '2.0', default: anime4kScaleRef.current === 2.0 },
-                { html: '3.0x', value: '3.0', default: anime4kScaleRef.current === 3.0 },
-                { html: '4.0x', value: '4.0', default: anime4kScaleRef.current === 4.0 },
-              ],
-              onSelect: async function (item: any) {
-                await changeAnime4KScale(parseFloat(item.value));
-                return item.html;
-              },
+                {
+                  html: '开启 Anime4K',
+                  tooltip: '',
+                  switch: anime4kEnabledRef.current,
+                  onSwitch: async function (item: any) {
+                    const newVal = !item.switch;
+                    await toggleAnime4K(newVal);
+                    return newVal;
+                  },
+                },
+                {
+                  html: '超分模式',
+                  tooltip: anime4kModeRef.current === 'ModeA' ? 'ModeA (快速)' :
+                           anime4kModeRef.current === 'ModeB' ? 'ModeB (标准)' :
+                           anime4kModeRef.current === 'ModeC' ? 'ModeC (高质)' :
+                           anime4kModeRef.current === 'ModeAA' ? 'ModeAA (极速)' :
+                           anime4kModeRef.current === 'ModeBB' ? 'ModeBB (平衡)' : 'ModeCA (优质)',
+                  onClick: async function (item: any) {
+                    const modes = [
+                      { html: 'ModeA (快速)', value: 'ModeA' },
+                      { html: 'ModeB (标准)', value: 'ModeB' },
+                      { html: 'ModeC (高质)', value: 'ModeC' },
+                      { html: 'ModeAA (极速)', value: 'ModeAA' },
+                      { html: 'ModeBB (平衡)', value: 'ModeBB' },
+                      { html: 'ModeCA (优质)', value: 'ModeCA' },
+                    ];
+                    const currentIndex = modes.findIndex(m => m.value === anime4kModeRef.current);
+                    const nextIndex = (currentIndex + 1) % modes.length;
+                    const nextMode = modes[nextIndex];
+                    
+                    await changeAnime4KMode(nextMode.value);
+                    item.tooltip = nextMode.html;
+                    
+                    // 🌟 核心：点击循环切换时，触发 ArtPlayer 菜单界面重新渲染以实时反应新的 tooltip 文本
+                    if (artPlayerRef.current) {
+                      artPlayerRef.current.setting.update();
+                    }
+                    return nextMode.html;
+                  }
+                },
+                {
+                  html: '超分倍数',
+                  tooltip: `${anime4kScaleRef.current.toFixed(1)}x`,
+                  onClick: async function (item: any) {
+                    const scales = [1.5, 2.0, 3.0, 4.0];
+                    const currentIndex = scales.indexOf(anime4kScaleRef.current);
+                    const nextIndex = (currentIndex + 1) % scales.length;
+                    const nextScale = scales[nextIndex];
+                    
+                    await changeAnime4KScale(nextScale);
+                    item.tooltip = `${nextScale.toFixed(1)}x`;
+                    
+                    if (artPlayerRef.current) {
+                      artPlayerRef.current.setting.update();
+                    }
+                    return `${nextScale.toFixed(1)}x`;
+                  }
+                }
+              ]
             },
           ] : []),
           {
@@ -4226,11 +4242,6 @@ function PlayPageClient() {
       artPlayerRef.current.on('ready', async () => {
         setError(null);
         setPlayerReady(true); // 标记播放器已就绪，启用观影室同步
-
-        // 🌟 播放器加载成功后，安全清除暂存状态
-        try {
-          localStorage.removeItem('blockad_was_paused');
-        } catch (_) {}
 
         // ⚙️ 齿轮设置菜单悬停自动弹出与零延迟启动、0.5秒延迟隐藏逻辑
         (() => {
@@ -5311,9 +5322,8 @@ function PlayPageClient() {
         }
         resumeTimeRef.current = null;
 
-        // iOS设备自动播放回退机制：如果先前决定自动播放（autoplay配置为true）但由于限制未播放，才尝试自动播放回退
-        const autoplaySetting = artPlayerRef.current.option.autoplay;
-        if ((isIOS || isSafari) && autoplaySetting && artPlayerRef.current.paused) {
+        // iOS设备自动播放回退机制：如果自动播放失败，尝试用户交互触发播放
+        if ((isIOS || isSafari) && artPlayerRef.current.paused) {
           console.log('iOS设备检测到视频未自动播放，准备交互触发机制');
           
           const tryAutoPlay = async () => {
