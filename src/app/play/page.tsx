@@ -4732,6 +4732,59 @@ function PlayPageClient() {
               border: 2px solid #00ff66 !important; /* 经典流光绿呼吸感 */
               box-shadow: 0 0 8px rgba(0, 255, 102, 0.4) !important;
             }
+
+            /* 🎨 弹幕样式按钮与面板高阶美化 (对齐配置面板设计) */
+            .artplayer-plugin-danmuku .apd-style {
+              display: flex !important;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            }
+            
+            .artplayer-plugin-danmuku .apd-style:hover {
+              transform: scale(var(--art-control-icon-scale, 1.1)) !important;
+              filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.35)) !important;
+            }
+            
+            .artplayer-plugin-danmuku .apd-style-panel {
+              position: absolute !important;
+              z-index: 2147483647 !important;
+              pointer-events: auto !important;
+              background: rgba(20, 20, 25, 0.82) !important;
+              border: 1px solid rgba(255, 255, 255, 0.12) !important;
+              backdrop-filter: blur(25px) !important;
+              -webkit-backdrop-filter: blur(25px) !important;
+              border-radius: 12px !important;
+              box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55) !important;
+              padding: 16px !important;
+              transition: opacity 0.2s ease, transform 0.2s ease !important;
+            }
+            
+            .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-style-panel {
+              position: fixed !important;
+              top: auto !important;
+              bottom: 80px !important;
+              right: 80px !important; /* 距离右侧80px，避开配置面板的20px */
+              left: auto !important;
+              z-index: 2147483647 !important;
+            }
+            
+            .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-style-panel * {
+              pointer-events: auto !important;
+            }
+ 
+            .artplayer-plugin-danmuku .apd-style-panel .apd-slider-track {
+              background: rgba(255, 255, 255, 0.15) !important;
+              height: 4px !important;
+              border-radius: 2px !important;
+            }
+ 
+            .artplayer-plugin-danmuku .apd-style-panel .apd-slider-thumb {
+              background: #ffffff !important;
+              border: 2px solid #00ff66 !important;
+              box-shadow: 0 0 8px rgba(0, 255, 102, 0.4) !important;
+            }
           `;
           document.head.appendChild(style);
         };
