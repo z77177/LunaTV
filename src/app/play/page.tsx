@@ -32,9 +32,11 @@ import OwnerChangeDialog from '@/components/play/OwnerChangeDialog';
 import VideoCoverDisplay from '@/components/play/VideoCoverDisplay';
 import PlayErrorDisplay from '@/components/play/PlayErrorDisplay';
 import DanmuSettingsPanel from '@/components/play/DanmuSettingsPanel';
+import UISettingsPanel from '@/components/play/UISettingsPanel';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
 import { useImmersiveMode } from '@/hooks/useImmersiveMode';
+import { useDraggableControlBar } from '@/hooks/useDraggableControlBar';
 import { ImmersivePlayerOverlay } from '@/components/ImmersivePlayerOverlay';
 import { MobileEpisodeDrawer } from '@/components/MobileEpisodeDrawer';
 import { ClientCache } from '@/lib/client-cache';
@@ -142,6 +144,7 @@ function PlayPageClient() {
 
   // 弹幕设置面板状态
   const [isDanmuSettingsPanelOpen, setIsDanmuSettingsPanelOpen] = useState(false);
+  const [isUISettingsPanelOpen, setIsUISettingsPanelOpen] = useState(false);
 
   // 全屏状态
   const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
@@ -353,6 +356,7 @@ function PlayPageClient() {
 
   // 🚀 沉浸模式相关状态
   const { settings: immersiveSettings, isLoaded: isImmersiveLoaded, toggleImmersiveMode, updateSetting: updateImmersiveSetting } = useImmersiveMode();
+  useDraggableControlBar(artPlayerRef, isPlayerFullscreen, immersiveSettings.enabled, immersiveSettings.opacity, immersiveSettings.hideTimeout);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
 
@@ -3914,6 +3918,20 @@ function PlayPageClient() {
               return '打开弹幕设置面板';
             },
           },
+          {
+            name: 'UI设置',
+            html: 'UI设置',
+            tooltip: '打开全屏 UI 设置',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>',
+            onClick: function () {
+              setIsUISettingsPanelOpen(true);
+              // 关闭settings菜单
+              if (artPlayerRef.current) {
+                artPlayerRef.current.setting.show = false;
+              }
+              return '打开全屏 UI 设置';
+            },
+          },
           ...(webGPUSupported ? [
             {
               name: 'Anime4K超分',
@@ -5493,6 +5511,11 @@ function PlayPageClient() {
           }
           return result.count;
         }}
+      />
+
+      <UISettingsPanel
+        isOpen={isUISettingsPanelOpen}
+        onClose={() => setIsUISettingsPanelOpen(false)}
       />
       </PageLayout>
 
