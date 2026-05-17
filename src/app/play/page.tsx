@@ -4213,19 +4213,24 @@ function PlayPageClient() {
             html: '<span class="art-control-danmaku-btn">弹</span>',
             tooltip: '发送弹幕',
             click: function () {
-              // 🚀 切换自定义弹幕面板的显示隐藏状态，并自动聚焦输入框！
+              // 🚀 点击时，如果是隐藏状态，立刻瞬间展示面板（0毫秒），并自动聚焦输入框！
               const art = artPlayerRef.current;
               if (!art || !art.template) return;
               
               const danmakuPanel = art.template.$bottom?.querySelector('.apd-danmaku-emitter') as HTMLElement;
               const input = danmakuPanel?.querySelector('.apd-danmaku-input') as HTMLInputElement;
+              const danmakuBtnSpan = art.template.$bottom?.querySelector('.art-control-danmaku-btn');
+              const danmakuBtn = danmakuBtnSpan?.closest('.art-control') as HTMLElement;
               
-              if (danmakuPanel && input) {
-                const isVisible = danmakuPanel.classList.toggle('apd-emitter-visible');
-                if (isVisible) {
-                  // 自动聚焦并选中，提升打字体验
+              if (danmakuPanel && input && danmakuBtn) {
+                if (!danmakuPanel.classList.contains('apd-emitter-visible')) {
+                  danmakuPanel.classList.add('apd-emitter-visible');
                   input.focus();
                   input.select();
+                  
+                  // 🚀 隐藏提示气泡
+                  danmakuBtn.setAttribute('data-tooltip-backup', danmakuBtn.getAttribute('aria-label') || '发送弹幕');
+                  danmakuBtn.removeAttribute('aria-label');
                 }
               }
             },
@@ -4555,6 +4560,7 @@ function PlayPageClient() {
           const colorDots = danmakuPanel.querySelectorAll('.apd-color-dot');
           
           let selectedColor = '#FFFFFF';
+          let danmakuHoverTimer: NodeJS.Timeout | null = null;
 
           // 3. 选色器事件绑定
           colorDots.forEach((dot) => {
@@ -4590,7 +4596,63 @@ function PlayPageClient() {
 
             input.value = '';
             danmakuPanel.classList.remove('apd-emitter-visible');
+            
+            // 🚀 发送成功关闭后，恢复提示气泡
+            const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
+            danmakuBtn.setAttribute('aria-label', backup);
           };
+
+          // 5. 极致统一的悬停显示隐藏延迟逻辑 (对齐设置面板：100ms 开启 / 500ms 关闭)
+          const showDanmaku = () => {
+            if (danmakuHoverTimer) {
+              clearTimeout(danmakuHoverTimer);
+              danmakuHoverTimer = null;
+            }
+
+            if (danmakuPanel.classList.contains('apd-emitter-visible')) {
+              // 🚀 已经是显示状态直接保持，无任何延迟以实现平滑移动
+              return;
+            }
+
+            // 🚀 100 毫秒触发延迟
+            danmakuHoverTimer = setTimeout(() => {
+              danmakuPanel.classList.add('apd-emitter-visible');
+              
+              // 自动聚焦并选中，提升打字体验
+              requestAnimationFrame(() => {
+                input.focus();
+                input.select();
+              });
+
+              // 🚀 隐藏提示气泡
+              danmakuBtn.setAttribute('data-tooltip-backup', danmakuBtn.getAttribute('aria-label') || '发送弹幕');
+              danmakuBtn.removeAttribute('aria-label');
+            }, 100);
+          };
+
+          const hideDanmaku = () => {
+            if (danmakuHoverTimer) {
+              clearTimeout(danmakuHoverTimer);
+              danmakuHoverTimer = null;
+            }
+
+            // 🚀 500 毫秒退出延迟
+            danmakuHoverTimer = setTimeout(() => {
+              if (danmakuPanel.classList.contains('apd-emitter-visible')) {
+                danmakuPanel.classList.remove('apd-emitter-visible');
+                
+                // 🚀 恢复提示气泡
+                const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
+                danmakuBtn.setAttribute('aria-label', backup);
+              }
+            }, 500);
+          };
+
+          danmakuBtn.addEventListener('mouseenter', showDanmaku);
+          danmakuBtn.addEventListener('mouseleave', hideDanmaku);
+
+          danmakuPanel.addEventListener('mouseenter', showDanmaku);
+          danmakuPanel.addEventListener('mouseleave', hideDanmaku);
 
           // 点击发送按钮
           sendBtn.addEventListener('click', (e) => {
@@ -4611,10 +4673,16 @@ function PlayPageClient() {
             e.stopPropagation();
           });
 
-          // 5. 点击外部任何地方自动隐藏面板 (Click-away close)
+          // 6. 点击外部任何地方自动隐藏面板 (Click-away close)
           const handleGlobalClick = (e: MouseEvent) => {
             if (!danmakuBtn.contains(e.target as Node)) {
-              danmakuPanel.classList.remove('apd-emitter-visible');
+              if (danmakuPanel.classList.contains('apd-emitter-visible')) {
+                danmakuPanel.classList.remove('apd-emitter-visible');
+                
+                // 🚀 恢复提示气泡
+                const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
+                danmakuBtn.setAttribute('aria-label', backup);
+              }
             }
           };
           document.addEventListener('click', handleGlobalClick);
