@@ -13,6 +13,10 @@ export function useDraggableControlBar(
     startY: 0,
     currentX: 0,
     currentY: 0,
+    minX: -Infinity,
+    maxX: Infinity,
+    minY: -Infinity,
+    maxY: Infinity,
   });
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -144,10 +148,14 @@ export function useDraggableControlBar(
         const dx = clientX - dragState.current.startX;
         const dy = clientY - dragState.current.startY;
 
-        const newX = dragState.current.currentX + dx;
-        const newY = dragState.current.currentY + dy;
+        const rawX = dragState.current.currentX + dx;
+        const rawY = dragState.current.currentY + dy;
 
-        syncTransforms(newX, newY);
+        // 🚀 对 X 和 Y 平移坐标进行高精度夹逼边界限制，限制不能移出播放器屏幕之外
+        const constrainedX = Math.max(dragState.current.minX, Math.min(dragState.current.maxX, rawX));
+        const constrainedY = Math.max(dragState.current.minY, Math.min(dragState.current.maxY, rawY));
+
+        syncTransforms(constrainedX, constrainedY);
       };
 
       const onMouseUp = (e: MouseEvent | TouchEvent) => {
@@ -158,14 +166,20 @@ export function useDraggableControlBar(
         const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
         const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
 
-        dragState.current.currentX += clientX - dragState.current.startX;
-        dragState.current.currentY += clientY - dragState.current.startY;
+        const rawX = dragState.current.currentX + (clientX - dragState.current.startX);
+        const rawY = dragState.current.currentY + (clientY - dragState.current.startY);
+
+        const constrainedX = Math.max(dragState.current.minX, Math.min(dragState.current.maxX, rawX));
+        const constrainedY = Math.max(dragState.current.minY, Math.min(dragState.current.maxY, rawY));
+
+        dragState.current.currentX = constrainedX;
+        dragState.current.currentY = constrainedY;
 
         // 保存位置
         try {
           localStorage.setItem('art_bottom_pos', JSON.stringify({
-            x: dragState.current.currentX,
-            y: dragState.current.currentY
+            x: constrainedX,
+            y: constrainedY
           }));
         } catch(err) {}
 
@@ -177,6 +191,22 @@ export function useDraggableControlBar(
 
       const onMouseDown = (e: MouseEvent | TouchEvent) => {
         e.preventDefault(); // 阻止选中文本
+        
+        // 🚀 每次开始拖拽前，动态且高精度地计算当前播放器容器(playerNode)和控制栏(bottomNode)在视口内的实际尺寸与边界
+        const playerRect = playerNode.getBoundingClientRect();
+        
+        // 临时取下当前的 transform，以便精准地读取 bottomNode 本身在 DOM 树中的无位移“天然”渲染区域
+        const originalTransform = bottomNode.style.transform;
+        bottomNode.style.transform = 'none';
+        const naturalRect = bottomNode.getBoundingClientRect();
+        bottomNode.style.transform = originalTransform;
+
+        // X/Y 轴分别计算能向上/下/左/右平移的最大极限偏移量
+        dragState.current.minX = playerRect.left - naturalRect.left;
+        dragState.current.maxX = playerRect.right - naturalRect.right;
+        dragState.current.minY = playerRect.top - naturalRect.top;
+        dragState.current.maxY = playerRect.bottom - naturalRect.bottom;
+
         dragState.current.isDragging = true;
         dragState.current.startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         dragState.current.startY = 'touches' in e ? e.touches[0].clientY : e.clientY;

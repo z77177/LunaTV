@@ -4468,6 +4468,17 @@ function PlayPageClient() {
               e.stopPropagation();
             });
 
+            // 🚀 核心拦截：当齿轮按钮被点击时，阻止原生开关关闭的行为（用户由于面板已通过悬停展示，点击不应使其关闭）
+            settingBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation(); // 抢先阻断，防止执行 ArtPlayer 的原生 toggle 逻辑！
+              
+              if (!art.setting.show) {
+                art.setting.show = true;
+              }
+            }, { capture: true }); // 使用捕获阶段 (capture: true) 确保能在事件到达原生监听器前拦截！
+
             // 🔄 监听 ArtPlayer 原生的 'setting' 事件，确保面板的激活类名状态始终与播放器内核同步！
             art.on('setting', (show: boolean) => {
               if (show) {
