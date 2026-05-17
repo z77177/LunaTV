@@ -16,10 +16,24 @@
 }
 
 .artplayer-plugin-liquid-glass.art-control-show .art-bottom .art-liquid-glass {
+  position: relative;
+  padding: var(--art-padding) calc(var(--art-padding) * 1.5) 5px;
+  /* 移除直接的背景和毛玻璃，用 ::before 实现以防止工具提示被裁剪 */
+}
+
+.artplayer-plugin-liquid-glass.art-control-show .art-bottom .art-liquid-glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   border-radius: 8px;
   backdrop-filter: blur(12px);
-  background-color: rgba(0, 0, 0, 0.25);
-  padding: var(--art-padding) calc(var(--art-padding) * 1.5) 5px;
+  -webkit-backdrop-filter: blur(12px);
+  background-color: rgba(20, 20, 25, var(--glass-opacity, 0.25));
+  z-index: -1;
+  pointer-events: none;
 }
 
 .artplayer-plugin-liquid-glass.art-control-show .art-settings {
