@@ -4451,6 +4451,44 @@ function PlayPageClient() {
             if (!art.setting.show) {
               art.setting.show = true;
             }
+
+            // 1. 确保名称/提示始终叫“设置”而非“隐藏设置”
+            requestAnimationFrame(() => {
+              if (settingBtn) {
+                settingBtn.setAttribute('aria-label', '设置');
+              }
+            });
+
+            // 2. 动态定位，使其精确居中对齐齿轮按钮（排除 transform 干扰）
+            try {
+              const bottomNode = art.template.$bottom as HTMLElement;
+              const playerNode = art.template.$player as HTMLElement;
+              const panelWidth = settingPanel.offsetWidth || 250;
+
+              // 计算 settingBtn 相对于 bottomNode 的 untransformed offsetLeft
+              let btnOffsetLeft = 0;
+              let curr: HTMLElement | null = settingBtn;
+              while (curr && curr !== bottomNode) {
+                btnOffsetLeft += curr.offsetLeft;
+                curr = curr.offsetParent as HTMLElement;
+              }
+
+              // 按钮中心点相对于播放器左侧的 untransformed 坐标
+              const btnCenterX = bottomNode.offsetLeft + btnOffsetLeft + settingBtn.offsetWidth / 2;
+
+              // 计算面板的 left 值，使其中心与按钮中心重合
+              let targetLeft = btnCenterX - panelWidth / 2;
+
+              // 边界防护：防止面板超出播放器左侧或右侧
+              const maxLeft = playerNode.clientWidth - panelWidth - 10;
+              if (targetLeft < 10) targetLeft = 10;
+              if (targetLeft > maxLeft) targetLeft = maxLeft;
+
+              settingPanel.style.left = `${targetLeft}px`;
+              settingPanel.style.right = 'auto';
+            } catch (e) {
+              console.error('Failed to position settings panel:', e);
+            }
           };
 
           const hideSettings = () => {
