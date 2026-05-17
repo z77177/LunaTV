@@ -27,53 +27,17 @@ export function useDraggableControlBar(
 
     if (isFullscreen && enabled) {
       // 1. 设置沉浸式外观
-      bottomNode.style.position = 'absolute';
-      bottomNode.style.width = 'calc(100% - 80px)';
-      bottomNode.style.left = '40px';
-      bottomNode.style.bottom = '40px';
-      bottomNode.style.top = 'auto';
-      bottomNode.style.height = 'auto';
-      bottomNode.style.minHeight = '50px';
-      bottomNode.style.paddingTop = '0px';
-      bottomNode.style.paddingLeft = '0px'; // reset base padding
-      bottomNode.style.zIndex = '999';
-      bottomNode.style.pointerEvents = 'none'; // let children handle clicks
+      // 1. 设置透明度变量给 CSS 使用
+      bottomNode.style.setProperty('--glass-opacity', opacity.toString());
       
-      bottomNode.classList.add('art-immersive-glass');
-      let styleNode = document.getElementById('art-immersive-glass-style');
-      if (!styleNode) {
-        styleNode = document.createElement('style');
-        styleNode.id = 'art-immersive-glass-style';
-        document.head.appendChild(styleNode);
-      }
-      // 动态更新透明度
-      styleNode.innerHTML = `
-        .art-immersive-glass::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background-color: rgba(20, 20, 25, ${opacity});
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-          z-index: -1;
-          pointer-events: auto;
-        }
-      `;
+      // 穿透底部的无形容器，只让实际内容（liquidGlass）响应点击
+      bottomNode.style.pointerEvents = 'none';
       
-      // 仅调整内部元素的左侧 padding 给最左侧拖拽手柄留出空间，不影响原有右侧对齐
-      const progress = bottomNode.querySelector('.art-progress') as HTMLElement;
-      const controls = bottomNode.querySelector('.art-controls') as HTMLElement;
-      if (progress) {
-        progress.style.paddingLeft = '30px';
-      }
-      if (controls) {
-        controls.style.paddingLeft = '30px';
+      const liquidGlass = bottomNode.querySelector('.art-liquid-glass') as HTMLElement;
+      if (liquidGlass) {
+        liquidGlass.style.pointerEvents = 'auto';
+        // 为拖拽手柄留出左侧空间
+        liquidGlass.style.paddingLeft = '34px';
       }
 
       const syncTransforms = (x: number, y: number) => {
@@ -120,8 +84,8 @@ export function useDraggableControlBar(
         dragHandle.innerHTML = '<span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);"></span>';
         dragHandle.style.position = 'absolute';
         dragHandle.style.left = '10px';
-        dragHandle.style.top = '0';
-        dragHandle.style.bottom = '0';
+        dragHandle.style.top = '10px';
+        dragHandle.style.bottom = '10px';
         dragHandle.style.width = '24px';
         dragHandle.style.display = 'flex';
         dragHandle.style.flexDirection = 'column';
@@ -132,6 +96,7 @@ export function useDraggableControlBar(
         dragHandle.style.zIndex = '999';
         dragHandle.style.pointerEvents = 'auto';
         dragHandle.style.touchAction = 'none'; // 防止移动端拖拽时滚动屏幕
+        dragHandle.style.borderRadius = '4px';
         
         // 鼠标悬停抓手时的特效
         dragHandle.addEventListener('mouseenter', () => {
@@ -141,7 +106,11 @@ export function useDraggableControlBar(
           dragHandle.style.backgroundColor = 'transparent';
         });
 
-        bottomNode.appendChild(dragHandle);
+        if (liquidGlass) {
+          liquidGlass.appendChild(dragHandle);
+        } else {
+          bottomNode.appendChild(dragHandle);
+        }
 
         // 恢复位置
         try {
@@ -224,33 +193,14 @@ export function useDraggableControlBar(
       };
     } else {
       // 还原 ArtPlayer 原生样式
-      bottomNode.classList.remove('art-immersive-glass');
-      bottomNode.style.position = '';
-      bottomNode.style.width = '';
-      bottomNode.style.left = '';
-      bottomNode.style.bottom = '';
-      bottomNode.style.borderRadius = '';
-      bottomNode.style.backgroundColor = '';
-      bottomNode.style.backdropFilter = '';
-      bottomNode.style.removeProperty('-webkit-backdrop-filter');
-      bottomNode.style.border = '';
-      bottomNode.style.paddingLeft = '';
-      bottomNode.style.paddingTop = '';
-      bottomNode.style.boxShadow = '';
-      bottomNode.style.height = '';
-      bottomNode.style.minHeight = '';
-      bottomNode.style.top = '';
-      bottomNode.style.zIndex = '';
+      bottomNode.style.removeProperty('--glass-opacity');
       bottomNode.style.pointerEvents = '';
       bottomNode.style.transform = '';
       
-      const progress = bottomNode.querySelector('.art-progress') as HTMLElement;
-      const controls = bottomNode.querySelector('.art-controls') as HTMLElement;
-      if (progress) {
-        progress.style.paddingLeft = '';
-      }
-      if (controls) {
-        controls.style.paddingLeft = '';
+      const liquidGlass = bottomNode.querySelector('.art-liquid-glass') as HTMLElement;
+      if (liquidGlass) {
+        liquidGlass.style.pointerEvents = '';
+        liquidGlass.style.paddingLeft = '';
       }
       if (art.template.$setting) art.template.$setting.style.transform = '';
       if (art.template.$info) art.template.$info.style.transform = '';
