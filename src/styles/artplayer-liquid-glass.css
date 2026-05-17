@@ -110,6 +110,7 @@
   left: 50% !important;
   right: auto !important;
   top: auto !important;
+  width: 220px !important; /* 🌟 设定固定宽度，彻底解决子菜单文字长度不同导致宽度动态跳动/浮动的问题！ */
 
   /* 🪄 丝滑渐变与平滑滑动过渡效果：150 毫秒渐变时间，带有 6px 的垂直滑动质感 */
   display: block !important;
