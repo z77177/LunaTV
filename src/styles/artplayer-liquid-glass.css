@@ -108,7 +108,22 @@
   position: absolute !important;
   bottom: 45px !important; /* 悬浮于齿轮按钮上方 */
   left: 50% !important;
-  transform: translateX(-50%) !important; /* 完美的物理水平绝对居中对齐 */
   right: auto !important;
   top: auto !important;
+
+  /* 🪄 丝滑渐变与平滑滑动过渡效果：150 毫秒渐变时间，带有 6px 的垂直滑动质感 */
+  display: block !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(6px) !important;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease !important;
+}
+
+/* ⚙️ 当设置菜单处于激活显示状态时 */
+.artplayer-plugin-liquid-glass .art-control-setting .art-settings.art-show {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) !important;
 }

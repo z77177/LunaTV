@@ -4466,27 +4466,36 @@ function PlayPageClient() {
               clearTimeout(settingHoverTimer);
               settingHoverTimer = null;
             }
-            if (!art.setting.show) {
-              art.setting.show = true;
+
+            if (art.setting.show) {
+              // 🚀 如果已经是显示状态，直接保持，不需要任何延迟，提升交互响应速度！
+              return;
             }
 
-            // 确保名称/提示始终叫“设置”而非“隐藏设置”
-            requestAnimationFrame(() => {
-              if (settingBtn) {
-                settingBtn.setAttribute('aria-label', '设置');
-              }
-            });
+            // 🚀 触发延迟改为 100 毫秒
+            settingHoverTimer = setTimeout(() => {
+              art.setting.show = true;
+              // 确保名称/提示始终叫“设置”而非“隐藏设置”
+              requestAnimationFrame(() => {
+                if (settingBtn) {
+                  settingBtn.setAttribute('aria-label', '设置');
+                }
+              });
+            }, 100);
           };
 
           const hideSettings = () => {
             if (settingHoverTimer) {
               clearTimeout(settingHoverTimer);
+              settingHoverTimer = null;
             }
+            
+            // 🚀 退出延迟为 500 毫秒
             settingHoverTimer = setTimeout(() => {
               if (art.setting.show) {
                 art.setting.show = false;
               }
-            }, 500); // 鼠标离开 0.5 秒后隐藏
+            }, 500);
           };
 
           if (settingBtn && settingPanel) {
