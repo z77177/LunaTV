@@ -4305,33 +4305,38 @@ function PlayPageClient() {
               setTimeout(() => {
                 const panel = art.template.$bottom?.querySelector('.apd-config-panel') as HTMLElement;
                 if (panel && !panel.querySelector('.apd-external-danmu-checkbox-wrap')) {
-                  const checkboxes = panel.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+                  const apdOther = panel.querySelector('.apd-other') as HTMLElement;
                   
-                  // 找到“防重叠”复选框的位置作为参考
-                  const antiOverlap = Array.from(checkboxes).find((el: any) => {
-                    const text = el.parentElement?.innerText || '';
-                    return text.includes('重叠') || text.includes('overlap');
-                  }) as HTMLInputElement;
-
-                  const checkboxWrap = document.createElement('label');
+                  // 创建复选框包装容器，默认使用 label
+                  let checkboxWrap = document.createElement('label');
                   checkboxWrap.className = 'apd-external-danmu-checkbox-wrap';
-                  checkboxWrap.style.display = 'inline-flex';
-                  checkboxWrap.style.alignItems = 'center';
-                  checkboxWrap.style.marginRight = '16px';
-                  checkboxWrap.style.cursor = 'pointer';
-                  checkboxWrap.style.fontSize = '13px';
-                  checkboxWrap.style.color = '#fff';
-                  checkboxWrap.style.userSelect = 'none';
+                  
+                  // 智能检测并克隆原生复选框的标签与类名，以实现 100% 完美的 CSS 样式与对齐自适应！
+                  if (apdOther && apdOther.firstElementChild) {
+                    const templateEl = apdOther.firstElementChild;
+                    checkboxWrap = document.createElement(templateEl.tagName.toLowerCase()) as any;
+                    checkboxWrap.className = `${templateEl.className} apd-external-danmu-checkbox-wrap`;
+                  } else {
+                    checkboxWrap.style.display = 'inline-flex';
+                    checkboxWrap.style.alignItems = 'center';
+                    checkboxWrap.style.marginRight = '16px';
+                    checkboxWrap.style.cursor = 'pointer';
+                    checkboxWrap.style.fontSize = '13px';
+                    checkboxWrap.style.color = '#fff';
+                    checkboxWrap.style.userSelect = 'none';
+                  }
 
-                  // 采用与原生 checkbox 风格对齐的样式
+                  // 注入原生复选框结构
                   checkboxWrap.innerHTML = `
                     <input type="checkbox" ${externalDanmuEnabledRef.current ? 'checked' : ''}>
                     <span>载入外部弹幕</span>
                   `;
 
                   const checkboxInput = checkboxWrap.querySelector('input') as HTMLInputElement;
-                  checkboxInput.style.marginRight = '6px';
-                  checkboxInput.style.cursor = 'pointer';
+                  if (checkboxInput) {
+                    checkboxInput.style.marginRight = '6px';
+                    checkboxInput.style.cursor = 'pointer';
+                  }
 
                   // 点击事件处理
                   checkboxWrap.addEventListener('click', (e) => {
@@ -4342,14 +4347,26 @@ function PlayPageClient() {
                     handleDanmuOperationOptimized(nextState);
                   });
 
-                  if (antiOverlap && antiOverlap.parentElement) {
-                    antiOverlap.parentElement.before(checkboxWrap);
+                  // 完美置入复选框容器 .apd-other，成为其头部子元素，彻底解决“悬浮在面板之外”的问题！
+                  if (apdOther) {
+                    apdOther.prepend(checkboxWrap);
                   } else {
-                    const firstRow = panel.firstElementChild;
-                    if (firstRow) {
-                      firstRow.after(checkboxWrap);
+                    // 备用方案：如果找不到 .apd-other，就插入到其它复选框前
+                    const checkboxes = panel.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+                    const antiOverlap = Array.from(checkboxes).find((el: any) => {
+                      const text = el.parentElement?.innerText || '';
+                      return text.includes('重叠') || text.includes('overlap');
+                    }) as HTMLInputElement;
+
+                    if (antiOverlap && antiOverlap.parentElement) {
+                      antiOverlap.parentElement.before(checkboxWrap);
                     } else {
-                      panel.appendChild(checkboxWrap);
+                      const firstRow = panel.firstElementChild;
+                      if (firstRow) {
+                        firstRow.after(checkboxWrap);
+                      } else {
+                        panel.appendChild(checkboxWrap);
+                      }
                     }
                   }
                 }
@@ -4691,12 +4708,30 @@ function PlayPageClient() {
           const style = document.createElement('style');
           style.id = 'danmuku-controls-optimize';
           style.textContent = `
-            /* 🚀 弹幕原生开关按钮与齿轮按钮复活与高定美化 */
+            /* 🚀 弹幕控制群组高定极致紧凑化：消除弹幕按钮组之间的过大间距，使其视觉上融为一体 */
+            .artplayer-plugin-danmuku {
+              display: inline-flex !important;
+              padding: 0 !important;
+              margin-right: 4px !important; /* 减少插件容器右侧的外边距，让开关、齿轮和“弹”字按钮完美紧凑对齐 */
+            }
+
+            .art-control:has(.art-control-danmaku-btn) {
+              padding: 0 4px !important; /* 减少“弹”字按钮左右两边的默认内边距 */
+            }
+
             .artplayer-plugin-danmuku .apd-toggle {
               display: inline-flex !important;
               align-items: center;
               justify-content: center;
-              margin-right: 12px !important;
+              margin-right: 4px !important; /* 开关与配置齿轮之间的间距 */
+              cursor: pointer;
+            }
+
+            .artplayer-plugin-danmuku .apd-config {
+              display: inline-flex !important;
+              align-items: center;
+              justify-content: center;
+              margin-right: 0 !important; /* 彻底移除最右侧的外边距，消除双重间距 */
               cursor: pointer;
             }
 
@@ -4704,10 +4739,6 @@ function PlayPageClient() {
             .artplayer-plugin-danmuku .apd-emitter {
               display: none !important;
             }
-
-            
-            /* 弹幕配置面板优化 - 修复全屏模式下点击问题 */
-            .artplayer-plugin-danmuku .apd-config {
               position: relative;
             }
             
