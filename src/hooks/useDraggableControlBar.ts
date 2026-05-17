@@ -91,52 +91,54 @@ export function useDraggableControlBar(
       bottomNode.addEventListener('mouseleave', handleBottomMouseLeave);
       showBar(); // 初始化时显示
 
-      // 2. 注入拖拽手柄
-      if (!dragHandle) {
-        dragHandle = document.createElement('div');
-        dragHandle.className = 'art-custom-drag-handle';
-        dragHandle.innerHTML = '<span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);"></span>';
-        dragHandle.style.position = 'absolute';
-        dragHandle.style.left = '10px';
-        dragHandle.style.top = '10px';
-        dragHandle.style.bottom = '10px';
-        dragHandle.style.width = '24px';
-        dragHandle.style.display = 'flex';
-        dragHandle.style.flexDirection = 'column';
-        dragHandle.style.alignItems = 'center';
-        dragHandle.style.justifyContent = 'center';
-        dragHandle.style.cursor = 'move';
-        dragHandle.style.borderRight = '1px solid rgba(255, 255, 255, 0.05)';
-        dragHandle.style.zIndex = '999';
-        dragHandle.style.pointerEvents = 'auto';
-        dragHandle.style.touchAction = 'none'; // 防止移动端拖拽时滚动屏幕
-        dragHandle.style.borderRadius = '4px';
-        
-        // 鼠标悬停抓手时的特效
-        dragHandle.addEventListener('mouseenter', () => {
-          dragHandle.style.backgroundColor = 'rgba(255,255,255,0.1)';
-        });
-        dragHandle.addEventListener('mouseleave', () => {
-          dragHandle.style.backgroundColor = 'transparent';
-        });
-
-        if (liquidGlass) {
-          liquidGlass.appendChild(dragHandle);
-        } else {
-          bottomNode.appendChild(dragHandle);
-        }
-
-        // 恢复位置
-        try {
-          const saved = localStorage.getItem('art_bottom_pos');
-          if (saved) {
-            const pos = JSON.parse(saved);
-            dragState.current.currentX = pos.x;
-            dragState.current.currentY = pos.y;
-            syncTransforms(pos.x, pos.y);
-          }
-        } catch(e) {}
+      // 2. 注入拖拽手柄，确保每次重新执行 effect 时都创建一个全新且带有正确闭包事件监听器的手柄，彻底防止旧闭包残留和重复累积监听器！
+      if (dragHandle) {
+        dragHandle.remove();
       }
+
+      dragHandle = document.createElement('div');
+      dragHandle.className = 'art-custom-drag-handle';
+      dragHandle.innerHTML = '<span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);margin-bottom:4px;"></span><span style="display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.4);"></span>';
+      dragHandle.style.position = 'absolute';
+      dragHandle.style.left = '10px';
+      dragHandle.style.top = '10px';
+      dragHandle.style.bottom = '10px';
+      dragHandle.style.width = '24px';
+      dragHandle.style.display = 'flex';
+      dragHandle.style.flexDirection = 'column';
+      dragHandle.style.alignItems = 'center';
+      dragHandle.style.justifyContent = 'center';
+      dragHandle.style.cursor = 'move';
+      dragHandle.style.borderRight = '1px solid rgba(255, 255, 255, 0.05)';
+      dragHandle.style.zIndex = '999';
+      dragHandle.style.pointerEvents = 'auto';
+      dragHandle.style.touchAction = 'none'; // 防止移动端拖拽时滚动屏幕
+      dragHandle.style.borderRadius = '4px';
+      
+      // 鼠标悬停抓手时的特效
+      dragHandle.addEventListener('mouseenter', () => {
+        dragHandle.style.backgroundColor = 'rgba(255,255,255,0.1)';
+      });
+      dragHandle.addEventListener('mouseleave', () => {
+        dragHandle.style.backgroundColor = 'transparent';
+      });
+
+      if (liquidGlass) {
+        liquidGlass.appendChild(dragHandle);
+      } else {
+        bottomNode.appendChild(dragHandle);
+      }
+
+      // 恢复位置
+      try {
+        const saved = localStorage.getItem('art_bottom_pos');
+        if (saved) {
+          const pos = JSON.parse(saved);
+          dragState.current.currentX = pos.x;
+          dragState.current.currentY = pos.y;
+          syncTransforms(pos.x, pos.y);
+        }
+      } catch(e) {}
 
       // 3. 拖拽核心逻辑
       const onMouseMove = (e: MouseEvent | TouchEvent) => {
@@ -237,6 +239,16 @@ export function useDraggableControlBar(
         playerNode.removeEventListener('touchstart', handlePlayerMouseMove);
         bottomNode.removeEventListener('mouseleave', handleBottomMouseLeave);
         if (timerRef.current) clearTimeout(timerRef.current);
+        
+        // 🚀 终极清理：不仅注销主监听器，还必须将拖拽手柄彻底移除，并注销 document 全局拖拽事件以绝对防止内存泄漏与闭包污染！
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('touchmove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('touchend', onMouseUp);
+
+        if (dragHandle) {
+          dragHandle.remove();
+        }
       };
     } else {
       // 还原 ArtPlayer 原生样式
