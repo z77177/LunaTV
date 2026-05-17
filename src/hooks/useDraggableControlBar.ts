@@ -144,25 +144,10 @@ export function useDraggableControlBar(
         const dx = clientX - dragState.current.startX;
         const dy = clientY - dragState.current.startY;
 
-        let targetX = dragState.current.currentX + dx;
-        let targetY = dragState.current.currentY + dy;
+        const newX = dragState.current.currentX + dx;
+        const newY = dragState.current.currentY + dy;
 
-        // 🚀 实时边界约束限制：防止控制栏被拖拽出播放器屏幕外！
-        const playerRect = playerNode.getBoundingClientRect();
-        const bottomRect = bottomNode.getBoundingClientRect();
-        
-        const currX = dragState.current.currentX;
-        const currY = dragState.current.currentY;
-        
-        const minX = currX + (playerRect.left - bottomRect.left);
-        const maxX = currX + (playerRect.right - bottomRect.right);
-        const minY = currY + (playerRect.top - bottomRect.top);
-        const maxY = currY + (playerRect.bottom - bottomRect.bottom);
-        
-        targetX = Math.max(minX, Math.min(maxX, targetX));
-        targetY = Math.max(minY, Math.min(maxY, targetY));
-
-        syncTransforms(targetX, targetY);
+        syncTransforms(newX, newY);
       };
 
       const onMouseUp = (e: MouseEvent | TouchEvent) => {
@@ -173,35 +158,14 @@ export function useDraggableControlBar(
         const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
         const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY;
 
-        const dx = clientX - dragState.current.startX;
-        const dy = clientY - dragState.current.startY;
+        dragState.current.currentX += clientX - dragState.current.startX;
+        dragState.current.currentY += clientY - dragState.current.startY;
 
-        let targetX = dragState.current.currentX + dx;
-        let targetY = dragState.current.currentY + dy;
-
-        // 🚀 在鼠标释放时同样进行安全边界限制，确保保存的位置永久有效！
-        const playerRect = playerNode.getBoundingClientRect();
-        const bottomRect = bottomNode.getBoundingClientRect();
-        
-        const currX = dragState.current.currentX;
-        const currY = dragState.current.currentY;
-        
-        const minX = currX + (playerRect.left - bottomRect.left);
-        const maxX = currX + (playerRect.right - bottomRect.right);
-        const minY = currY + (playerRect.top - bottomRect.top);
-        const maxY = currY + (playerRect.bottom - bottomRect.bottom);
-        
-        targetX = Math.max(minX, Math.min(maxX, targetX));
-        targetY = Math.max(minY, Math.min(maxY, targetY));
-
-        dragState.current.currentX = targetX;
-        dragState.current.currentY = targetY;
-
-        // 保存限制后的安全位置
+        // 保存位置
         try {
           localStorage.setItem('art_bottom_pos', JSON.stringify({
-            x: targetX,
-            y: targetY
+            x: dragState.current.currentX,
+            y: dragState.current.currentY
           }));
         } catch(err) {}
 

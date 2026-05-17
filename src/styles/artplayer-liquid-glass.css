@@ -255,3 +255,44 @@
   visibility: visible !important;
   pointer-events: auto !important;
 }
+
+/* 🚀 弹幕控制群组高定美化：高定制原生开关和齿轮按钮，使其彻底融于我们的高端流光毛玻璃设计中 */
+.artplayer-plugin-danmuku .apd-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px !important;
+  cursor: pointer;
+}
+
+.artplayer-plugin-danmuku .apd-config {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px !important;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: all 0.2s ease !important;
+}
+
+.artplayer-plugin-danmuku .apd-config:hover {
+  opacity: 1;
+  transform: scale(1.08) !important;
+}
+
+/* 美化弹幕设置面板的内部样式，让其成为高定毛玻璃的延伸 */
+.artplayer-plugin-danmuku .apd-config-panel {
+  background: rgba(18, 18, 22, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+  padding: 16px !important;
+  font-family: inherit !important;
+  z-index: 2147483647 !important;
+}
+
+/* 载入外部弹幕复选框样式定制，与原生复选框风格对齐 */
+.apd-external-danmu-checkbox-wrap input[type="checkbox"] {
+  accent-color: #00E5FF !important; /* 精致主题色 */
+}
