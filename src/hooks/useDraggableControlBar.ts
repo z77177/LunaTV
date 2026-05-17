@@ -34,7 +34,7 @@ export function useDraggableControlBar(
       bottomNode.style.borderRadius = '16px';
       bottomNode.style.backgroundColor = `rgba(20, 20, 25, ${opacity})`;
       bottomNode.style.backdropFilter = 'blur(16px)';
-      bottomNode.style.webkitBackdropFilter = 'blur(16px)';
+      bottomNode.style.setProperty('-webkit-backdrop-filter', 'blur(16px)');
       bottomNode.style.border = '1px solid rgba(255, 255, 255, 0.1)';
       bottomNode.style.paddingLeft = '30px'; // 为拖拽手柄留出空间
       bottomNode.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
@@ -178,7 +178,7 @@ export function useDraggableControlBar(
       bottomNode.style.borderRadius = '';
       bottomNode.style.backgroundColor = '';
       bottomNode.style.backdropFilter = '';
-      bottomNode.style.webkitBackdropFilter = '';
+      bottomNode.style.removeProperty('-webkit-backdrop-filter');
       bottomNode.style.border = '';
       bottomNode.style.paddingLeft = '';
       bottomNode.style.boxShadow = '';
