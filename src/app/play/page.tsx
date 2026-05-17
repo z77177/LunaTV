@@ -3857,11 +3857,13 @@ function PlayPageClient() {
         },
         settings: [
           {
+            name: '去广告',
             html: '去广告',
-            icon: '<text x="50%" y="50%" font-size="20" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">AD</text>',
-            tooltip: blockAdEnabled ? '已开启' : '已关闭',
-            onClick() {
-              const newVal = !blockAdEnabled;
+            icon: '<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 11px; font-weight: bold; color: #fff; background: rgba(255, 255, 255, 0.15); border-radius: 4px;">AD</span>',
+            tooltip: '', // 🌟 空白提示，只保留开关按钮，杜绝文字冗余！
+            switch: blockAdEnabled,
+            onSwitch: function (item: any) {
+              const newVal = !item.switch;
               try {
                 localStorage.setItem('enable_blockad', String(newVal));
                 if (artPlayerRef.current) {
@@ -3876,14 +3878,14 @@ function PlayPageClient() {
               } catch (_) {
                 // ignore
               }
-              return newVal ? '当前开启' : '当前关闭';
+              return newVal;
             },
           },
           {
             name: '外部弹幕',
             html: '外部弹幕',
             icon: '<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 13px; font-weight: bold; color: #fff; background: rgba(255, 255, 255, 0.15); border-radius: 4px;">外</span>',
-            tooltip: externalDanmuEnabledRef.current ? '外部弹幕已开启' : '外部弹幕已关闭',
+            tooltip: '', // 🌟 空白提示，只保留开关按钮！
             switch: externalDanmuEnabledRef.current,
             onSwitch: function (item: any) {
               const nextState = !item.switch;
@@ -3891,43 +3893,17 @@ function PlayPageClient() {
               // 🚀 使用优化后的弹幕操作处理函数
               handleDanmuOperationOptimized(nextState);
 
-              // 更新tooltip显示
-              item.tooltip = nextState ? '外部弹幕已开启' : '外部弹幕已关闭';
+              // 保持空提示
+              item.tooltip = '';
 
               return nextState; // 立即返回新状态
             },
-          },
-          {
-            name: 'UI设置',
-            html: 'UI设置',
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>',
-            selector: [
-              {
-                html: 'UI透明度',
-                tooltip: `${Math.round(immersiveSettings.opacity * 100)}%`,
-                range: [immersiveSettings.opacity, 0.05, 1.0, 0.05],
-                onRange: function (item: any) {
-                  const val = Math.round(item.range[0] * 20) / 20; // 0.05 step
-                  updateImmersiveSetting('opacity', val);
-                  return `${Math.round(val * 100)}%`;
-                },
-              },
-              {
-                html: 'UI隐藏时间',
-                tooltip: `${immersiveSettings.hideTimeout / 1000}秒`,
-                range: [immersiveSettings.hideTimeout, 2000, 10000, 1000],
-                onRange: function (item: any) {
-                  const val = Math.round(item.range[0]);
-                  updateImmersiveSetting('hideTimeout', val);
-                  return `${val / 1000}秒`;
-                },
-              },
-            ],
           },
           ...(webGPUSupported ? [
             {
               name: 'Anime4K超分',
               html: 'Anime4K超分',
+              tooltip: '', // 🌟 空白提示，只保留开关按钮！
               switch: anime4kEnabledRef.current,
               onSwitch: async function (item: any) {
                 const newVal = !item.switch;
@@ -3966,6 +3942,34 @@ function PlayPageClient() {
               },
             },
           ] : []),
+          {
+            // 🌟 将 UI 设置完美沉淀移动到菜单的最下面一行！
+            name: 'UI设置',
+            html: 'UI设置',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>',
+            selector: [
+              {
+                html: 'UI透明度',
+                tooltip: `${Math.round(immersiveSettings.opacity * 100)}%`,
+                range: [immersiveSettings.opacity, 0.05, 1.0, 0.05],
+                onRange: function (item: any) {
+                  const val = Math.round(item.range[0] * 20) / 20; // 0.05 step
+                  updateImmersiveSetting('opacity', val);
+                  return `${Math.round(val * 100)}%`;
+                },
+              },
+              {
+                html: 'UI隐藏时间',
+                tooltip: `${immersiveSettings.hideTimeout / 1000}秒`,
+                range: [immersiveSettings.hideTimeout, 2000, 10000, 1000],
+                onRange: function (item: any) {
+                  const val = Math.round(item.range[0]);
+                  updateImmersiveSetting('hideTimeout', val);
+                  return `${val / 1000}秒`;
+                },
+              },
+            ],
+          },
         ],
         // 控制栏配置
         controls: [
