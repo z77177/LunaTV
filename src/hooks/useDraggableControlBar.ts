@@ -191,14 +191,38 @@ export function useDraggableControlBar(
         document.removeEventListener('touchend', onMouseUp);
       };
 
+      // 🚀 超强兼容性的 CSS 变换矩阵正则解析器，100% 避免 DOMMatrix 的 API 缺失或解析报错！
+      const parseTransform = (el: HTMLElement) => {
+        const style = window.getComputedStyle(el);
+        const transform = style.transform;
+        if (!transform || transform === 'none') {
+          return { x: 0, y: 0 };
+        }
+        
+        const matrixMatch = transform.match(/^matrix\((.+)\)$/);
+        if (matrixMatch) {
+          const values = matrixMatch[1].split(',').map(parseFloat);
+          if (values.length >= 6) {
+            return { x: values[4], y: values[5] };
+          }
+        }
+        
+        const matrix3dMatch = transform.match(/^matrix3d\((.+)\)$/);
+        if (matrix3dMatch) {
+          const values = matrix3dMatch[1].split(',').map(parseFloat);
+          if (values.length >= 16) {
+            return { x: values[12], y: values[13] };
+          }
+        }
+        
+        return { x: 0, y: 0 };
+      };
+
       const onMouseDown = (e: MouseEvent | TouchEvent) => {
         e.preventDefault(); // 阻止选中文本
         
-        // 🚀 终极可靠方案：直接解析底层的 DOMMatrix 二维/三维变换矩阵，获取 DOM 元素当前真实、实时的平移值。这百分之百解决了 React state、localStorage 或播放器第三方框架在重置控制栏样式时所产生的状态失步问题！
-        const style = window.getComputedStyle(bottomNode);
-        const matrix = style.transform && style.transform !== 'none' ? new DOMMatrix(style.transform) : new DOMMatrix();
-        const currentX = matrix.m41;
-        const currentY = matrix.m42;
+        // 🚀 使用百分之百安全、兼容全系浏览器的正则解析器读取变换坐标，避免 DOMMatrix 的异常崩溃
+        const { x: currentX, y: currentY } = parseTransform(bottomNode);
 
         // 同步 React ref 内部的值，确保后续 move / up 阶段的所有求和与本地缓存完全精准同步
         dragState.current.currentX = currentX;
@@ -207,13 +231,25 @@ export function useDraggableControlBar(
         const playerRect = playerNode.getBoundingClientRect();
         const currentRect = bottomNode.getBoundingClientRect();
 
-        // 🚀 加上 5 像素的安全内缩边距，确保控制栏永远保留尊贵悬浮感，并且拖拽手柄绝对不会贴死边缘导致鼠标失焦无法重新抓取！
-        const safetyMargin = 5;
+        let minX = playerRect.left - currentRect.left + currentX;
+        let maxX = playerRect.right - currentRect.right + currentX;
+        let minY = playerRect.top - currentRect.top + currentY;
+        let maxY = playerRect.bottom - currentRect.bottom + currentY;
 
-        dragState.current.minX = playerRect.left - currentRect.left + currentX + safetyMargin;
-        dragState.current.maxX = playerRect.right - currentRect.right + currentX - safetyMargin;
-        dragState.current.minY = playerRect.top - currentRect.top + currentY + safetyMargin;
-        dragState.current.maxY = playerRect.bottom - currentRect.bottom + currentY - safetyMargin;
+        // 🚀 终极数学漏洞堵漏：如果控制栏宽度与播放器等宽（或由于 safetyMargin 导致 minX >= maxX），则在 X 轴上锁定其绝对不可横向拖动，防止 Math.max(minX, Math.min(maxX, ...)) 数学模型折叠锁死！
+        if (minX >= maxX) {
+          minX = currentX;
+          maxX = currentX;
+        }
+
+        // 🚀 加上 5 像素的底部安全内缩边距，确保控制栏底端永远不贴死屏幕边缘，保留抓取区域。并使用 Math.max 确保绝对不会小于 minY
+        const safetyMargin = 5;
+        maxY = Math.max(minY, maxY - safetyMargin);
+
+        dragState.current.minX = minX;
+        dragState.current.maxX = maxX;
+        dragState.current.minY = minY;
+        dragState.current.maxY = maxY;
 
         dragState.current.isDragging = true;
         dragState.current.startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
