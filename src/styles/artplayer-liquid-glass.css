@@ -68,3 +68,19 @@
     min-width: 28px !important;
   }
 }
+
+/* 🔒 层级关系优化：降低进度条层级，防止遮挡弹幕/音量等向上弹出的设置面板 */
+.artplayer-plugin-liquid-glass .art-progress {
+  z-index: 10 !important;
+}
+
+.artplayer-plugin-liquid-glass .art-controls {
+  z-index: 20 !important;
+}
+
+.artplayer-plugin-liquid-glass .art-volume-panel,
+.artplayer-plugin-liquid-glass .art-settings,
+.artplayer-plugin-liquid-glass .apd-config-panel,
+.artplayer-plugin-liquid-glass .apd-style-panel {
+  z-index: 9999 !important;
+}
