@@ -3988,29 +3988,73 @@ function PlayPageClient() {
                 html: '显示区域',
                 tooltip: '弹幕显示区域',
                 selector: [
-                  { html: '1/4 屏幕', value: '25%', default: typeof window !== 'undefined' && (() => {
-                    try { return JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]')[1] === '25%'; } catch { return false; }
-                  })() },
-                  { html: '半屏', value: '50%', default: typeof window !== 'undefined' && (() => {
-                    try { return JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]')[1] === '50%'; } catch { return false; }
-                  })() },
-                  { html: '3/4 屏幕', value: '75%', default: typeof window === 'undefined' || (() => {
-                    try { return JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]')[1] === '75%'; } catch { return true; }
-                  })() },
-                  { html: '全屏', value: '100%', default: typeof window !== 'undefined' && (() => {
-                    try { return JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]')[1] === '100%'; } catch { return false; }
-                  })() },
+                  {
+                    html: '全屏显示',
+                    value: [10, 10],
+                    default: typeof window !== 'undefined' && (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
+                        return m[0] === 10 && m[1] === 10;
+                      } catch { return false; }
+                    })()
+                  },
+                  {
+                    html: '顶部区域',
+                    value: [10, '75%'],
+                    default: typeof window === 'undefined' || (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
+                        return m[0] === 10 && m[1] === '75%';
+                      } catch { return true; }
+                    })()
+                  },
+                  {
+                    html: '上半部分',
+                    value: [10, '50%'],
+                    default: typeof window !== 'undefined' && (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
+                        return m[0] === 10 && m[1] === '50%';
+                      } catch { return false; }
+                    })()
+                  },
+                  {
+                    html: '下半部分',
+                    value: ['50%', 10],
+                    default: typeof window !== 'undefined' && (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
+                        return m[0] === '50%' && m[1] === 10;
+                      } catch { return false; }
+                    })()
+                  },
+                  {
+                    html: '底部区域',
+                    value: ['75%', 10],
+                    default: typeof window !== 'undefined' && (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
+                        return m[0] === '75%' && m[1] === 10;
+                      } catch { return false; }
+                    })()
+                  },
+                  {
+                    html: '仅中间',
+                    value: ['25%', '25%'],
+                    default: typeof window !== 'undefined' && (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
+                        return m[0] === '25%' && m[1] === '25%';
+                      } catch { return false; }
+                    })()
+                  },
                 ],
                 onSelect: function (subItem: any) {
-                  try {
-                    const margin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
-                    margin[1] = subItem.value;
-                    localStorage.setItem('danmaku_margin', JSON.stringify(margin));
-                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ margin });
-                    }
-                  } catch (e) {
-                    console.error(e);
+                  localStorage.setItem('danmaku_margin', JSON.stringify(subItem.value));
+                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                      margin: subItem.value,
+                    });
                   }
                   return subItem.html;
                 },
@@ -4019,25 +4063,63 @@ function PlayPageClient() {
                 html: '弹幕类型',
                 tooltip: '选择显示的弹幕类型',
                 selector: [
-                  { html: '显示全部', value: '[0,1,2]', default: typeof window === 'undefined' || (() => {
-                    try { return localStorage.getItem('danmaku_modes') === '[0,1,2]' || !localStorage.getItem('danmaku_modes'); } catch { return true; }
-                  })() },
-                  { html: '只显示滚动', value: '[0]', default: typeof window !== 'undefined' && (() => {
-                    try { return localStorage.getItem('danmaku_modes') === '[0]'; } catch { return false; }
-                  })() },
-                  { html: '只显示顶部/底部', value: '[1,2]', default: typeof window !== 'undefined' && (() => {
-                    try { return localStorage.getItem('danmaku_modes') === '[1,2]'; } catch { return false; }
-                  })() },
+                  {
+                    html: '全部显示',
+                    value: [0, 1, 2],
+                    default: typeof window === 'undefined' || (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
+                        return m.includes(0) && m.includes(1) && m.includes(2);
+                      } catch { return true; }
+                    })()
+                  },
+                  {
+                    html: '仅滚动',
+                    value: [0],
+                    default: typeof window !== 'undefined' && (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
+                        return m.length === 1 && m[0] === 0;
+                      } catch { return false; }
+                    })()
+                  },
+                  {
+                    html: '滚动+顶部',
+                    value: [0, 1],
+                    default: typeof window !== 'undefined' && (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
+                        return m.length === 2 && m.includes(0) && m.includes(1);
+                      } catch { return false; }
+                    })()
+                  },
+                  {
+                    html: '滚动+底部',
+                    value: [0, 2],
+                    default: typeof window !== 'undefined' && (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
+                        return m.length === 2 && m.includes(0) && m.includes(2);
+                      } catch { return false; }
+                    })()
+                  },
+                  {
+                    html: '仅固定',
+                    value: [1, 2],
+                    default: typeof window !== 'undefined' && (() => {
+                      try {
+                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
+                        return m.length === 2 && m.includes(1) && m.includes(2);
+                      } catch { return false; }
+                    })()
+                  },
                 ],
                 onSelect: function (subItem: any) {
-                  try {
-                    const modes = JSON.parse(subItem.value);
-                    localStorage.setItem('danmaku_modes', subItem.value);
-                    if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                      artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ modes });
-                    }
-                  } catch (e) {
-                    console.error(e);
+                  localStorage.setItem('danmaku_modes', JSON.stringify(subItem.value));
+                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
+                      modes: subItem.value,
+                    });
                   }
                   return subItem.html;
                 },
