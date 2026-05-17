@@ -5516,6 +5516,8 @@ function PlayPageClient() {
       <UISettingsPanel
         isOpen={isUISettingsPanelOpen}
         onClose={() => setIsUISettingsPanelOpen(false)}
+        playerContainer={artPlayerRef.current?.template?.$player || artRef.current}
+        isFullscreen={isPlayerFullscreen}
       />
       </PageLayout>
 
