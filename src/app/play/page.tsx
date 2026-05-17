@@ -4728,17 +4728,23 @@ function PlayPageClient() {
 
           // 6. 点击外部任何地方自动隐藏面板 (Click-away close)
           const handleGlobalClick = (e: MouseEvent) => {
-            if (!danmakuBtn.contains(e.target as Node)) {
-              if (danmakuPanel.classList.contains('apd-emitter-visible')) {
-                inputHasFocus = false; // 🚀 重置输入框焦点状态
-                if (playerContainer) playerContainer.classList.remove('apd-lock-controls');
-                if (playerEl) playerEl.classList.remove('apd-lock-controls');
-                danmakuPanel.classList.remove('apd-emitter-visible');
-                
-                // 🚀 恢复提示气泡
-                const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
-                danmakuBtn.setAttribute('aria-label', backup);
-              }
+            const target = e.target as HTMLElement;
+            if (!target) return;
+
+            // 🚀 如果点击的是弹幕面板或按钮内的任何元素，绝对不要触发关闭，即使 DOM 处于临时重绘状态！
+            if (target.closest('.apd-danmaku-emitter') || target.closest('.art-control-danmaku-btn')) {
+              return;
+            }
+
+            if (danmakuPanel.classList.contains('apd-emitter-visible')) {
+              inputHasFocus = false; // 🚀 重置输入框焦点状态
+              if (playerContainer) playerContainer.classList.remove('apd-lock-controls');
+              if (playerEl) playerEl.classList.remove('apd-lock-controls');
+              danmakuPanel.classList.remove('apd-emitter-visible');
+              
+              // 🚀 恢复提示气泡
+              const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
+              danmakuBtn.setAttribute('aria-label', backup);
             }
           };
           document.addEventListener('click', handleGlobalClick);
