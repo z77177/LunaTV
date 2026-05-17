@@ -169,6 +169,7 @@ function PlayPageClient() {
     return true;
   });
   const blockAdEnabledRef = useRef(blockAdEnabled);
+  const wasPausedRef = useRef(false); // 🌟 追踪去广告刷新前的视频播放/暂停状态，防止非预期自动播放
 
   // 自定义去广告代码
   const [customAdFilterCode, setCustomAdFilterCode] = useState<string>('');
@@ -3665,6 +3666,10 @@ function PlayPageClient() {
     }
 
     try {
+      // 🌟 读取并重置前一次暂存的播放/暂停状态，决定初始化时是否自动播放
+      const shouldAutoplay = !wasPausedRef.current;
+      wasPausedRef.current = false;
+
       // 使用动态导入的 Artplayer
       const Artplayer = (window as any).DynamicArtplayer;
       const artplayerPluginDanmuku = (window as any).DynamicArtplayerPluginDanmuku;
@@ -3684,7 +3689,7 @@ function PlayPageClient() {
         isLive: false,
         // iOS设备需要静音才能自动播放，参考ArtPlayer源码处理
         muted: isIOS || isSafari,
-        autoplay: true,
+        autoplay: shouldAutoplay,
         pip: true,
         autoSize: false,
         autoMini: false,
@@ -3867,6 +3872,8 @@ function PlayPageClient() {
               try {
                 localStorage.setItem('enable_blockad', String(newVal));
                 if (artPlayerRef.current) {
+                  // 🌟 暂存前一次的播放/暂停状态，避免重建后强行自动播放
+                  wasPausedRef.current = artPlayerRef.current.paused;
                   resumeTimeRef.current = artPlayerRef.current.currentTime;
                   if (artPlayerRef.current.video.hls) {
                     artPlayerRef.current.video.hls.destroy();
