@@ -132,7 +132,8 @@
 .artplayer-plugin-liquid-glass .art-control .apd-danmaku-emitter {
   position: absolute !important;
   bottom: 45px !important;
-  right: -10px !important; /* 对齐到控制栏右端 */
+  left: 50% !important;
+  right: auto !important;
   width: 280px !important;
   padding: 12px !important;
   border-radius: 12px !important;
@@ -150,7 +151,7 @@
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
-  transform: translateY(6px) !important;
+  transform: translateX(-50%) translateY(6px) !important;
   transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease !important;
 }
 
@@ -159,7 +160,15 @@
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
-  transform: translateY(0) !important;
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+/* 当弹幕发射器面板处于可见状态时，隐藏该按钮上的原生/自定义 tooltip 气泡 */
+.art-control:has(.apd-emitter-visible):before,
+.art-control:has(.apd-emitter-visible):after {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 /* 🎨 颜色小圆点容器 */
