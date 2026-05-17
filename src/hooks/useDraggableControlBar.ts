@@ -39,37 +39,41 @@ export function useDraggableControlBar(
       bottomNode.style.zIndex = '999';
       bottomNode.style.pointerEvents = 'none'; // let children handle clicks
       
-      // 使用独立的 bgNode 处理毛玻璃，避免 backdrop-filter 裁剪内部绝对定位元素（如 tooltip 提示词）
-      let bgNode = bottomNode.querySelector('.art-custom-glass-bg') as HTMLElement;
-      if (!bgNode) {
-        bgNode = document.createElement('div');
-        bgNode.className = 'art-custom-glass-bg';
-        bottomNode.insertBefore(bgNode, bottomNode.firstChild);
+      bottomNode.classList.add('art-immersive-glass');
+      let styleNode = document.getElementById('art-immersive-glass-style');
+      if (!styleNode) {
+        styleNode = document.createElement('style');
+        styleNode.id = 'art-immersive-glass-style';
+        document.head.appendChild(styleNode);
       }
-      bgNode.style.position = 'absolute';
-      bgNode.style.top = '0';
-      bgNode.style.bottom = '0';
-      bgNode.style.left = '0';
-      bgNode.style.right = '0';
-      bgNode.style.backgroundColor = `rgba(20, 20, 25, ${opacity})`;
-      bgNode.style.backdropFilter = 'blur(16px)';
-      bgNode.style.setProperty('-webkit-backdrop-filter', 'blur(16px)');
-      bgNode.style.borderRadius = '16px';
-      bgNode.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-      bgNode.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
-      bgNode.style.zIndex = '-1';
-      bgNode.style.pointerEvents = 'auto'; // 遮挡底部视频点击
+      // 动态更新透明度
+      styleNode.innerHTML = `
+        .art-immersive-glass::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background-color: rgba(20, 20, 25, ${opacity});
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          z-index: -1;
+          pointer-events: auto;
+        }
+      `;
       
-      // 调整内部元素的 padding，给最左侧拖拽手柄留出精确空间，并对齐玻璃背景
+      // 仅调整内部元素的左侧 padding 给最左侧拖拽手柄留出空间，不影响原有右侧对齐
       const progress = bottomNode.querySelector('.art-progress') as HTMLElement;
       const controls = bottomNode.querySelector('.art-controls') as HTMLElement;
       if (progress) {
-        progress.style.paddingLeft = '45px';
-        progress.style.paddingRight = '15px';
+        progress.style.paddingLeft = '30px';
       }
       if (controls) {
-        controls.style.paddingLeft = '45px';
-        controls.style.paddingRight = '15px';
+        controls.style.paddingLeft = '30px';
       }
 
       const syncTransforms = (x: number, y: number) => {
@@ -220,6 +224,7 @@ export function useDraggableControlBar(
       };
     } else {
       // 还原 ArtPlayer 原生样式
+      bottomNode.classList.remove('art-immersive-glass');
       bottomNode.style.position = '';
       bottomNode.style.width = '';
       bottomNode.style.left = '';
@@ -239,18 +244,13 @@ export function useDraggableControlBar(
       bottomNode.style.pointerEvents = '';
       bottomNode.style.transform = '';
       
-      const bgNode = bottomNode.querySelector('.art-custom-glass-bg');
-      if (bgNode) bgNode.remove();
-      
       const progress = bottomNode.querySelector('.art-progress') as HTMLElement;
       const controls = bottomNode.querySelector('.art-controls') as HTMLElement;
       if (progress) {
         progress.style.paddingLeft = '';
-        progress.style.paddingRight = '';
       }
       if (controls) {
         controls.style.paddingLeft = '';
-        controls.style.paddingRight = '';
       }
       if (art.template.$setting) art.template.$setting.style.transform = '';
       if (art.template.$info) art.template.$info.style.transform = '';
