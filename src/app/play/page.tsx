@@ -3880,6 +3880,24 @@ function PlayPageClient() {
             },
           },
           {
+            name: '外部弹幕',
+            html: '外部弹幕',
+            icon: '<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 13px; font-weight: bold; color: #fff; background: rgba(255, 255, 255, 0.15); border-radius: 4px;">外</span>',
+            tooltip: externalDanmuEnabledRef.current ? '外部弹幕已开启' : '外部弹幕已关闭',
+            switch: externalDanmuEnabledRef.current,
+            onSwitch: function (item: any) {
+              const nextState = !item.switch;
+
+              // 🚀 使用优化后的弹幕操作处理函数
+              handleDanmuOperationOptimized(nextState);
+
+              // 更新tooltip显示
+              item.tooltip = nextState ? '外部弹幕已开启' : '外部弹幕已关闭';
+
+              return nextState; // 立即返回新状态
+            },
+          },
+          {
             name: 'UI设置',
             html: 'UI设置',
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>',
@@ -4024,8 +4042,7 @@ function PlayPageClient() {
                 margin: JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]') as [number | `${number}%`, number | `${number}%`],
                 visible: localStorage.getItem('danmaku_visible') !== 'false',
                 emitter: false,
-                setting: false, // 🚫 彻底禁用插件自动向播放器齿轮菜单中添加“弹幕”设置项
-                settings: false, // 🚫 兼容部分旧版本属性
+                setting: false, // 🚀 彻底禁止在齿轮设置菜单里自动注册任何弹幕相关菜单项，保持菜单极其干净！
                 maxLength: 50,
                 lockTime: 1, // 🎯 进一步减少锁定时间，提升进度跳转响应
                 theme: 'dark' as const,
@@ -4290,75 +4307,6 @@ function PlayPageClient() {
             
             settingPanel.addEventListener('mouseenter', showSettings);
             settingPanel.addEventListener('mouseleave', hideSettings);
-          }
-        })();
-
-        // 🛑 动态获取弹幕插件的配置按钮，并在其展开配置面板时注入“外部弹幕”复选框！
-        (() => {
-          const art = artPlayerRef.current;
-          if (!art || !art.template) return;
-
-          const apdConfigBtn = art.template.$bottom?.querySelector('.apd-config') as HTMLElement;
-          if (apdConfigBtn) {
-            apdConfigBtn.addEventListener('click', () => {
-              // 🚀 建立智能观测器，等待内部复选框容器及其子元素加载完毕后再优雅安全地注入，完美解决插件动态二次重绘抹除 DOM 的竞态冲突！
-              const injectCheckboxWithRetry = () => {
-                const panel = art.template.$bottom?.querySelector('.apd-config-panel') as HTMLElement;
-                if (!panel) return;
-
-                const apdOther = panel.querySelector('.apd-other') as HTMLElement;
-                // 如果容器尚未渲染完毕，或原生复选框列表还为空，则等待 50ms 继续尝试
-                if (!apdOther || !apdOther.querySelector('input[type="checkbox"]')) {
-                  setTimeout(injectCheckboxWithRetry, 50);
-                  return;
-                }
-
-                // 防重入：已经存在我们的复选框时不再重复插入
-                if (panel.querySelector('.apd-external-danmu-checkbox-wrap')) return;
-
-                const templateEl = apdOther.querySelector('label') || apdOther.firstElementChild;
-                let checkboxWrap = document.createElement('label');
-                checkboxWrap.className = 'apd-external-danmu-checkbox-wrap';
-                
-                // 100% 完美的 CSS 样式与对齐自适应克隆
-                if (templateEl) {
-                  checkboxWrap = document.createElement(templateEl.tagName.toLowerCase()) as any;
-                  checkboxWrap.className = `${templateEl.className} apd-external-danmu-checkbox-wrap`;
-                } else {
-                  checkboxWrap.style.display = 'inline-flex';
-                  checkboxWrap.style.alignItems = 'center';
-                  checkboxWrap.style.marginRight = '16px';
-                  checkboxWrap.style.cursor = 'pointer';
-                  checkboxWrap.style.fontSize = '13px';
-                  checkboxWrap.style.color = '#fff';
-                  checkboxWrap.style.userSelect = 'none';
-                }
-
-                checkboxWrap.innerHTML = `
-                  <input type="checkbox" ${externalDanmuEnabledRef.current ? 'checked' : ''}>
-                  <span>载入外部弹幕</span>
-                `;
-
-                const checkboxInput = checkboxWrap.querySelector('input') as HTMLInputElement;
-                if (checkboxInput) {
-                  checkboxInput.style.marginRight = '6px';
-                  checkboxInput.style.cursor = 'pointer';
-                }
-
-                checkboxWrap.addEventListener('click', (e) => {
-                  e.preventDefault(); // 阻止默认行为以防双重触发
-                  const nextState = !checkboxInput.checked;
-                  checkboxInput.checked = nextState;
-                  // 调用外部弹幕一键载入方法！
-                  handleDanmuOperationOptimized(nextState);
-                });
-
-                // 完美前置挂载，使其成为容器的第一个复选框！
-                apdOther.prepend(checkboxWrap);
-              };
-
-              injectCheckboxWithRetry();
-            });
           }
         })();
 
@@ -4688,58 +4636,86 @@ function PlayPageClient() {
           artPlayerRef.current.on('video:play', handleFirstPlay);
         }
 
-        // 添加弹幕插件按钮选择性隐藏CSS
+        // 添加弹幕插件按钮高阶美化与布局CSS
         const optimizeDanmukuControlsCSS = () => {
           if (document.getElementById('danmuku-controls-optimize')) return;
 
           const style = document.createElement('style');
           style.id = 'danmuku-controls-optimize';
           style.textContent = `
-            /* 🚀 极致紧贴高定：强力消除弹幕控制栏所有相关按钮的左右 padding 与 margin，实现完美紧贴！ */
-            .artplayer-plugin-danmuku,
-            .art-control-danmuku,
-            .art-control-danmuku-config,
-            .art-control:has(.apd-toggle),
-            .art-control:has(.apd-config),
-            .art-control:has(.art-control-danmaku-btn) {
-              padding: 0 2px !important; /* 将左右 padding 彻底压缩至 2px！ */
-              margin: 0 !important;
-            }
-
+            /* 🛠️ 弹幕开关与配置按钮美化 */
             .artplayer-plugin-danmuku .apd-toggle {
-              display: inline-flex !important;
+              display: flex !important;
               align-items: center;
               justify-content: center;
-              margin-right: 4px !important; /* 开关与配置齿轮之间的间距 */
               cursor: pointer;
+              transition: all 0.2s ease !important;
+              opacity: 0.95;
+            }
+            
+            .artplayer-plugin-danmuku .apd-toggle:hover {
+              opacity: 1;
+              transform: scale(1.05) !important;
             }
 
-            .artplayer-plugin-danmuku .apd-config {
-              display: inline-flex !important;
-              align-items: center;
-              justify-content: center;
-              margin-right: 0 !important;
-              cursor: pointer;
-              position: relative;
+            /* 美化开关容器样式，使用高端毛玻璃质感 */
+            .artplayer-plugin-danmuku .apd-toggle-inner,
+            .artplayer-plugin-danmuku .apd-toggle-state {
+              background: rgba(255, 255, 255, 0.1) !important;
+              border: 1px solid rgba(255, 255, 255, 0.15) !important;
+              border-radius: 20px !important;
+              backdrop-filter: blur(5px) !important;
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
             }
 
-            /* 原生发射器面板依然保持隐藏（使用我们高定毛玻璃的发射面板） */
+            /* 隐藏自带的输入发射器以及其对应的 .art-control 容器占位 */
+            .art-control:has(.apd-emitter) {
+              display: none !important;
+            }
             .artplayer-plugin-danmuku .apd-emitter {
               display: none !important;
             }
+
+            /* 🎯 收紧弹幕独立控制群组按钮之间的间距，使其紧凑美观 */
+            .art-control:has(.apd-toggle),
+            .art-control:has(.apd-config),
+            .art-control:has(.art-control-danmaku-btn) {
+              min-width: auto !important;
+              padding: 0 4px !important;
+            }
+
+            /* ⚙️ 弹幕配置按钮呼吸动画与微动 */
+            .artplayer-plugin-danmuku .apd-config {
+              display: flex !important;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            }
             
+            .artplayer-plugin-danmuku .apd-config:hover {
+              transform: scale(var(--art-control-icon-scale, 1.1)) !important;
+              filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.35)) !important;
+            }
+            
+            /* 弹幕配置面板优化 - 整合毛玻璃与高端暗色调 */
             .artplayer-plugin-danmuku .apd-config-panel {
               /* 使用绝对定位而不是fixed，让ArtPlayer的动态定位生效 */
               position: absolute !important;
-              /* 保持ArtPlayer原版的默认left: 0，让JS动态覆盖 */
               /* 保留z-index确保层级正确 */
               z-index: 2147483647 !important; /* 使用最大z-index确保在全屏模式下也能显示在最顶层 */
               /* 确保面板可以接收点击事件 */
               pointer-events: auto !important;
-              /* 添加一些基础样式确保可见性 */
-              background: rgba(0, 0, 0, 0.8);
-              border-radius: 6px;
-              backdrop-filter: blur(10px);
+              
+              /* 🌟 极致美学：流光毛玻璃质感，与主设置面板完美统一 */
+              background: rgba(20, 20, 25, 0.82) !important;
+              border: 1px solid rgba(255, 255, 255, 0.12) !important;
+              backdrop-filter: blur(25px) !important;
+              -webkit-backdrop-filter: blur(25px) !important;
+              border-radius: 12px !important;
+              box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55) !important;
+              padding: 16px !important;
+              transition: opacity 0.2s ease, transform 0.2s ease !important;
             }
             
             /* 全屏模式下的特殊优化 */
@@ -4756,6 +4732,19 @@ function PlayPageClient() {
             /* 确保全屏模式下弹幕面板内部元素可点击 */
             .artplayer[data-fullscreen="true"] .artplayer-plugin-danmuku .apd-config-panel * {
               pointer-events: auto !important;
+            }
+
+            /* 面板内部滑块与交互微调 */
+            .artplayer-plugin-danmuku .apd-config-panel .apd-slider-track {
+              background: rgba(255, 255, 255, 0.15) !important;
+              height: 4px !important;
+              border-radius: 2px !important;
+            }
+
+            .artplayer-plugin-danmuku .apd-config-panel .apd-slider-thumb {
+              background: #ffffff !important;
+              border: 2px solid #00ff66 !important; /* 经典流光绿呼吸感 */
+              box-shadow: 0 0 8px rgba(0, 255, 102, 0.4) !important;
             }
           `;
           document.head.appendChild(style);
