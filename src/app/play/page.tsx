@@ -4533,7 +4533,9 @@ function PlayPageClient() {
           const danmakuBtn = danmakuBtnSpan?.closest('.art-control') as HTMLElement;
           if (!danmakuBtn) return;
 
-          // 1. 创建并构建自定义弹幕面板的 DOM 结构
+          const playerContainer = art.template.$container;
+
+          // 1. 创建并构建自定义弹幕面板 of DOM 结构
           const danmakuPanel = document.createElement('div');
           danmakuPanel.className = 'apd-danmaku-emitter';
           danmakuPanel.innerHTML = `
@@ -4598,6 +4600,9 @@ function PlayPageClient() {
 
             input.value = '';
             inputHasFocus = false; // 🚀 重置输入框焦点状态
+            if (playerContainer) {
+              playerContainer.classList.remove('apd-lock-controls');
+            }
             danmakuPanel.classList.remove('apd-emitter-visible');
             
             // 🚀 发送成功关闭后，恢复提示气泡
@@ -4664,9 +4669,13 @@ function PlayPageClient() {
           danmakuPanel.addEventListener('mouseenter', showDanmaku);
           danmakuPanel.addEventListener('mouseleave', hideDanmaku);
 
-          // ⌨️ 输入框焦点状态监测，确保光标聚焦时面板维持显示
+          // ⌨️ 输入框焦点状态监测，确保光标聚焦时面板维持显示，且锁定控制栏不隐藏！
           input.addEventListener('focus', () => {
             inputHasFocus = true;
+            if (playerContainer) {
+              playerContainer.classList.add('apd-lock-controls');
+            }
+            art.controls.show = true;
             if (danmakuHoverTimer) {
               clearTimeout(danmakuHoverTimer);
               danmakuHoverTimer = null;
@@ -4675,6 +4684,9 @@ function PlayPageClient() {
 
           input.addEventListener('blur', () => {
             inputHasFocus = false;
+            if (playerContainer) {
+              playerContainer.classList.remove('apd-lock-controls');
+            }
             // 🚀 当失去焦点时，如果鼠标已经在面板和按钮外部，立即触发 500ms 退出延迟收起！
             if (!mouseInside) {
               hideDanmaku();
@@ -4705,6 +4717,9 @@ function PlayPageClient() {
             if (!danmakuBtn.contains(e.target as Node)) {
               if (danmakuPanel.classList.contains('apd-emitter-visible')) {
                 inputHasFocus = false; // 🚀 重置输入框焦点状态
+                if (playerContainer) {
+                  playerContainer.classList.remove('apd-lock-controls');
+                }
                 danmakuPanel.classList.remove('apd-emitter-visible');
                 
                 // 🚀 恢复提示气泡

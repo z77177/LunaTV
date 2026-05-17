@@ -171,6 +171,14 @@
   visibility: hidden !important;
 }
 
+/* 🔒 当用户聚焦输入框时，强行锁定控制栏为 100% 不透明、完全可见状态，拒绝任何超时自动隐藏！ */
+.artplayer-plugin-liquid-glass.apd-lock-controls .art-bottom {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
+}
+
 /* 🎨 颜色小圆点容器 */
 .apd-danmaku-colors {
   display: flex !important;
