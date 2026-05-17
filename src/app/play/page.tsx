@@ -3880,253 +3880,6 @@ function PlayPageClient() {
             },
           },
           {
-            name: '外部弹幕',
-            html: '外部弹幕',
-            icon: '<text x="50%" y="50%" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#ffffff">外</text>',
-            tooltip: externalDanmuEnabled ? '外部弹幕已开启' : '外部弹幕已关闭',
-            switch: externalDanmuEnabled,
-            onSwitch: function (item: any) {
-              const nextState = !item.switch;
-
-              // 🚀 使用优化后的弹幕操作处理函数
-              handleDanmuOperationOptimized(nextState);
-
-              // 更新tooltip显示
-              item.tooltip = nextState ? '外部弹幕已开启' : '外部弹幕已关闭';
-
-              return nextState; // 立即返回新状态
-            },
-          },
-          {
-            name: '弹幕设置',
-            html: '弹幕设置',
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
-            selector: [
-              {
-                html: '显示弹幕',
-                switch: typeof window !== 'undefined' ? localStorage.getItem('danmaku_visible') !== 'false' : true,
-                onSwitch: function (item: any) {
-                  const nextState = !item.switch;
-                  localStorage.setItem('danmaku_visible', String(nextState));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    if (nextState) {
-                      artPlayerRef.current.plugins.artplayerPluginDanmuku.show();
-                    } else {
-                      artPlayerRef.current.plugins.artplayerPluginDanmuku.hide();
-                    }
-                  }
-                  return nextState;
-                },
-              },
-              {
-                html: '防重叠',
-                switch: typeof window !== 'undefined' ? localStorage.getItem('danmaku_antiOverlap') !== 'false' : true,
-                onSwitch: function (item: any) {
-                  const nextState = !item.switch;
-                  localStorage.setItem('danmaku_antiOverlap', String(nextState));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ antiOverlap: nextState });
-                  }
-                  return nextState;
-                },
-              },
-              {
-                html: '字号',
-                tooltip: `${typeof window !== 'undefined' ? localStorage.getItem('danmaku_fontSize') || '25' : '25'}px`,
-                range: [
-                  typeof window !== 'undefined' ? parseInt(localStorage.getItem('danmaku_fontSize') || '25') : 25,
-                  12,
-                  48,
-                  1
-                ],
-                onRange: function (item: any) {
-                  const val = Math.round(item.range[0]);
-                  localStorage.setItem('danmaku_fontSize', String(val));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ fontSize: val });
-                  }
-                  return `${val}px`;
-                },
-              },
-              {
-                html: '速度',
-                tooltip: `${typeof window !== 'undefined' ? localStorage.getItem('danmaku_speed') || '5' : '5'}`,
-                range: [
-                  typeof window !== 'undefined' ? parseFloat(localStorage.getItem('danmaku_speed') || '5') : 5,
-                  1,
-                  10,
-                  1
-                ],
-                onRange: function (item: any) {
-                  const val = Math.round(item.range[0]);
-                  localStorage.setItem('danmaku_speed', String(val));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ speed: val });
-                  }
-                  return `${val}`;
-                },
-              },
-              {
-                html: '透明度',
-                tooltip: `${Math.round(parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_opacity') || '0.8' : '0.8') * 100)}%`,
-                range: [
-                  typeof window !== 'undefined' ? parseFloat(localStorage.getItem('danmaku_opacity') || '0.8') : 0.8,
-                  0.1,
-                  1.0,
-                  0.05
-                ],
-                onRange: function (item: any) {
-                  const val = Math.round(item.range[0] * 20) / 20; // 0.05 step
-                  localStorage.setItem('danmaku_opacity', String(val));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ opacity: val });
-                  }
-                  return `${Math.round(val * 100)}%`;
-                },
-              },
-              {
-                html: '显示区域',
-                tooltip: '弹幕显示区域',
-                selector: [
-                  {
-                    html: '全屏显示',
-                    value: [10, 10],
-                    default: typeof window !== 'undefined' && (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
-                        return m[0] === 10 && m[1] === 10;
-                      } catch { return false; }
-                    })()
-                  },
-                  {
-                    html: '顶部区域',
-                    value: [10, '75%'],
-                    default: typeof window === 'undefined' || (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
-                        return m[0] === 10 && m[1] === '75%';
-                      } catch { return true; }
-                    })()
-                  },
-                  {
-                    html: '上半部分',
-                    value: [10, '50%'],
-                    default: typeof window !== 'undefined' && (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
-                        return m[0] === 10 && m[1] === '50%';
-                      } catch { return false; }
-                    })()
-                  },
-                  {
-                    html: '下半部分',
-                    value: ['50%', 10],
-                    default: typeof window !== 'undefined' && (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
-                        return m[0] === '50%' && m[1] === 10;
-                      } catch { return false; }
-                    })()
-                  },
-                  {
-                    html: '底部区域',
-                    value: ['75%', 10],
-                    default: typeof window !== 'undefined' && (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
-                        return m[0] === '75%' && m[1] === 10;
-                      } catch { return false; }
-                    })()
-                  },
-                  {
-                    html: '仅中间',
-                    value: ['25%', '25%'],
-                    default: typeof window !== 'undefined' && (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
-                        return m[0] === '25%' && m[1] === '25%';
-                      } catch { return false; }
-                    })()
-                  },
-                ],
-                onSelect: function (subItem: any) {
-                  localStorage.setItem('danmaku_margin', JSON.stringify(subItem.value));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                      margin: subItem.value,
-                    });
-                  }
-                  return subItem.html;
-                },
-              },
-              {
-                html: '弹幕类型',
-                tooltip: '选择显示的弹幕类型',
-                selector: [
-                  {
-                    html: '全部显示',
-                    value: [0, 1, 2],
-                    default: typeof window === 'undefined' || (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
-                        return m.includes(0) && m.includes(1) && m.includes(2);
-                      } catch { return true; }
-                    })()
-                  },
-                  {
-                    html: '仅滚动',
-                    value: [0],
-                    default: typeof window !== 'undefined' && (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
-                        return m.length === 1 && m[0] === 0;
-                      } catch { return false; }
-                    })()
-                  },
-                  {
-                    html: '滚动+顶部',
-                    value: [0, 1],
-                    default: typeof window !== 'undefined' && (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
-                        return m.length === 2 && m.includes(0) && m.includes(1);
-                      } catch { return false; }
-                    })()
-                  },
-                  {
-                    html: '滚动+底部',
-                    value: [0, 2],
-                    default: typeof window !== 'undefined' && (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
-                        return m.length === 2 && m.includes(0) && m.includes(2);
-                      } catch { return false; }
-                    })()
-                  },
-                  {
-                    html: '仅固定',
-                    value: [1, 2],
-                    default: typeof window !== 'undefined' && (() => {
-                      try {
-                        const m = JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]');
-                        return m.length === 2 && m.includes(1) && m.includes(2);
-                      } catch { return false; }
-                    })()
-                  },
-                ],
-                onSelect: function (subItem: any) {
-                  localStorage.setItem('danmaku_modes', JSON.stringify(subItem.value));
-                  if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                    artPlayerRef.current.plugins.artplayerPluginDanmuku.config({
-                      modes: subItem.value,
-                    });
-                  }
-                  return subItem.html;
-                },
-              },
-            ],
-          },
-          {
             name: 'UI设置',
             html: 'UI设置',
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>',
@@ -4271,6 +4024,8 @@ function PlayPageClient() {
                 margin: JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]') as [number | `${number}%`, number | `${number}%`],
                 visible: localStorage.getItem('danmaku_visible') !== 'false',
                 emitter: false,
+                setting: false, // 🚫 彻底禁用插件自动向播放器齿轮菜单中添加“弹幕”设置项
+                settings: false, // 🚫 兼容部分旧版本属性
                 maxLength: 50,
                 lockTime: 1, // 🎯 进一步减少锁定时间，提升进度跳转响应
                 theme: 'dark' as const,
@@ -4535,6 +4290,71 @@ function PlayPageClient() {
             
             settingPanel.addEventListener('mouseenter', showSettings);
             settingPanel.addEventListener('mouseleave', hideSettings);
+          }
+        })();
+
+        // 🛑 动态获取弹幕插件的配置按钮，并在其展开配置面板时注入“外部弹幕”复选框！
+        (() => {
+          const art = artPlayerRef.current;
+          if (!art || !art.template) return;
+
+          const apdConfigBtn = art.template.$bottom?.querySelector('.apd-config') as HTMLElement;
+          if (apdConfigBtn) {
+            apdConfigBtn.addEventListener('click', () => {
+              // 延迟 50ms 确保配置面板 DOM 已由插件渲染出来
+              setTimeout(() => {
+                const panel = art.template.$bottom?.querySelector('.apd-config-panel') as HTMLElement;
+                if (panel && !panel.querySelector('.apd-external-danmu-checkbox-wrap')) {
+                  const checkboxes = panel.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+                  
+                  // 找到“防重叠”复选框的位置作为参考
+                  const antiOverlap = Array.from(checkboxes).find((el: any) => {
+                    const text = el.parentElement?.innerText || '';
+                    return text.includes('重叠') || text.includes('overlap');
+                  }) as HTMLInputElement;
+
+                  const checkboxWrap = document.createElement('label');
+                  checkboxWrap.className = 'apd-external-danmu-checkbox-wrap';
+                  checkboxWrap.style.display = 'inline-flex';
+                  checkboxWrap.style.alignItems = 'center';
+                  checkboxWrap.style.marginRight = '16px';
+                  checkboxWrap.style.cursor = 'pointer';
+                  checkboxWrap.style.fontSize = '13px';
+                  checkboxWrap.style.color = '#fff';
+                  checkboxWrap.style.userSelect = 'none';
+
+                  // 采用与原生 checkbox 风格对齐的样式
+                  checkboxWrap.innerHTML = `
+                    <input type="checkbox" ${externalDanmuEnabledRef.current ? 'checked' : ''}>
+                    <span>载入外部弹幕</span>
+                  `;
+
+                  const checkboxInput = checkboxWrap.querySelector('input') as HTMLInputElement;
+                  checkboxInput.style.marginRight = '6px';
+                  checkboxInput.style.cursor = 'pointer';
+
+                  // 点击事件处理
+                  checkboxWrap.addEventListener('click', (e) => {
+                    e.preventDefault(); // 阻止默认行为以防双重触发
+                    const nextState = !checkboxInput.checked;
+                    checkboxInput.checked = nextState;
+                    // 🚀 调用外部弹幕切换方法，一键切换！
+                    handleDanmuOperationOptimized(nextState);
+                  });
+
+                  if (antiOverlap && antiOverlap.parentElement) {
+                    antiOverlap.parentElement.before(checkboxWrap);
+                  } else {
+                    const firstRow = panel.firstElementChild;
+                    if (firstRow) {
+                      firstRow.after(checkboxWrap);
+                    } else {
+                      panel.appendChild(checkboxWrap);
+                    }
+                  }
+                }
+              }, 50);
+            });
           }
         })();
 
@@ -4871,11 +4691,16 @@ function PlayPageClient() {
           const style = document.createElement('style');
           style.id = 'danmuku-controls-optimize';
           style.textContent = `
-            /* 隐藏弹幕开关按钮和发射器 */
+            /* 🚀 弹幕原生开关按钮与齿轮按钮复活与高定美化 */
             .artplayer-plugin-danmuku .apd-toggle {
-              display: none !important;
+              display: inline-flex !important;
+              align-items: center;
+              justify-content: center;
+              margin-right: 12px !important;
+              cursor: pointer;
             }
 
+            /* 原生发射器面板依然保持隐藏（使用我们高定毛玻璃的发射面板） */
             .artplayer-plugin-danmuku .apd-emitter {
               display: none !important;
             }
