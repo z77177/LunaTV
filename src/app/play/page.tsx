@@ -3,6 +3,7 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Hls from 'hls.js';
 import { Heart, ChevronUp, Download, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -33,6 +34,9 @@ import PlayErrorDisplay from '@/components/play/PlayErrorDisplay';
 import DanmuSettingsPanel from '@/components/play/DanmuSettingsPanel';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
+import { useImmersiveMode } from '@/hooks/useImmersiveMode';
+import { ImmersivePlayerOverlay } from '@/components/ImmersivePlayerOverlay';
+import { MobileEpisodeDrawer } from '@/components/MobileEpisodeDrawer';
 import { ClientCache } from '@/lib/client-cache';
 import {
   deleteFavorite,
@@ -346,6 +350,21 @@ function PlayPageClient() {
   // ArtPlayer ref
   const artPlayerRef = useRef<any>(null);
   const artRef = useRef<HTMLDivElement | null>(null);
+
+  // 🚀 沉浸模式相关状态
+  const { settings: immersiveSettings, isLoaded: isImmersiveLoaded, toggleImmersiveMode, updateSetting: updateImmersiveSetting } = useImmersiveMode();
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+
+  useEffect(() => {
+    // 简单的移动端检测
+    const checkMobile = () => {
+      setIsMobileDevice(window.innerWidth < 1024); // lg breakpoint in Tailwind
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 🚀 使用 useDanmu Hook 管理弹幕
   const {
@@ -5174,6 +5193,41 @@ function PlayPageClient() {
     );
   }
 
+  const episodeSelectorContent = (
+    <EpisodeSelector
+      totalEpisodes={totalEpisodes}
+      episodes_titles={detail?.episodes_titles || []}
+      value={currentEpisodeIndex + 1}
+      onChange={handleEpisodeChange}
+      onSourceChange={handleSourceChange}
+      currentSource={currentSource}
+      currentId={currentId}
+      videoTitle={searchTitle || videoTitle}
+      availableSources={availableSources.filter(source => {
+        // 必须有集数数据（所有源包括短剧源都必须满足）
+        if (!source.episodes || source.episodes.length < 1) return false;
+
+        // 短剧源不受集数差异限制（但必须有集数数据）
+        if (source.source === 'shortdrama') return true;
+
+        // 如果当前有 detail，只显示集数相近的源（允许 ±30% 的差异）
+        if (detail && detail.episodes && detail.episodes.length > 0) {
+          const currentEpisodes = detail.episodes.length;
+          const sourceEpisodes = source.episodes.length;
+          const tolerance = Math.max(5, Math.ceil(currentEpisodes * 0.3)); // 至少5集的容差
+
+          // 在合理范围内
+          return Math.abs(sourceEpisodes - currentEpisodes) <= tolerance;
+        }
+
+        return true;
+      })}
+      sourceSearchLoading={sourceSearchLoading}
+      sourceSearchError={sourceSearchError}
+      precomputedVideoInfo={precomputedVideoInfo}
+    />
+  );
+
   return (
     <>
       <PageLayout activePath='/play'>
@@ -5267,45 +5321,16 @@ function PlayPageClient() {
 
             {/* 选集和换源 - 在移动端始终显示，在 lg 及以上可折叠 */}
             <div
-              className={`h-[300px] lg:h-full md:overflow-hidden transition-all duration-300 ease-in-out ${isEpisodeSelectorCollapsed
-                ? 'md:col-span-1 lg:hidden lg:opacity-0 lg:scale-95'
+              className={`h-[300px] lg:h-full md:overflow-hidden transition-all duration-300 ease-in-out ${
+                isEpisodeSelectorCollapsed || (immersiveSettings.enabled && isPlayerFullscreen)
+                ? 'md:col-span-1 hidden lg:opacity-0 lg:scale-95'
                 : 'md:col-span-1 lg:opacity-100 lg:scale-100'
                 }`}
             >
-              <EpisodeSelector
-                totalEpisodes={totalEpisodes}
-                episodes_titles={detail?.episodes_titles || []}
-                value={currentEpisodeIndex + 1}
-                onChange={handleEpisodeChange}
-                onSourceChange={handleSourceChange}
-                currentSource={currentSource}
-                currentId={currentId}
-                videoTitle={searchTitle || videoTitle}
-                availableSources={availableSources.filter(source => {
-                  // 必须有集数数据（所有源包括短剧源都必须满足）
-                  if (!source.episodes || source.episodes.length < 1) return false;
-
-                  // 短剧源不受集数差异限制（但必须有集数数据）
-                  if (source.source === 'shortdrama') return true;
-
-                  // 如果当前有 detail，只显示集数相近的源（允许 ±30% 的差异）
-                  if (detail && detail.episodes && detail.episodes.length > 0) {
-                    const currentEpisodes = detail.episodes.length;
-                    const sourceEpisodes = source.episodes.length;
-                    const tolerance = Math.max(5, Math.ceil(currentEpisodes * 0.3)); // 至少5集的容差
-
-                    // 在合理范围内
-                    return Math.abs(sourceEpisodes - currentEpisodes) <= tolerance;
-                  }
-
-                  return true;
-                })}
-                sourceSearchLoading={sourceSearchLoading}
-                sourceSearchError={sourceSearchError}
-                precomputedVideoInfo={precomputedVideoInfo}
-              />
+              {episodeSelectorContent}
             </div>
           </div>
+
         </div>
 
         {/* 详情展示 */}
@@ -5681,6 +5706,52 @@ function PlayPageClient() {
         }
       }}
       />
+
+      {/* 沉浸式组件：PC端悬浮卡片 */}
+      {!isMobileDevice && (
+        <ImmersivePlayerOverlay
+          artPlayerRef={artPlayerRef}
+          isFullscreen={isPlayerFullscreen && immersiveSettings.enabled}
+          opacity={immersiveSettings.opacity}
+          hideTimeout={immersiveSettings.hideTimeout}
+        >
+          {episodeSelectorContent}
+        </ImmersivePlayerOverlay>
+      )}
+
+      {/* 沉浸式组件：移动端全屏滑动抽屉 */}
+      {isMobileDevice && (
+        <MobileEpisodeDrawer
+          isOpen={isMobileDrawerOpen}
+          onClose={() => setIsMobileDrawerOpen(false)}
+          artPlayerRef={artPlayerRef}
+          isFullscreen={isPlayerFullscreen && immersiveSettings.enabled}
+        >
+          {episodeSelectorContent}
+        </MobileEpisodeDrawer>
+      )}
+
+      {/* 移动端沉浸模式全屏呼出按钮 */}
+      {isMobileDevice && isPlayerFullscreen && immersiveSettings.enabled && artPlayerRef.current?.template?.$player && createPortal(
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-[400]">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMobileDrawerOpen(true);
+            }}
+            className="bg-black/50 text-white p-2 rounded-l-lg hover:bg-black/70 backdrop-blur shadow-lg border border-white/10 border-r-0 transition-all pointer-events-auto"
+            style={{ opacity: immersiveSettings.opacity }}
+          >
+            <div className="flex flex-col items-center justify-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-white/70"></span>
+              <span className="w-1 h-1 rounded-full bg-white/70"></span>
+              <span className="w-1 h-1 rounded-full bg-white/70"></span>
+              <span className="text-[10px] mt-1 text-white/90" style={{ writingMode: 'vertical-rl' }}>选集</span>
+            </div>
+          </button>
+        </div>,
+        artPlayerRef.current.template.$player
+      )}
     </>
   );
 }
