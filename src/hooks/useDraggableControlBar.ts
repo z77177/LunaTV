@@ -38,8 +38,22 @@ export function useDraggableControlBar(
       bottomNode.style.border = '1px solid rgba(255, 255, 255, 0.1)';
       bottomNode.style.paddingLeft = '30px'; // 为拖拽手柄留出空间
       bottomNode.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
-      bottomNode.style.height = '50px';
+      bottomNode.style.top = 'auto';
+      bottomNode.style.height = 'auto';
+      bottomNode.style.minHeight = '50px';
+      bottomNode.style.paddingTop = '0px';
+      bottomNode.style.zIndex = '999';
       bottomNode.style.pointerEvents = 'auto';
+      
+      const syncTransforms = (x: number, y: number) => {
+        const transform = `translate(${x}px, ${y}px)`;
+        bottomNode.style.transform = transform;
+        if (art.template.$setting) art.template.$setting.style.transform = transform;
+        if (art.template.$info) art.template.$info.style.transform = transform;
+        
+        const contextMenu = playerNode.querySelector('.art-contextmenu') as HTMLElement;
+        if (contextMenu) contextMenu.style.transform = transform;
+      };
       
       // 我们通过覆盖 opacity 来实现自定义的 hideTimeout，不依赖于 ArtPlayer 的 .art-hover
       bottomNode.style.transition = dragState.current.isDragging ? 'none' : 'opacity 0.3s ease, background-color 0.3s ease, visibility 0.3s ease';
@@ -101,7 +115,7 @@ export function useDraggableControlBar(
             const pos = JSON.parse(saved);
             dragState.current.currentX = pos.x;
             dragState.current.currentY = pos.y;
-            bottomNode.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+            syncTransforms(pos.x, pos.y);
           }
         } catch(e) {}
       }
@@ -119,7 +133,7 @@ export function useDraggableControlBar(
         const newX = dragState.current.currentX + dx;
         const newY = dragState.current.currentY + dy;
 
-        bottomNode.style.transform = `translate(${newX}px, ${newY}px)`;
+        syncTransforms(newX, newY);
       };
 
       const onMouseUp = (e: MouseEvent | TouchEvent) => {
@@ -185,10 +199,18 @@ export function useDraggableControlBar(
       bottomNode.style.removeProperty('-webkit-backdrop-filter');
       bottomNode.style.border = '';
       bottomNode.style.paddingLeft = '';
+      bottomNode.style.paddingTop = '';
       bottomNode.style.boxShadow = '';
       bottomNode.style.height = '';
+      bottomNode.style.minHeight = '';
+      bottomNode.style.top = '';
+      bottomNode.style.zIndex = '';
       bottomNode.style.pointerEvents = '';
       bottomNode.style.transform = '';
+      if (art.template.$setting) art.template.$setting.style.transform = '';
+      if (art.template.$info) art.template.$info.style.transform = '';
+      const contextMenu = playerNode.querySelector('.art-contextmenu') as HTMLElement;
+      if (contextMenu) contextMenu.style.transform = '';
       bottomNode.style.transition = '';
       bottomNode.style.opacity = '';
       bottomNode.style.visibility = '';
