@@ -4217,18 +4217,25 @@ function PlayPageClient() {
               const art = artPlayerRef.current;
               if (!art || !art.template) return;
               
-              const danmakuPanel = art.template.$bottom?.querySelector('.apd-danmaku-emitter') as HTMLElement;
+              const danmakuPanel = art.template.$container?.querySelector('.apd-danmaku-emitter') as HTMLElement;
               const input = danmakuPanel?.querySelector('.apd-danmaku-input') as HTMLInputElement;
               const danmakuBtnSpan = art.template.$bottom?.querySelector('.art-control-danmaku-btn');
               const danmakuBtn = danmakuBtnSpan?.closest('.art-control') as HTMLElement;
               
               if (danmakuPanel && input && danmakuBtn) {
                 if (!danmakuPanel.classList.contains('apd-emitter-visible')) {
+                  // 🚀 动态计算位置以实现完美的绝对定位水平居中
+                  const btnRect = danmakuBtn.getBoundingClientRect();
+                  const containerRect = art.template.$container.getBoundingClientRect();
+                  const leftOffset = (btnRect.left - containerRect.left) + (btnRect.width / 2);
+                  danmakuPanel.style.left = `${leftOffset}px`;
+
                   danmakuPanel.classList.add('apd-emitter-visible');
                   input.focus();
                   input.select();
                   
                   // 🚀 隐藏提示气泡
+                  danmakuBtn.classList.add('apd-btn-active');
                   danmakuBtn.setAttribute('data-tooltip-backup', danmakuBtn.getAttribute('aria-label') || '发送弹幕');
                   danmakuBtn.removeAttribute('aria-label');
                 }
@@ -4551,9 +4558,8 @@ function PlayPageClient() {
             </div>
           `;
 
-          // 2. 将弹幕面板添加到弹幕控制按钮内部，实现一致的物理定位！
-          danmakuBtn.style.position = 'relative';
-          danmakuBtn.appendChild(danmakuPanel);
+          // 2. 将弹幕面板独立挂载到播放器主容器，使其不受控制栏自动消失周期的影响！
+          art.template.$container.appendChild(danmakuPanel);
 
           const input = danmakuPanel.querySelector('.apd-danmaku-input') as HTMLInputElement;
           const sendBtn = danmakuPanel.querySelector('.apd-danmaku-send-btn') as HTMLButtonElement;
@@ -4562,6 +4568,15 @@ function PlayPageClient() {
           let selectedColor = '#FFFFFF';
           let danmakuHoverTimer: NodeJS.Timeout | null = null;
           let isMouseOver = false;
+
+          // 🚀 动态计算位置函数：根据“弹”按钮物理位置，计算绝对定位的水平居中坐标
+          const updatePosition = () => {
+            if (!danmakuPanel.classList.contains('apd-emitter-visible')) return;
+            const btnRect = danmakuBtn.getBoundingClientRect();
+            const containerRect = art.template.$container.getBoundingClientRect();
+            const leftOffset = (btnRect.left - containerRect.left) + (btnRect.width / 2);
+            danmakuPanel.style.left = `${leftOffset}px`;
+          };
 
           // 3. 选色器事件绑定
           colorDots.forEach((dot) => {
@@ -4599,6 +4614,7 @@ function PlayPageClient() {
             danmakuPanel.classList.remove('apd-emitter-visible');
             
             // 🚀 发送成功关闭后，恢复提示气泡
+            danmakuBtn.classList.remove('apd-btn-active');
             const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
             danmakuBtn.setAttribute('aria-label', backup);
           };
@@ -4620,6 +4636,9 @@ function PlayPageClient() {
             danmakuHoverTimer = setTimeout(() => {
               danmakuPanel.classList.add('apd-emitter-visible');
               
+              // 🚀 瞬间计算并调整定位坐标
+              updatePosition();
+
               // 自动聚焦并选中，提升打字体验
               requestAnimationFrame(() => {
                 input.focus();
@@ -4627,6 +4646,7 @@ function PlayPageClient() {
               });
 
               // 🚀 隐藏提示气泡
+              danmakuBtn.classList.add('apd-btn-active');
               danmakuBtn.setAttribute('data-tooltip-backup', danmakuBtn.getAttribute('aria-label') || '发送弹幕');
               danmakuBtn.removeAttribute('aria-label');
             }, 100);
@@ -4650,6 +4670,7 @@ function PlayPageClient() {
                 danmakuPanel.classList.remove('apd-emitter-visible');
                 
                 // 🚀 恢复提示气泡
+                danmakuBtn.classList.remove('apd-btn-active');
                 const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
                 danmakuBtn.setAttribute('aria-label', backup);
               }
@@ -4668,6 +4689,7 @@ function PlayPageClient() {
               if (!isMouseOver && danmakuPanel.classList.contains('apd-emitter-visible')) {
                 danmakuPanel.classList.remove('apd-emitter-visible');
                 
+                danmakuBtn.classList.remove('apd-btn-active');
                 const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
                 danmakuBtn.setAttribute('aria-label', backup);
               }
@@ -4695,11 +4717,13 @@ function PlayPageClient() {
 
           // 6. 点击外部任何地方自动隐藏面板 (Click-away close)
           const handleGlobalClick = (e: MouseEvent) => {
-            if (!danmakuBtn.contains(e.target as Node)) {
+            // 🚀 因为面板已被独立挂在容器下，点击判定要同时排除按钮本身和弹幕面板本身！
+            if (!danmakuBtn.contains(e.target as Node) && !danmakuPanel.contains(e.target as Node)) {
               if (danmakuPanel.classList.contains('apd-emitter-visible')) {
                 danmakuPanel.classList.remove('apd-emitter-visible');
                 
                 // 🚀 恢复提示气泡
+                danmakuBtn.classList.remove('apd-btn-active');
                 const backup = danmakuBtn.getAttribute('data-tooltip-backup') || '发送弹幕';
                 danmakuBtn.setAttribute('aria-label', backup);
               }
@@ -4707,9 +4731,14 @@ function PlayPageClient() {
           };
           document.addEventListener('click', handleGlobalClick);
 
+          // 🚀 绑定播放器和视口 Resize 监听，保证绝对定位始终精准贴合
+          art.on('resize', updatePosition);
+          window.addEventListener('resize', updatePosition);
+
           // 页面销毁时移除全局点击事件
           art.on('destroy', () => {
             document.removeEventListener('click', handleGlobalClick);
+            window.removeEventListener('resize', updatePosition);
           });
         })();
 

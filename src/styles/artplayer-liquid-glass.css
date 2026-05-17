@@ -128,12 +128,10 @@
   transform: translateX(-50%) translateY(0) !important;
 }
 
-/* 💬 弹幕发送面板全新 DOM 内置静态定位与过渡 */
-.artplayer-plugin-liquid-glass .art-control .apd-danmaku-emitter {
+/* 💬 弹幕发送面板全新 DOM 独立定位与过渡 */
+.artplayer-plugin-liquid-glass .apd-danmaku-emitter {
   position: absolute !important;
-  bottom: 45px !important;
-  left: 50% !important;
-  right: auto !important;
+  bottom: 50px !important; /* 精确贴合视频区域底部，避开控制栏 */
   width: 280px !important;
   padding: 12px !important;
   border-radius: 12px !important;
@@ -152,11 +150,11 @@
   visibility: hidden !important;
   pointer-events: none !important;
   transform: translateX(-50%) translateY(6px) !important;
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease !important;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease, left 0.1s ease !important;
 }
 
 /* 💬 激活时显示 */
-.artplayer-plugin-liquid-glass .art-control .apd-danmaku-emitter.apd-emitter-visible {
+.artplayer-plugin-liquid-glass .apd-danmaku-emitter.apd-emitter-visible {
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
@@ -164,8 +162,8 @@
 }
 
 /* 当弹幕发射器面板处于可见状态时，隐藏该按钮上的原生/自定义 tooltip 气泡 */
-.art-control:has(.apd-emitter-visible):before,
-.art-control:has(.apd-emitter-visible):after {
+.art-control.apd-btn-active:before,
+.art-control.apd-btn-active:after {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
