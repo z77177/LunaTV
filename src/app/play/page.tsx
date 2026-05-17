@@ -31,8 +31,6 @@ import SourceSwitchDialog from '@/components/play/SourceSwitchDialog';
 import OwnerChangeDialog from '@/components/play/OwnerChangeDialog';
 import VideoCoverDisplay from '@/components/play/VideoCoverDisplay';
 import PlayErrorDisplay from '@/components/play/PlayErrorDisplay';
-import DanmuSettingsPanel from '@/components/play/DanmuSettingsPanel';
-import UISettingsPanel from '@/components/play/UISettingsPanel';
 import artplayerPluginChromecast from '@/lib/artplayer-plugin-chromecast';
 import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
 import { useImmersiveMode } from '@/hooks/useImmersiveMode';
@@ -141,10 +139,6 @@ function PlayPageClient() {
   const [isSkipSettingOpen, setIsSkipSettingOpen] = useState(false);
   const [currentPlayTime, setCurrentPlayTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
-
-  // 弹幕设置面板状态
-  const [isDanmuSettingsPanelOpen, setIsDanmuSettingsPanelOpen] = useState(false);
-  const [isUISettingsPanelOpen, setIsUISettingsPanelOpen] = useState(false);
 
   // 全屏状态
   const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
@@ -3903,33 +3897,186 @@ function PlayPageClient() {
             },
           },
           {
-            name: '弹幕设置',
-            html: '弹幕设置',
-            tooltip: '打开弹幕设置面板',
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
-            // 🎨 点击式按钮，打开美化的弹幕设置面板
-            onClick: function () {
-              setIsDanmuSettingsPanelOpen(true);
-              // 关闭settings菜单
-              if (artPlayerRef.current) {
-                artPlayerRef.current.setting.show = false;
-              }
-              // ✅ 必须返回tooltip文本，否则ArtPlayer会设置为undefined
-              return '打开弹幕设置面板';
+            name: 'uiOpacity',
+            html: 'UI透明度',
+            tooltip: `${Math.round(immersiveSettings.opacity * 100)}%`,
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>',
+            selector: [
+              { html: '5%', value: 0.05, default: Math.abs(immersiveSettings.opacity - 0.05) < 0.01 },
+              { html: '25%', value: 0.25, default: Math.abs(immersiveSettings.opacity - 0.25) < 0.01 },
+              { html: '50%', value: 0.50, default: Math.abs(immersiveSettings.opacity - 0.50) < 0.01 },
+              { html: '75%', value: 0.75, default: Math.abs(immersiveSettings.opacity - 0.75) < 0.01 },
+              { html: '100%', value: 1.0, default: Math.abs(immersiveSettings.opacity - 1.0) < 0.01 },
+            ],
+            onSelect: function (item: any) {
+              updateImmersiveSetting('opacity', item.value);
+              return item.html;
             },
           },
           {
-            name: 'UI设置',
-            html: 'UI设置',
-            tooltip: '打开全屏 UI 设置',
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>',
-            onClick: function () {
-              setIsUISettingsPanelOpen(true);
-              // 关闭settings菜单
-              if (artPlayerRef.current) {
-                artPlayerRef.current.setting.show = false;
+            name: 'uiHideTimeout',
+            html: 'UI隐藏时间',
+            tooltip: `${immersiveSettings.hideTimeout / 1000}秒`,
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+            selector: [
+              { html: '2秒', value: 2000, default: immersiveSettings.hideTimeout === 2000 },
+              { html: '3秒', value: 3000, default: immersiveSettings.hideTimeout === 3000 },
+              { html: '5秒', value: 5000, default: immersiveSettings.hideTimeout === 5000 },
+              { html: '8秒', value: 8000, default: immersiveSettings.hideTimeout === 8000 },
+              { html: '10秒', value: 10000, default: immersiveSettings.hideTimeout === 10000 },
+            ],
+            onSelect: function (item: any) {
+              updateImmersiveSetting('hideTimeout', item.value);
+              return item.html;
+            },
+          },
+          {
+            name: 'danmuOpacity',
+            html: '弹幕透明度',
+            tooltip: `${Math.round(parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_opacity') || '0.8' : '0.8') * 100)}%`,
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>',
+            selector: [
+              { html: '20%', value: 0.2, default: Math.abs(parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_opacity') || '0.8' : '0.8') - 0.2) < 0.01 },
+              { html: '40%', value: 0.4, default: Math.abs(parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_opacity') || '0.8' : '0.8') - 0.4) < 0.01 },
+              { html: '60%', value: 0.6, default: Math.abs(parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_opacity') || '0.8' : '0.8') - 0.6) < 0.01 },
+              { html: '80%', value: 0.8, default: Math.abs(parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_opacity') || '0.8' : '0.8') - 0.8) < 0.01 },
+              { html: '100%', value: 1.0, default: Math.abs(parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_opacity') || '0.8' : '0.8') - 1.0) < 0.01 },
+            ],
+            onSelect: function (item: any) {
+              localStorage.setItem('danmaku_opacity', String(item.value));
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ opacity: item.value });
               }
-              return '打开全屏 UI 设置';
+              return item.html;
+            },
+          },
+          {
+            name: 'danmuFontSize',
+            html: '弹幕字号',
+            tooltip: `${typeof window !== 'undefined' ? localStorage.getItem('danmaku_fontSize') || '25' : '25'}px`,
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>',
+            selector: [
+              { html: '极小 (16px)', value: 16, default: parseInt(typeof window !== 'undefined' ? localStorage.getItem('danmaku_fontSize') || '25' : '25') === 16 },
+              { html: '较小 (20px)', value: 20, default: parseInt(typeof window !== 'undefined' ? localStorage.getItem('danmaku_fontSize') || '25' : '25') === 20 },
+              { html: '正常 (25px)', value: 25, default: parseInt(typeof window !== 'undefined' ? localStorage.getItem('danmaku_fontSize') || '25' : '25') === 25 },
+              { html: '较大 (30px)', value: 30, default: parseInt(typeof window !== 'undefined' ? localStorage.getItem('danmaku_fontSize') || '25' : '25') === 30 },
+              { html: '极高 (38px)', value: 38, default: parseInt(typeof window !== 'undefined' ? localStorage.getItem('danmaku_fontSize') || '25' : '25') === 38 },
+            ],
+            onSelect: function (item: any) {
+              localStorage.setItem('danmaku_fontSize', String(item.value));
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ fontSize: item.value });
+              }
+              return item.html;
+            },
+          },
+          {
+            name: 'danmuSpeed',
+            html: '弹幕速度',
+            tooltip: `${typeof window !== 'undefined' ? localStorage.getItem('danmaku_speed') || '5' : '5'}`,
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+            selector: [
+              { html: '极慢 (2)', value: 2, default: parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_speed') || '5' : '5') === 2 },
+              { html: '慢速 (3)', value: 3, default: parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_speed') || '5' : '5') === 3 },
+              { html: '正常 (5)', value: 5, default: parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_speed') || '5' : '5') === 5 },
+              { html: '快速 (7)', value: 7, default: parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_speed') || '5' : '5') === 7 },
+              { html: '极快 (9)', value: 9, default: parseFloat(typeof window !== 'undefined' ? localStorage.getItem('danmaku_speed') || '5' : '5') === 9 },
+            ],
+            onSelect: function (item: any) {
+              localStorage.setItem('danmaku_speed', String(item.value));
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ speed: item.value });
+              }
+              return item.html;
+            },
+          },
+          {
+            name: 'danmuArea',
+            html: '弹幕显示区域',
+            tooltip: (() => {
+              if (typeof window === 'undefined') return '3/4屏';
+              try {
+                const margin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
+                if (margin[1] === '25%') return '1/4屏';
+                if (margin[1] === '50%') return '半屏';
+                if (margin[1] === '75%') return '3/4屏';
+                return '全屏';
+              } catch {
+                return '3/4屏';
+              }
+            })(),
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>',
+            selector: [
+              {
+                html: '1/4 屏幕',
+                value: '25%',
+                default: (() => {
+                  if (typeof window === 'undefined') return false;
+                  try {
+                    return JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]')[1] === '25%';
+                  } catch { return false; }
+                })()
+              },
+              {
+                html: '半屏',
+                value: '50%',
+                default: (() => {
+                  if (typeof window === 'undefined') return false;
+                  try {
+                    return JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]')[1] === '50%';
+                  } catch { return false; }
+                })()
+              },
+              {
+                html: '3/4 屏幕',
+                value: '75%',
+                default: (() => {
+                  if (typeof window === 'undefined') return true;
+                  try {
+                    return JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]')[1] === '75%';
+                  } catch { return true; }
+                })()
+              },
+              {
+                html: '全屏',
+                value: '100%',
+                default: (() => {
+                  if (typeof window === 'undefined') return false;
+                  try {
+                    return JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]')[1] === '100%';
+                  } catch { return false; }
+                })()
+              },
+            ],
+            onSelect: function (item: any) {
+              try {
+                const margin = JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]');
+                margin[1] = item.value;
+                localStorage.setItem('danmaku_margin', JSON.stringify(margin));
+                if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                  artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ margin });
+                }
+              } catch (e) {
+                console.error(e);
+              }
+              return item.html;
+            },
+          },
+          {
+            name: 'danmuAntiOverlap',
+            html: '防挡字幕 (防重叠)',
+            tooltip: (typeof window !== 'undefined' && localStorage.getItem('danmaku_antiOverlap') !== 'false') ? '开启' : '关闭',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
+            selector: [
+              { html: '开启', value: true, default: typeof window !== 'undefined' && localStorage.getItem('danmaku_antiOverlap') !== 'false' },
+              { html: '关闭', value: false, default: typeof window !== 'undefined' && localStorage.getItem('danmaku_antiOverlap') === 'false' },
+            ],
+            onSelect: function (item: any) {
+              localStorage.setItem('danmaku_antiOverlap', String(item.value));
+              if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
+                artPlayerRef.current.plugins.artplayerPluginDanmuku.config({ antiOverlap: item.value });
+              }
+              return item.html;
             },
           },
           ...(webGPUSupported ? [
@@ -5421,104 +5568,6 @@ function PlayPageClient() {
         onReject={rejectFollowOwner}
       />
 
-      {/* 🎨 美化的弹幕设置面板 */}
-      <DanmuSettingsPanel
-        isOpen={isDanmuSettingsPanelOpen}
-        onClose={() => setIsDanmuSettingsPanelOpen(false)}
-        settings={{
-          enabled: externalDanmuEnabled, // 启用弹幕主开关
-          fontSize: parseInt(localStorage.getItem('danmaku_fontSize') || '25'),
-          speed: parseFloat(localStorage.getItem('danmaku_speed') || '5'),
-          opacity: parseFloat(localStorage.getItem('danmaku_opacity') || '0.8'),
-          margin: JSON.parse(localStorage.getItem('danmaku_margin') || '[10, "75%"]'),
-          modes: JSON.parse(localStorage.getItem('danmaku_modes') || '[0, 1, 2]') as Array<0 | 1 | 2>,
-          antiOverlap: localStorage.getItem('danmaku_antiOverlap') !== null
-            ? localStorage.getItem('danmaku_antiOverlap') === 'true'
-            : true, // 默认开启防重叠
-          visible: localStorage.getItem('danmaku_visible') !== 'false',
-        }}
-        matchInfo={
-          detail?.title && currentEpisodeIndex >= 0
-            ? {
-                animeTitle: detail.title,
-                episodeTitle: `第 ${currentEpisodeIndex + 1} 集`,
-              }
-            : null
-        }
-        onSettingsChange={(newSettings) => {
-          // 更新启用状态
-          if (newSettings.enabled !== undefined) {
-            handleDanmuOperationOptimized(newSettings.enabled);
-          }
-
-          // 更新 localStorage
-          if (newSettings.fontSize !== undefined) {
-            localStorage.setItem('danmaku_fontSize', String(newSettings.fontSize));
-          }
-          if (newSettings.speed !== undefined) {
-            localStorage.setItem('danmaku_speed', String(newSettings.speed));
-          }
-          if (newSettings.opacity !== undefined) {
-            localStorage.setItem('danmaku_opacity', String(newSettings.opacity));
-          }
-          if (newSettings.margin !== undefined) {
-            localStorage.setItem('danmaku_margin', JSON.stringify(newSettings.margin));
-          }
-          if (newSettings.modes !== undefined) {
-            localStorage.setItem('danmaku_modes', JSON.stringify(newSettings.modes));
-          }
-          if (newSettings.antiOverlap !== undefined) {
-            localStorage.setItem('danmaku_antiOverlap', String(newSettings.antiOverlap));
-          }
-          if (newSettings.visible !== undefined) {
-            localStorage.setItem('danmaku_visible', String(newSettings.visible));
-          }
-
-          // 实时更新弹幕插件配置
-          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-            artPlayerRef.current.plugins.artplayerPluginDanmuku.config(newSettings);
-
-            // 处理显示/隐藏
-            if (newSettings.visible !== undefined) {
-              if (newSettings.visible) {
-                artPlayerRef.current.plugins.artplayerPluginDanmuku.show();
-              } else {
-                artPlayerRef.current.plugins.artplayerPluginDanmuku.hide();
-              }
-            }
-          }
-
-          // 强制重新渲染面板以显示新值
-          setIsDanmuSettingsPanelOpen(false);
-          setTimeout(() => setIsDanmuSettingsPanelOpen(true), 50);
-        }}
-        danmuCount={danmuList.length} // 使用state而不是ref，确保React能追踪变化
-        loading={danmuLoading}
-        loadMeta={danmuLoadMeta}
-        error={danmuError}
-        playerContainer={artPlayerRef.current?.template?.$player || artRef.current}
-        isFullscreen={isPlayerFullscreen}
-        onReload={async () => {
-          // 重新加载外部弹幕（强制刷新）
-          const result = await loadExternalDanmu({ force: true });
-          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-            artPlayerRef.current.plugins.artplayerPluginDanmuku.load(result.data);
-            if (result.count > 0) {
-              artPlayerRef.current.notice.show = `已加载 ${result.count} 条弹幕`;
-            } else {
-              artPlayerRef.current.notice.show = '暂无弹幕数据';
-            }
-          }
-          return result.count;
-        }}
-      />
-
-      <UISettingsPanel
-        isOpen={isUISettingsPanelOpen}
-        onClose={() => setIsUISettingsPanelOpen(false)}
-        playerContainer={artPlayerRef.current?.template?.$player || artRef.current}
-        isFullscreen={isPlayerFullscreen}
-      />
       </PageLayout>
 
       {/* 网盘资源模态框 */}
