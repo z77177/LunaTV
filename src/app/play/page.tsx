@@ -4463,26 +4463,24 @@ function PlayPageClient() {
               settingPanel.style.bottom = '';
             }
 
-            // 🛑 阻止设置面板内部的一切点击事件向上冒泡到齿轮按钮，防止触发 ArtPlayer 原生的开关关闭逻辑！
+             // 🛑 阻止设置面板内部的一切点击事件向上冒泡到齿轮按钮，防止触发 ArtPlayer 原生的开关关闭逻辑！
             settingPanel.addEventListener('click', (e) => {
               e.stopPropagation();
             });
 
-            // 🚀 核心拦截：当齿轮按钮被点击时，阻止原生开关关闭的行为（用户由于面板已通过悬停展示，点击不应使其关闭）
-            settingBtn.addEventListener('click', (e) => {
-              // 🚨 如果点击事件发生在地下的设置面板(settingPanel)内部，绝对不能进行抢先拦截，确保面板内选项能够正常被点击和滑动修改！
-              if (settingPanel.contains(e.target as Node)) {
+            // 🛑 拦截并取消点击齿轮按钮本尊的动作与反馈，但绝不影响设置面板内部的操作！
+            const blockGearInteraction = (e: Event) => {
+              const target = e.target as HTMLElement;
+              // 如果点击的是设置面板内部，或者是设置面板本身，我们放行，允许内部操作正常工作！
+              if (settingPanel.contains(target) || target === settingPanel) {
                 return;
               }
-
+              // 否则，说明点击的是齿轮按钮本尊或其子图标，直接拦截并消除！
               e.preventDefault();
               e.stopPropagation();
-              e.stopImmediatePropagation(); // 抢先阻断，防止执行 ArtPlayer 的原生 toggle 逻辑！
-              
-              if (!art.setting.show) {
-                art.setting.show = true;
-              }
-            }, { capture: true }); // 使用捕获阶段 (capture: true) 确保能在事件到达原生监听器前拦截！
+            };
+            settingBtn.addEventListener('click', blockGearInteraction, { capture: true });
+            settingBtn.addEventListener('touchstart', blockGearInteraction, { capture: true, passive: false });
 
             // 🔄 监听 ArtPlayer 原生的 'setting' 事件，确保面板的激活类名状态始终与播放器内核同步！
             art.on('setting', (show: boolean) => {
