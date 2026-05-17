@@ -4459,6 +4459,15 @@ function PlayPageClient() {
             settingPanel.addEventListener('click', (e) => {
               e.stopPropagation();
             });
+
+            // 🔄 监听 ArtPlayer 原生的 'setting' 事件，确保面板的激活类名状态始终与播放器内核同步！
+            art.on('setting', (show: boolean) => {
+              if (show) {
+                settingPanel.classList.add('art-settings-visible');
+              } else {
+                settingPanel.classList.remove('art-settings-visible');
+              }
+            });
           }
 
           const showSettings = () => {

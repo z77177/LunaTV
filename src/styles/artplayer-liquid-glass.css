@@ -121,7 +121,7 @@
 }
 
 /* ⚙️ 当设置菜单处于激活显示状态时 */
-.artplayer-plugin-liquid-glass .art-control-setting .art-settings.art-show {
+.artplayer-plugin-liquid-glass .art-control-setting .art-settings.art-settings-visible {
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
