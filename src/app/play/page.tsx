@@ -4434,6 +4434,45 @@ function PlayPageClient() {
         setError(null);
         setPlayerReady(true); // 标记播放器已就绪，启用观影室同步
 
+        // ⚙️ 齿轮设置菜单悬停自动弹出与隐藏逻辑
+        (() => {
+          const art = artPlayerRef.current;
+          if (!art || !art.template) return;
+          
+          const settingBtn = art.template.$bottom?.querySelector('.art-control-setting') as HTMLElement;
+          const settingPanel = art.template.$setting as HTMLElement;
+          let settingHoverTimer: NodeJS.Timeout | null = null;
+
+          const showSettings = () => {
+            if (settingHoverTimer) {
+              clearTimeout(settingHoverTimer);
+              settingHoverTimer = null;
+            }
+            if (!art.setting.show) {
+              art.setting.show = true;
+            }
+          };
+
+          const hideSettings = () => {
+            if (settingHoverTimer) {
+              clearTimeout(settingHoverTimer);
+            }
+            settingHoverTimer = setTimeout(() => {
+              if (art.setting.show) {
+                art.setting.show = false;
+              }
+            }, 300); // 300毫秒缓冲时间，确保鼠标移动极其顺滑
+          };
+
+          if (settingBtn && settingPanel) {
+            settingBtn.addEventListener('mouseenter', showSettings);
+            settingBtn.addEventListener('mouseleave', hideSettings);
+            
+            settingPanel.addEventListener('mouseenter', showSettings);
+            settingPanel.addEventListener('mouseleave', hideSettings);
+          }
+        })();
+
         // 使用ArtPlayer layers API添加分辨率徽章（带渐变和发光效果）
         const video = artPlayerRef.current.video as HTMLVideoElement;
 
