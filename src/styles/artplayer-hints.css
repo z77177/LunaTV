@@ -271,3 +271,15 @@
 .art-video-player .art-control-setting:after {
   display: none !important;
 }
+
+/* 🚀 播放按钮与关闭弹幕气泡特异性调高，对齐“播放下一集”同一高度 */
+.art-video-player .art-control-play[class*="hint--"]::before,
+.art-video-player .art-control-play[class*="hint--"]::after,
+.art-video-player .art-control-danmaku[class*="hint--"]::before,
+.art-video-player .art-control-danmaku[class*="hint--"]::after,
+.art-video-player .art-control-danmuku[class*="hint--"]::before,
+.art-video-player .art-control-danmuku[class*="hint--"]::after,
+.art-video-player .apd-danmaku[class*="hint--"]::before,
+.art-video-player .apd-danmaku[class*="hint--"]::after {
+  bottom: calc(100% + 5px) !important;
+}
