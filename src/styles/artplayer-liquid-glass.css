@@ -104,6 +104,11 @@
     right: -5px;
     bottom: -3px;
     z-index: -1;
+    /* 🚀 极其关键的体验优化：初始状态下禁用指针事件，防止鼠标划过进度栏上方时误触 */
+    pointer-events: none;
+  }
+
+  .artplayer-plugin-liquid-glass .art-control-setting:hover::before {
     pointer-events: auto;
   }
 }

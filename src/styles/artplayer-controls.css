@@ -28,6 +28,12 @@
     right: -5px;
     bottom: -3px;
     z-index: -1;
+    /* 🚀 极其关键的体验优化：初始状态下禁用指针事件，防止鼠标划过进度栏上方时误触弹出音量面板 */
+    pointer-events: none;
+  }
+
+  /* 🌟 只有当音量按钮已经被触发Hover后，才激活桥接区域的鼠标拦截，确保用户能丝滑移动到音量面板上 */
+  .art-control-volume:hover::before {
     pointer-events: auto;
   }
 
