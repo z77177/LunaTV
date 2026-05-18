@@ -3943,13 +3943,13 @@ function PlayPageClient() {
             },
           ] : []),
           {
-            // 🌟 将 UI 设置完美沉淀移动到菜单的最下面一行！
-            name: 'UI设置',
-            html: 'UI设置',
+            // 🌟 将 窗口设置 完美沉淀移动到菜单的最下面一行！
+            name: '窗口设置',
+            html: '窗口设置',
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>',
             selector: [
               {
-                html: 'UI透明度',
+                html: '窗口透明度',
                 tooltip: `${Math.round(immersiveSettings.opacity * 100)}%`,
                 range: [immersiveSettings.opacity, 0.05, 1.0, 0.05],
                 onRange: function (item: any) {
@@ -3959,7 +3959,7 @@ function PlayPageClient() {
                 },
               },
               {
-                html: 'UI隐藏时间',
+                html: '窗口隐藏时间',
                 tooltip: `${immersiveSettings.hideTimeout / 1000}秒`,
                 range: [immersiveSettings.hideTimeout, 2000, 10000, 1000],
                 onRange: function (item: any) {
