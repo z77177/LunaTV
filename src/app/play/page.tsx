@@ -3901,69 +3901,45 @@ function PlayPageClient() {
           },
           ...(webGPUSupported ? [
             {
-              name: 'Anime4K',
-              html: 'Anime4K设置',
-              icon: '<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 11px; font-weight: bold; color: #fff; background: rgba(255, 255, 255, 0.15); border-radius: 4px;">4K</span>',
+              name: 'Anime4K超分',
+              html: 'Anime4K超分',
+              tooltip: '', // 🌟 空白提示，只保留开关按钮！
+              switch: anime4kEnabledRef.current,
+              onSwitch: async function (item: any) {
+                const newVal = !item.switch;
+                await toggleAnime4K(newVal);
+                return newVal;
+              },
+            },
+            {
+              name: '超分模式',
+              html: '超分模式',
               selector: [
-                {
-                  html: '开启 Anime4K',
-                  tooltip: '',
-                  switch: anime4kEnabledRef.current,
-                  onSwitch: async function (item: any) {
-                    const newVal = !item.switch;
-                    await toggleAnime4K(newVal);
-                    return newVal;
-                  },
-                },
-                {
-                  html: '超分模式',
-                  tooltip: anime4kModeRef.current === 'ModeA' ? 'ModeA (快速)' :
-                           anime4kModeRef.current === 'ModeB' ? 'ModeB (标准)' :
-                           anime4kModeRef.current === 'ModeC' ? 'ModeC (高质)' :
-                           anime4kModeRef.current === 'ModeAA' ? 'ModeAA (极速)' :
-                           anime4kModeRef.current === 'ModeBB' ? 'ModeBB (平衡)' : 'ModeCA (优质)',
-                  onClick: async function (item: any) {
-                    const modes = [
-                      { html: 'ModeA (快速)', value: 'ModeA' },
-                      { html: 'ModeB (标准)', value: 'ModeB' },
-                      { html: 'ModeC (高质)', value: 'ModeC' },
-                      { html: 'ModeAA (极速)', value: 'ModeAA' },
-                      { html: 'ModeBB (平衡)', value: 'ModeBB' },
-                      { html: 'ModeCA (优质)', value: 'ModeCA' },
-                    ];
-                    const currentIndex = modes.findIndex(m => m.value === anime4kModeRef.current);
-                    const nextIndex = (currentIndex + 1) % modes.length;
-                    const nextMode = modes[nextIndex];
-                    
-                    await changeAnime4KMode(nextMode.value);
-                    item.tooltip = nextMode.html;
-                    
-                    // 🌟 核心：点击循环切换时，触发 ArtPlayer 菜单界面重新渲染以实时反应新的 tooltip 文本
-                    if (artPlayerRef.current) {
-                      artPlayerRef.current.setting.update();
-                    }
-                    return nextMode.html;
-                  }
-                },
-                {
-                  html: '超分倍数',
-                  tooltip: `${anime4kScaleRef.current.toFixed(1)}x`,
-                  onClick: async function (item: any) {
-                    const scales = [1.5, 2.0, 3.0, 4.0];
-                    const currentIndex = scales.indexOf(anime4kScaleRef.current);
-                    const nextIndex = (currentIndex + 1) % scales.length;
-                    const nextScale = scales[nextIndex];
-                    
-                    await changeAnime4KScale(nextScale);
-                    item.tooltip = `${nextScale.toFixed(1)}x`;
-                    
-                    if (artPlayerRef.current) {
-                      artPlayerRef.current.setting.update();
-                    }
-                    return `${nextScale.toFixed(1)}x`;
-                  }
-                }
-              ]
+                { html: 'ModeA (快速)', value: 'ModeA', default: anime4kModeRef.current === 'ModeA' },
+                { html: 'ModeB (标准)', value: 'ModeB', default: anime4kModeRef.current === 'ModeB' },
+                { html: 'ModeC (高质)', value: 'ModeC', default: anime4kModeRef.current === 'ModeC' },
+                { html: 'ModeAA (极速)', value: 'ModeAA', default: anime4kModeRef.current === 'ModeAA' },
+                { html: 'ModeBB (平衡)', value: 'ModeBB', default: anime4kModeRef.current === 'ModeBB' },
+                { html: 'ModeCA (优质)', value: 'ModeCA', default: anime4kModeRef.current === 'ModeCA' },
+              ],
+              onSelect: async function (item: any) {
+                await changeAnime4KMode(item.value);
+                return item.html;
+              },
+            },
+            {
+              name: '超分倍数',
+              html: '超分倍数',
+              selector: [
+                { html: '1.5x', value: '1.5', default: anime4kScaleRef.current === 1.5 },
+                { html: '2.0x', value: '2.0', default: anime4kScaleRef.current === 2.0 },
+                { html: '3.0x', value: '3.0', default: anime4kScaleRef.current === 3.0 },
+                { html: '4.0x', value: '4.0', default: anime4kScaleRef.current === 4.0 },
+              ],
+              onSelect: async function (item: any) {
+                await changeAnime4KScale(parseFloat(item.value));
+                return item.html;
+              },
             },
           ] : []),
           {
@@ -4725,8 +4701,8 @@ function PlayPageClient() {
               position: absolute !important;
               /* 保留z-index确保层级正确 */
               z-index: 2147483647 !important; /* 使用最大z-index确保在全屏模式下也能显示在最顶层 */
-              /* 确保面板可以接收点击事件 */
-              pointer-events: auto !important;
+              /* 🚀 极其关键的体验加固：默认非 Hover/非激活状态下，配置面板彻底取消鼠标事件拦截，允许点击完美穿透，不影响进度栏与播放/暂停点击！ */
+              pointer-events: none !important;
               
               /* 🌟 外层作为事件悬浮容器与定位锚点，本身不设任何多余的背景与边框，杜绝双层嵌套边框！ */
               background: transparent !important;
@@ -4736,6 +4712,12 @@ function PlayPageClient() {
               -webkit-backdrop-filter: none !important;
               padding: 0 !important;
               transition: opacity 0.2s ease, transform 0.2s ease !important;
+            }
+
+            /* 🌟 只有当用户鼠标悬停在配置面板所在区域，且面板显示时，才重新恢复点击事件交互 */
+            .artplayer-plugin-danmuku .apd-config:hover .apd-config-panel,
+            .artplayer-plugin-danmuku .apd-config-panel:hover {
+              pointer-events: auto !important;
             }
 
             .artplayer-plugin-danmuku .apd-config-panel-inner {
@@ -4797,7 +4779,9 @@ function PlayPageClient() {
             .artplayer-plugin-danmuku .apd-style-panel {
               position: absolute !important;
               z-index: 2147483647 !important;
-              pointer-events: auto !important;
+              /* 🚀 极其关键的体验加固：默认非 Hover/非激活状态下，样式面板彻底取消鼠标事件拦截，允许点击完美穿透，不影响进度栏与播放/暂停点击！ */
+              pointer-events: none !important;
+              
               /* 🌟 外层作为事件悬浮容器与定位锚点，本身不设任何多余的背景与边框，杜绝双层嵌套边框！ */
               background: transparent !important;
               border: none !important;
@@ -4806,6 +4790,12 @@ function PlayPageClient() {
               -webkit-backdrop-filter: none !important;
               padding: 0 !important;
               transition: opacity 0.2s ease, transform 0.2s ease !important;
+            }
+
+            /* 🌟 只有当用户鼠标悬停在样式面板所在区域，且面板显示时，才重新恢复点击事件交互 */
+            .artplayer-plugin-danmuku .apd-style:hover .apd-style-panel,
+            .artplayer-plugin-danmuku .apd-style-panel:hover {
+              pointer-events: auto !important;
             }
 
             .artplayer-plugin-danmuku .apd-style-panel-inner {
