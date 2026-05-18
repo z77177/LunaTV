@@ -1,9 +1,11 @@
 /** @type {import('next').NextConfig} */
 
+const shouldUseStandalone =
+  process.env.DOCKER_BUILD === 'true' || process.env.NEXT_STANDALONE === 'true';
+
 const nextConfig = {
-  // 生产环境始终使用 standalone 模式（Vercel/Docker/Zeabur）
-  // 本地开发时（NODE_ENV !== 'production'）不使用 standalone
-  ...(process.env.NODE_ENV === 'production' ? { output: 'standalone' } : {}),
+  // Standalone output creates symlinks; enable it only for Docker/explicit builds.
+  ...(shouldUseStandalone ? { output: 'standalone' } : {}),
 
   reactStrictMode: false,
 

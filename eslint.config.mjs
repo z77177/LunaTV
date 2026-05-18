@@ -1,23 +1,14 @@
-import { FlatCompat } from '@eslint/eslintrc';
-import js from '@eslint/js';
+import nextVitals from 'eslint-config-next/core-web-vitals';
+import prettierConfig from 'eslint-config-prettier/flat';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unusedImports from 'eslint-plugin-unused-imports';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-});
 
 export default [
   {
     ignores: ['public/sw.js', 'public/workbox-*.js', 'node_modules/**', '.next/**'],
   },
-  ...compat.extends('next/core-web-vitals', 'prettier'),
+  ...nextVitals,
+  prettierConfig,
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
     plugins: {
@@ -26,9 +17,12 @@ export default [
     },
     rules: {
       'no-unused-vars': 'off',
-      'no-console': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       'react/no-unescaped-entities': 'off',
       'react/display-name': 'off',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
       'react/jsx-curly-brace-presence': [
         'warn',
         { props: 'never', children: 'never' },

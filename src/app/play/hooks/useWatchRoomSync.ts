@@ -1,7 +1,11 @@
 // 观影室播放同步Hook (基于 MoonTVPlus 实现，适配外部 watch-room-server)
-import { useEffect, useRef, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { logger } from '@/lib/logger';
+
 import type { WatchRoomContextType } from '@/components/WatchRoomProvider';
+
 import type { PlayState } from '@/types/watch-room.types';
 
 interface UseWatchRoomSyncOptions {
@@ -131,7 +135,7 @@ export function useWatchRoomSync({
 
     if (isSameShow) {
       // 同一部剧，只需要切换集数，不刷新页面
-      console.log('[PlaySync] Same show, switching episode:', state.episode);
+      logger.debug('[PlaySync] Same show, switching episode:', state.episode);
 
       if (state.episode !== episodeIndex) {
         setCurrentEpisodeIndex(state.episode);
@@ -140,7 +144,7 @@ export function useWatchRoomSync({
       // 等待播放器切换集数后，seek 到指定时间
       setTimeout(() => {
         if (artPlayerRef.current && state.currentTime > 0) {
-          console.log('[PlaySync] Seeking to:', state.currentTime);
+          logger.debug('[PlaySync] Seeking to:', state.currentTime);
           artPlayerRef.current.currentTime = state.currentTime;
         }
       }, 1000);  // 给播放器足够时间加载新集数
@@ -167,7 +171,7 @@ export function useWatchRoomSync({
       params.set('_reload', Date.now().toString());
 
       const url = `/play?${params.toString()}`;
-      console.log('[PlaySync] Different show or source, navigating with router.push:', url);
+      logger.debug('[PlaySync] Different show or source, navigating with router.push:', url);
 
       // 使用 router.push 而不是 window.location.href，保持 WebSocket 连接
       router.push(url);
@@ -176,7 +180,7 @@ export function useWatchRoomSync({
       // 参考：https://github.com/vercel/next.js/issues/54766
       setTimeout(() => {
         router.refresh();
-        console.log('[PlaySync] Called router.refresh() to reload data');
+        logger.debug('[PlaySync] Called router.refresh() to reload data');
       }, 100);
     }
   }, [videoTitle, videoYear, currentSource, episodeIndex, setCurrentEpisodeIndex, artPlayerRef, router]);
@@ -184,7 +188,7 @@ export function useWatchRoomSync({
   // 确认切换源
   const handleConfirmSourceSwitch = useCallback(() => {
     if (pendingOwnerState) {
-      console.log('[PlaySync] User confirmed source switch, navigating to:', pendingOwnerState);
+      logger.debug('[PlaySync] User confirmed source switch, navigating to:', pendingOwnerState);
       navigateToState(pendingOwnerState);
     }
     setShowSourceSwitchDialog(false);
@@ -193,7 +197,7 @@ export function useWatchRoomSync({
 
   // 取消切换源，保持当前源
   const handleCancelSourceSwitch = useCallback(() => {
-    console.log('[PlaySync] User cancelled source switch, keeping current source');
+    logger.debug('[PlaySync] User cancelled source switch, keeping current source');
     setShowSourceSwitchDialog(false);
     setPendingOwnerState(null);
     // 暂停同步，避免后续继续提示
@@ -229,13 +233,13 @@ export function useWatchRoomSync({
     lastSyncTimeRef.current = now;
 
     watchRoom.updatePlayState(state);
-  }, [socket, watchRoom, artPlayerRef, isInRoom, detail, episodeIndex, videoId, currentSource, videoTitle, videoYear]);
+  }, [socket, watchRoom, artPlayerRef, isInRoom, detail, episodeIndex, videoId, currentSource, videoTitle, videoYear, searchTitle, videoDoubanId]);
 
   // === -1. 当 videoId 或 currentSource 变化时，重置初始同步标记 ===
   useEffect(() => {
     // 只有成员需要重置，房主不需要
     if (!isOwner && isInRoom) {
-      console.log('[PlaySync] Video/Source changed, resetting initial sync flag', { videoId, currentSource });
+      logger.debug('[PlaySync] Video/Source changed, resetting initial sync flag', { videoId, currentSource });
       initialSyncDoneRef.current = false;
     }
   }, [videoId, currentSource, isOwner, isInRoom]);
@@ -254,14 +258,14 @@ export function useWatchRoomSync({
 
     // 已经处理过初始同步，跳过
     if (initialSyncDoneRef.current) {
-      console.log('[PlaySync] Initial sync already done, skipping');
+      logger.debug('[PlaySync] Initial sync already done, skipping');
       return;
     }
 
     // 检查房间的 currentState（房主当前播放状态）
     const roomState = currentRoom.currentState;
     if (!roomState || roomState.type !== 'play') {
-      console.log('[PlaySync] No play state in room, skipping initial sync');
+      logger.debug('[PlaySync] No play state in room, skipping initial sync');
       initialSyncDoneRef.current = true;
       return;
     }
@@ -283,12 +287,12 @@ export function useWatchRoomSync({
 
     // 检查是否与房主观看同一视频同一集
     if (isSameVideoAndEpisode(roomState)) {
-      console.log('[PlaySync] Already watching same video and episode, syncing time only');
+      logger.debug('[PlaySync] Already watching same video and episode, syncing time only');
       // 同步进度（如果播放器已就绪）
       if (playerReady && artPlayerRef.current) {
         const timeDiff = Math.abs(artPlayerRef.current.currentTime - roomState.currentTime);
         if (timeDiff > 2) {
-          console.log('[PlaySync] Initial sync - seeking to:', roomState.currentTime);
+          logger.debug('[PlaySync] Initial sync - seeking to:', roomState.currentTime);
           artPlayerRef.current.currentTime = roomState.currentTime;
         }
       }
@@ -299,7 +303,7 @@ export function useWatchRoomSync({
     // 不是同一视频/集数，检查是否是源不同
     if (isSameVideoButDifferentSource(roomState)) {
       // 相同视频但不同源，显示确认对话框
-      console.log('[PlaySync] Same video but different source, showing confirmation dialog');
+      logger.debug('[PlaySync] Same video but different source, showing confirmation dialog');
       setPendingOwnerState(newOwnerState);
       setShowSourceSwitchDialog(true);
       initialSyncDoneRef.current = true;
@@ -307,7 +311,7 @@ export function useWatchRoomSync({
     }
 
     // 完全不同的视频，直接跳转
-    console.log('[PlaySync] Different video/episode, redirecting to owner content');
+    logger.debug('[PlaySync] Different video/episode, redirecting to owner content');
     initialSyncDoneRef.current = true;
     navigateToState(newOwnerState);
   }, [isOwner, isInRoom, currentRoom, playerReady, isSameVideoAndEpisode, isSameVideoButDifferentSource, navigateToState, artPlayerRef]);
@@ -315,14 +319,14 @@ export function useWatchRoomSync({
   // === 1. 接收并同步其他成员的播放状态（所有人都监听）===
   useEffect(() => {
     if (!socket || !currentRoom || !isInRoom) {
-      console.log('[PlaySync] Skip setup:', { hasSocket: !!socket, hasRoom: !!currentRoom, isInRoom });
+      logger.debug('[PlaySync] Skip setup:', { hasSocket: !!socket, hasRoom: !!currentRoom, isInRoom });
       return;
     }
 
-    console.log('[PlaySync] Setting up event listeners');
+    logger.debug('[PlaySync] Setting up event listeners');
 
     const handlePlayUpdate = (state: PlayState) => {
-      console.log('[PlaySync] Received play:update event:', state);
+      logger.debug('[PlaySync] Received play:update event:', state);
 
       // 保存房主状态（无论是否同步）
       const newOwnerState: OwnerPlayState = {
@@ -341,13 +345,13 @@ export function useWatchRoomSync({
 
       // 如果同步已暂停，跳过处理
       if (syncPaused) {
-        console.log('[PlaySync] Sync paused, skipping play:update');
+        logger.debug('[PlaySync] Sync paused, skipping play:update');
         return;
       }
 
       // 只有观看同一视频同一集时才同步进度
       if (!isSameVideoAndEpisode(state)) {
-        console.log('[PlaySync] Different video/episode, skipping progress sync');
+        logger.debug('[PlaySync] Different video/episode, skipping progress sync');
         return;
       }
 
@@ -363,7 +367,7 @@ export function useWatchRoomSync({
       // play:update 只同步进度，不改变播放/暂停状态
       const timeDiff = Math.abs(player.currentTime - state.currentTime);
       if (timeDiff > 2) {
-        console.log('[PlaySync] Seeking to:', state.currentTime, '(diff:', timeDiff, 's)');
+        logger.debug('[PlaySync] Seeking to:', state.currentTime, '(diff:', timeDiff, 's)');
         player.currentTime = state.currentTime;
         setTimeout(() => {
           isHandlingRemoteCommandRef.current = false;
@@ -374,17 +378,17 @@ export function useWatchRoomSync({
     };
 
     const handlePlayCommand = () => {
-      console.log('[PlaySync] Received play:play event');
+      logger.debug('[PlaySync] Received play:play event');
 
       // 如果同步已暂停，跳过处理
       if (syncPaused) {
-        console.log('[PlaySync] Sync paused, skipping play:play');
+        logger.debug('[PlaySync] Sync paused, skipping play:play');
         return;
       }
 
       // 只有观看同一视频同一集时才同步播放/暂停
       if (!isSameVideoAndEpisode(ownerState)) {
-        console.log('[PlaySync] Different video/episode, skipping play command');
+        logger.debug('[PlaySync] Different video/episode, skipping play command');
         return;
       }
 
@@ -410,17 +414,17 @@ export function useWatchRoomSync({
     };
 
     const handlePauseCommand = () => {
-      console.log('[PlaySync] Received play:pause event');
+      logger.debug('[PlaySync] Received play:pause event');
 
       // 如果同步已暂停，跳过处理
       if (syncPaused) {
-        console.log('[PlaySync] Sync paused, skipping play:pause');
+        logger.debug('[PlaySync] Sync paused, skipping play:pause');
         return;
       }
 
       // 只有观看同一视频同一集时才同步播放/暂停
       if (!isSameVideoAndEpisode(ownerState)) {
-        console.log('[PlaySync] Different video/episode, skipping pause command');
+        logger.debug('[PlaySync] Different video/episode, skipping pause command');
         return;
       }
 
@@ -440,17 +444,17 @@ export function useWatchRoomSync({
     };
 
     const handleSeekCommand = (currentTime: number) => {
-      console.log('[PlaySync] Received play:seek event:', currentTime);
+      logger.debug('[PlaySync] Received play:seek event:', currentTime);
 
       // 如果同步已暂停，跳过处理
       if (syncPaused) {
-        console.log('[PlaySync] Sync paused, skipping play:seek');
+        logger.debug('[PlaySync] Sync paused, skipping play:seek');
         return;
       }
 
       // 只有观看同一视频同一集时才同步进度
       if (!isSameVideoAndEpisode(ownerState)) {
-        console.log('[PlaySync] Different video/episode, skipping seek command');
+        logger.debug('[PlaySync] Different video/episode, skipping seek command');
         return;
       }
 
@@ -466,7 +470,7 @@ export function useWatchRoomSync({
     };
 
     const handleChangeCommand = (state: PlayState) => {
-      console.log('[PlaySync] Received play:change event:', state);
+      logger.debug('[PlaySync] Received play:change event:', state);
 
       // 保存房主状态（无论是否同步）
       const newOwnerState: OwnerPlayState = {
@@ -485,18 +489,18 @@ export function useWatchRoomSync({
 
       // 只有房员才处理视频切换命令
       if (isOwner) {
-        console.log('[PlaySync] Skipping play:change - user is owner');
+        logger.debug('[PlaySync] Skipping play:change - user is owner');
         return;
       }
 
       // 如果同步已暂停，跳过处理（但更新ownerState以便重新同步）
       if (syncPaused) {
-        console.log('[PlaySync] Sync paused, skipping play:change but updating ownerState');
+        logger.debug('[PlaySync] Sync paused, skipping play:change but updating ownerState');
         return;
       }
 
       // 设置待确认的房主切换状态，让UI显示确认框
-      console.log('[PlaySync] Owner changed video, showing confirmation');
+      logger.debug('[PlaySync] Owner changed video, showing confirmation');
       setPendingOwnerChange(newOwnerState);
     };
 
@@ -507,27 +511,27 @@ export function useWatchRoomSync({
     socket.on('play:seek', handleSeekCommand);
     socket.on('play:change', handleChangeCommand);
 
-    console.log('[PlaySync] Event listeners registered');
+    logger.debug('[PlaySync] Event listeners registered');
 
     return () => {
-      console.log('[PlaySync] Cleaning up event listeners');
+      logger.debug('[PlaySync] Cleaning up event listeners');
       socket.off('play:update', handlePlayUpdate);
       socket.off('play:play', handlePlayCommand);
       socket.off('play:pause', handlePauseCommand);
       socket.off('play:seek', handleSeekCommand);
       socket.off('play:change', handleChangeCommand);
     };
-  }, [socket, currentRoom, isInRoom, isOwner, syncPaused, isSameVideoAndEpisode, ownerState]);
+  }, [socket, currentRoom, isInRoom, isOwner, syncPaused, isSameVideoAndEpisode, ownerState, artPlayerRef]);
 
   // === 2. 监听播放器事件并广播（所有人都可以触发同步）===
   useEffect(() => {
     if (!socket || !currentRoom || !isInRoom || !watchRoom) {
-      console.log('[PlaySync] Skip player setup:', { hasSocket: !!socket, hasRoom: !!currentRoom, isInRoom, hasWatchRoom: !!watchRoom });
+      logger.debug('[PlaySync] Skip player setup:', { hasSocket: !!socket, hasRoom: !!currentRoom, isInRoom, hasWatchRoom: !!watchRoom });
       return;
     }
 
     if (!playerReady) {
-      console.log('[PlaySync] Player not ready yet, waiting...');
+      logger.debug('[PlaySync] Player not ready yet, waiting...');
       return;
     }
 
@@ -537,12 +541,12 @@ export function useWatchRoomSync({
       return;
     }
 
-    console.log('[PlaySync] Setting up player event listeners');
+    logger.debug('[PlaySync] Setting up player event listeners');
 
     const handlePlay = () => {
       // 如果正在处理远程命令，不要广播（避免循环）
       if (isHandlingRemoteCommandRef.current) {
-        console.log('[PlaySync] Play event triggered by remote command, not broadcasting');
+        logger.debug('[PlaySync] Play event triggered by remote command, not broadcasting');
         return;
       }
 
@@ -551,17 +555,17 @@ export function useWatchRoomSync({
 
       // 确认播放器确实在播放状态才广播
       if (player.playing) {
-        console.log('[PlaySync] Play event detected, player is playing, broadcasting...');
+        logger.debug('[PlaySync] Play event detected, player is playing, broadcasting...');
         watchRoom.play();
       } else {
-        console.log('[PlaySync] Play event detected but player is paused, not broadcasting');
+        logger.debug('[PlaySync] Play event detected but player is paused, not broadcasting');
       }
     };
 
     const handlePause = () => {
       // 如果正在处理远程命令，不要广播（避免循环）
       if (isHandlingRemoteCommandRef.current) {
-        console.log('[PlaySync] Pause event triggered by remote command, not broadcasting');
+        logger.debug('[PlaySync] Pause event triggered by remote command, not broadcasting');
         return;
       }
 
@@ -570,24 +574,24 @@ export function useWatchRoomSync({
 
       // 确认播放器确实在暂停状态才广播
       if (!player.playing) {
-        console.log('[PlaySync] Pause event detected, player is paused, broadcasting...');
+        logger.debug('[PlaySync] Pause event detected, player is paused, broadcasting...');
         watchRoom.pause();
       } else {
-        console.log('[PlaySync] Pause event detected but player is playing, not broadcasting');
+        logger.debug('[PlaySync] Pause event detected but player is playing, not broadcasting');
       }
     };
 
     const handleSeeked = () => {
       // 如果正在处理远程命令，不要广播（避免循环）
       if (isHandlingRemoteCommandRef.current) {
-        console.log('[PlaySync] Seeked event triggered by remote command, not broadcasting');
+        logger.debug('[PlaySync] Seeked event triggered by remote command, not broadcasting');
         return;
       }
 
       const player = artPlayerRef.current;
       if (!player) return;
 
-      console.log('[PlaySync] Seeked event detected, broadcasting time:', player.currentTime);
+      logger.debug('[PlaySync] Seeked event detected, broadcasting time:', player.currentTime);
       watchRoom.seekPlayback(player.currentTime);
     };
 
@@ -601,16 +605,16 @@ export function useWatchRoomSync({
       syncInterval = setInterval(() => {
         if (!player.playing) return; // 暂停时不同步
 
-        console.log('[PlaySync] Periodic sync - broadcasting state (owner only)');
+        logger.debug('[PlaySync] Periodic sync - broadcasting state (owner only)');
         broadcastPlayState();
       }, 5000);
-      console.log('[PlaySync] Player event listeners registered with periodic sync (owner mode)');
+      logger.debug('[PlaySync] Player event listeners registered with periodic sync (owner mode)');
     } else {
-      console.log('[PlaySync] Player event listeners registered (member mode, no periodic sync)');
+      logger.debug('[PlaySync] Player event listeners registered (member mode, no periodic sync)');
     }
 
     return () => {
-      console.log('[PlaySync] Cleaning up player event listeners');
+      logger.debug('[PlaySync] Cleaning up player event listeners');
       player.off('play', handlePlay);
       player.off('pause', handlePause);
       player.off('seeked', handleSeeked);
@@ -618,7 +622,7 @@ export function useWatchRoomSync({
         clearInterval(syncInterval);
       }
     };
-  }, [socket, currentRoom, watchRoom, broadcastPlayState, isInRoom, playerReady, isOwner]);
+  }, [socket, currentRoom, watchRoom, broadcastPlayState, isInRoom, playerReady, isOwner, artPlayerRef]);
 
   // === 3. 房主：监听视频/集数变化并广播 ===
   const lastBroadcastRef = useRef<{
@@ -644,11 +648,11 @@ export function useWatchRoomSync({
       lastBroadcastRef.current.episode !== currentState.episode;
 
     if (!shouldBroadcast) {
-      console.log('[PlaySync] No change detected, skipping broadcast');
+      logger.debug('[PlaySync] No change detected, skipping broadcast');
       return;
     }
 
-    console.log('[PlaySync] Detected change, will broadcast:', {
+    logger.debug('[PlaySync] Detected change, will broadcast:', {
       from: lastBroadcastRef.current,
       to: currentState
     });
@@ -672,7 +676,7 @@ export function useWatchRoomSync({
         doubanId: videoDoubanId || detail?.douban_id || undefined,  // 添加豆瓣ID
       };
 
-      console.log('[PlaySync] Broadcasting play:change:', state);
+      logger.debug('[PlaySync] Broadcasting play:change:', state);
       watchRoom.changeVideo(state);
 
       // 更新跟踪值
@@ -680,19 +684,19 @@ export function useWatchRoomSync({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [isOwner, socket, currentRoom, isInRoom, watchRoom, videoId, episodeIndex, currentSource, detail, artPlayerRef, videoTitle, videoYear]);
+  }, [isOwner, socket, currentRoom, isInRoom, watchRoom, videoId, episodeIndex, currentSource, detail, artPlayerRef, videoTitle, videoYear, searchTitle, videoDoubanId]);
 
   // 暂停同步（成员自己切换集数时调用）
   const pauseSync = useCallback(() => {
     if (!isOwner && isInRoom) {
-      console.log('[PlaySync] Pausing sync');
+      logger.debug('[PlaySync] Pausing sync');
       setSyncPaused(true);
     }
   }, [isOwner, isInRoom]);
 
   // 重新同步到房主进度（跳转到房主正在播放的视频/集数/进度）
   const resumeSync = useCallback(() => {
-    console.log('[PlaySync] Resuming sync');
+    logger.debug('[PlaySync] Resuming sync');
     setSyncPaused(false);
 
     // 如果有保存的房主状态，跳转到房主的视频/集数，并带上进度参数
@@ -704,7 +708,7 @@ export function useWatchRoomSync({
   // 确认跟随房主切换
   const confirmFollowOwner = useCallback(() => {
     if (pendingOwnerChange) {
-      console.log('[PlaySync] Confirmed follow owner');
+      logger.debug('[PlaySync] Confirmed follow owner');
       navigateToState(pendingOwnerChange);
       setPendingOwnerChange(null);
     }
@@ -712,7 +716,7 @@ export function useWatchRoomSync({
 
   // 拒绝跟随房主，进入自由观看模式
   const rejectFollowOwner = useCallback(() => {
-    console.log('[PlaySync] Rejected follow owner, entering free watch mode');
+    logger.debug('[PlaySync] Rejected follow owner, entering free watch mode');
     setSyncPaused(true);
     setPendingOwnerChange(null);
   }, []);

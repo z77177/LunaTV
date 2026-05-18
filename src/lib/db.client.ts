@@ -1,4 +1,4 @@
-/* eslint-disable no-console, @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-function */
+/* eslint-disable no-console */
 'use client';
 
 /**
@@ -15,12 +15,13 @@
  */
 
 import { getAuthInfoFromBrowserCookie } from './auth';
-import { UserPlayStat, SkipSegment, EpisodeSkipConfig } from './types';
+import { logger } from './logger';
 import type { PlayRecord } from './types';
+import { EpisodeSkipConfig, UserPlayStat } from './types';
 import { forceClearWatchingUpdatesCache } from './watching-updates';
 
 // 重新导出类型以保持API兼容性
-export type { PlayRecord, SkipSegment, EpisodeSkipConfig } from './types';
+export type { EpisodeSkipConfig,PlayRecord, SkipSegment } from './types';
 
 // 全局错误触发函数
 function triggerGlobalError(message: string) {
@@ -702,6 +703,81 @@ function releaseSlot(): void {
 
 // 正在进行的请求 Map，用于请求合并 (Single-Flight)
 const pendingRequests = new Map<string, Promise<any>>();
+const recentGetResponses = new Map<
+  string,
+  { expiresAt: number; value: unknown }
+>();
+const endpointCooldowns = new Map<string, number>();
+let globalCooldownUntil = 0;
+const GET_RESPONSE_TTL_MS = 2000;
+const MAX_COOLDOWN_MS = 30000;
+
+const sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+function cloneApiValue<T>(value: unknown): T {
+  try {
+    if (typeof structuredClone === 'function') {
+      return structuredClone(value) as T;
+    }
+  } catch {
+    // API responses are JSON-shaped; fall back to the original value.
+  }
+  return value as T;
+}
+
+function getRecentGetResponse<T>(
+  requestKey: string
+): { hit: true; value: T } | { hit: false } {
+  const cached = recentGetResponses.get(requestKey);
+  if (!cached) return { hit: false };
+
+  if (Date.now() > cached.expiresAt) {
+    recentGetResponses.delete(requestKey);
+    return { hit: false };
+  }
+
+  return { hit: true, value: cloneApiValue<T>(cached.value) };
+}
+
+function cacheRecentGetResponse(requestKey: string, value: unknown): void {
+  recentGetResponses.set(requestKey, {
+    expiresAt: Date.now() + GET_RESPONSE_TTL_MS,
+    value,
+  });
+}
+
+function parseRetryAfter(headers: Headers): number | null {
+  const retryAfter = headers.get('Retry-After');
+  if (!retryAfter) return null;
+
+  const seconds = Number(retryAfter);
+  if (Number.isFinite(seconds)) {
+    return Math.max(seconds * 1000, 1000);
+  }
+
+  const retryAt = Date.parse(retryAfter);
+  if (Number.isFinite(retryAt)) {
+    return Math.max(retryAt - Date.now(), 1000);
+  }
+
+  return null;
+}
+
+async function waitForEndpointCooldown(requestKey: string): Promise<void> {
+  const cooldownUntil = endpointCooldowns.get(requestKey);
+  const waitUntil = Math.max(cooldownUntil ?? 0, globalCooldownUntil);
+  if (!waitUntil) return;
+
+  const waitMs = waitUntil - Date.now();
+  if (waitMs <= 0) {
+    endpointCooldowns.delete(requestKey);
+    globalCooldownUntil = 0;
+    return;
+  }
+
+  await sleep(waitMs);
+}
 
 /**
  * 带重试的 API 请求函数
@@ -714,9 +790,18 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
   const method = (options.method || 'GET').toUpperCase();
   const isCacheable = method === 'GET';
   const requestKey = `${method}:${path}`;
+  const shouldUseShortCache = isCacheable && options.cache !== 'no-store';
+
+  if (shouldUseShortCache) {
+    const cached = getRecentGetResponse<T>(requestKey);
+    if (cached.hit) {
+      logger.debug(`[SingleFlight] 使用短缓存: ${path}`);
+      return cached.value;
+    }
+  }
 
   if (isCacheable && pendingRequests.has(requestKey)) {
-    console.log(`[SingleFlight] 复用正在进行的请求: ${path}`);
+    logger.debug(`[SingleFlight] 复用正在进行的请求: ${path}`);
     return pendingRequests.get(requestKey);
   }
 
@@ -724,6 +809,8 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
     let lastError: Error | null = null;
 
     for (let i = 0; i <= retries; i++) {
+      await waitForEndpointCooldown(requestKey);
+
       // ---- 排队获取并发 slot ----
       await acquireSlot();
 
@@ -736,18 +823,30 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
         if (res.status === 429) {
           got429 = true;
           // 解析 Retry-After，否则指数退避（基数 2s）
-          const ra = res.headers.get('Retry-After');
-          if (ra && Number.isFinite(Number(ra))) {
-            retryDelayMs = Math.max(Number(ra) * 1000, 1000);
-          } else {
-            retryDelayMs = Math.min(2000 * Math.pow(2, i) + Math.random() * 1500, 30000);
-          }
+          retryDelayMs = Math.min(
+            parseRetryAfter(res.headers) ??
+              (2000 * Math.pow(2, i) + Math.random() * 1500),
+            MAX_COOLDOWN_MS
+          );
+          endpointCooldowns.set(
+            requestKey,
+            Date.now() + Math.min(retryDelayMs, MAX_COOLDOWN_MS)
+          );
+          globalCooldownUntil = Math.max(
+            globalCooldownUntil,
+            Date.now() + Math.min(retryDelayMs, MAX_COOLDOWN_MS)
+          );
         } else if (!res.ok) {
           const errorText = await res.text().catch(() => 'Unknown error');
           throw new Error(`请求 ${path} 失败: ${res.status} ${errorText}`);
         } else {
           // ✅ 成功
-          return await res.json();
+          endpointCooldowns.delete(requestKey);
+          const data = await res.json();
+          if (shouldUseShortCache) {
+            cacheRecentGetResponse(requestKey, data);
+          }
+          return data;
         }
       } catch (error) {
         lastError = error as Error;
@@ -763,7 +862,7 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
       if (got429) {
         if (i < retries) {
           console.warn(`[API] ${path} → 429, ${(retryDelayMs / 1000).toFixed(1)}s 后重试 (${i + 1}/${retries})`);
-          await new Promise(r => setTimeout(r, retryDelayMs));
+          await sleep(retryDelayMs);
           continue;
         }
         throw new Error(`请求 ${path} 失败: 429 (已重试 ${retries} 次)`);
@@ -771,7 +870,7 @@ export async function fetchFromApi<T>(path: string, options: RequestInit = {}, r
 
       // 非 429 错误的重试等待
       if (retryDelayMs > 0 && i < retries) {
-        await new Promise(r => setTimeout(r, retryDelayMs));
+        await sleep(retryDelayMs);
       }
     }
     throw lastError || new Error(`请求失败: ${path}`);
