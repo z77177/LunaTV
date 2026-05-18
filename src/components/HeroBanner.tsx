@@ -4,12 +4,13 @@
 import { ChevronLeft, ChevronRight, Info, Play, Volume2, VolumeX } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState, useRef, useCallback, memo } from 'react';
-import { useAutoplay } from './hooks/useAutoplay';
-import { useSwipeGesture } from './hooks/useSwipeGesture';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { fetchFromApi } from '@/lib/db.client';
 import { processImageUrl } from '@/lib/utils';
+
+import { useAutoplay } from './hooks/useAutoplay';
+import { useSwipeGesture } from './hooks/useSwipeGesture';
 
 interface BannerItem {
   id: string | number;
@@ -182,6 +183,8 @@ function HeroBanner({
   // 预加载背景图片（只预加载当前和相邻的图片，优化性能）
   useEffect(() => {
     // 预加载当前、前一张、后一张
+    if (!items || items.length === 0) return;
+
     const indicesToPreload = [
       currentIndex,
       (currentIndex - 1 + items.length) % items.length,
@@ -198,25 +201,21 @@ function HeroBanner({
     });
   }, [items, currentIndex]);
 
-  if (!items || items.length === 0) {
-    return null;
-  }
-
-  const currentItem = items[currentIndex];
-  const backgroundImage = getHDBackdrop(currentItem.backdrop) || currentItem.poster;
-
+  const currentItem = items && items.length > 0 ? items[currentIndex] : null;
   // 🔍 调试日志
   console.log('[HeroBanner] 当前项目:', {
-    title: currentItem.title,
-    hasBackdrop: !!currentItem.backdrop,
-    hasTrailer: !!currentItem.trailerUrl,
-    trailerUrl: currentItem.trailerUrl,
+    title: currentItem?.title,
+    hasBackdrop: !!currentItem?.backdrop,
+    hasTrailer: !!currentItem?.trailerUrl,
+    trailerUrl: currentItem?.trailerUrl,
     enableVideo,
   });
 
   // 🎯 检查并刷新缺失的 trailer URL（组件挂载时）
   useEffect(() => {
     const checkAndRefreshMissingTrailers = async () => {
+      if (!items || items.length === 0) return;
+
       for (const item of items) {
         // 如果有 douban_id 但没有 trailerUrl，尝试获取
         if (item.douban_id && !item.trailerUrl && !refreshedTrailerUrls[item.douban_id]) {
@@ -230,6 +229,10 @@ function HeroBanner({
     const timer = setTimeout(checkAndRefreshMissingTrailers, 1000);
     return () => clearTimeout(timer);
   }, [items, refreshedTrailerUrls, refreshTrailerUrl]);
+
+  if (!currentItem) {
+    return null;
+  }
 
   return (
     <div

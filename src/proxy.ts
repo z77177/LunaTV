@@ -171,7 +171,7 @@ function isIPTrusted(clientIP: string, trustedIPs: string[]): boolean {
 }
 
 // 生成信任网络的自动登录 cookie
-function generateTrustedAuthCookie(request: NextRequest): NextResponse {
+function generateTrustedAuthCookie(): NextResponse {
   const response = NextResponse.next();
 
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
@@ -211,7 +211,7 @@ function generateTrustedAuthCookie(request: NextRequest): NextResponse {
 }
 
 // 生成访客自动登录 cookie
-function generateGuestAuthCookie(request: NextRequest): NextResponse {
+function generateGuestAuthCookie(): NextResponse {
   const response = NextResponse.next();
   const guestAuth = {
     username: '访客',
@@ -290,7 +290,7 @@ async function handleAuthentication(
       }
 
       // 没有认证 cookie，自动生成并设置
-      return generateTrustedAuthCookie(request);
+      return generateTrustedAuthCookie();
     }
   }
 
@@ -309,7 +309,7 @@ async function handleAuthentication(
     // 🔥 如果没有认证信息，自动生成一个访客会话（排除管理后台路径）
     if (!pathname.startsWith('/admin') && !pathname.startsWith('/api/admin')) {
       console.log(`[Middleware] Auto-generating guest session for path: ${pathname}`);
-      return generateGuestAuthCookie(request);
+      return generateGuestAuthCookie();
     }
     return handleAuthFailure(request, pathname);
   }
