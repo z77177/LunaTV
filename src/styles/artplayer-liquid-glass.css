@@ -13,12 +13,15 @@
   align-items: center;
   background-image: none;
   padding-bottom: var(--art-padding);
+  /* 🚀 极致体验加固：外层容器彻底穿透，不拦截屏幕任何空白处的点击事件 */
+  pointer-events: none !important;
 }
 
 .artplayer-plugin-liquid-glass.art-control-show .art-bottom .art-liquid-glass {
   position: relative;
   padding: var(--art-padding) calc(var(--art-padding) * 1.5) 5px;
-  /* 移除直接的背景和毛玻璃，用 ::before 实现以防止工具提示被裁剪 */
+  /* 🚀 仅限毛玻璃容器本身以及内部控制按钮、进度条响应鼠标事件，实现精细化物理碰撞箱 */
+  pointer-events: auto !important;
 }
 
 .artplayer-plugin-liquid-glass.art-control-show .art-bottom .art-liquid-glass::before {
@@ -59,6 +62,8 @@
 /* 🔑 关键：完全按照官方CSS，不设置width让容器自适应 */
 .artplayer-plugin-liquid-glass .art-bottom {
   align-items: center; /* 官方唯一的对齐设置 */
+  /* 🚀 全场景极简穿透：让外层无形占位壳完全不拦截鼠标，解决所有空白处的点击判定错误 */
+  pointer-events: none !important;
 }
 
 /* 移动端优化 */
@@ -249,10 +254,9 @@
   transform: translateY(1px) !important;
 }
 
-/* 🚀 极致体验加固：当用户鼠标悬浮于进度条面板/控制栏，或弹幕输入框正在被聚焦使用时，强制控制栏（.art-bottom）保持显示，完全屏蔽自动隐藏！ */
-.artplayer-plugin-liquid-glass:has(.art-bottom:hover) .art-bottom,
+/* 🚀 极致体验加固：当用户鼠标悬浮于进度条面板/控制栏（仅限实际的毛玻璃区域），或弹幕输入框正在被聚焦使用时，强制控制栏保持显示，完全屏蔽自动隐藏！ */
+.artplayer-plugin-liquid-glass:has(.art-liquid-glass:hover) .art-bottom,
 .artplayer-plugin-liquid-glass:has(.apd-danmaku-input:focus) .art-bottom {
   opacity: 1 !important;
   visibility: visible !important;
-  pointer-events: auto !important;
 }
