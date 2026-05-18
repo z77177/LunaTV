@@ -273,13 +273,31 @@
 }
 
 /* 🚀 播放按钮与关闭弹幕气泡特异性调高，对齐“播放下一集”同一高度 */
-.art-video-player .art-control-play[class*="hint--"]::before,
-.art-video-player .art-control-play[class*="hint--"]::after,
-.art-video-player .art-control-danmaku[class*="hint--"]::before,
-.art-video-player .art-control-danmaku[class*="hint--"]::after,
-.art-video-player .art-control-danmuku[class*="hint--"]::before,
-.art-video-player .art-control-danmuku[class*="hint--"]::after,
-.art-video-player .apd-danmaku[class*="hint--"]::before,
-.art-video-player .apd-danmaku[class*="hint--"]::after {
+.art-video-player [data-hint="播放"]::before,
+.art-video-player [data-hint="播放"]::after,
+.art-video-player [data-hint="暂停"]::before,
+.art-video-player [data-hint="暂停"]::after,
+.art-video-player [data-hint="关闭弹幕"]::before,
+.art-video-player [data-hint="关闭弹幕"]::after,
+.art-video-player [data-hint="开启弹幕"]::before,
+.art-video-player [data-hint="开启弹幕"]::after,
+.art-video-player [aria-label="播放"]::before,
+.art-video-player [aria-label="播放"]::after,
+.art-video-player [aria-label="暂停"]::before,
+.art-video-player [aria-label="暂停"]::after,
+.art-video-player [aria-label="关闭弹幕"]::before,
+.art-video-player [aria-label="关闭弹幕"]::after,
+.art-video-player [aria-label="开启弹幕"]::before,
+.art-video-player [aria-label="开启弹幕"]::after,
+.art-video-player .art-control-playAndPause::before,
+.art-video-player .art-control-playAndPause::after,
+.art-video-player .art-control-play::before,
+.art-video-player .art-control-play::after,
+.art-video-player .art-control-danmaku::before,
+.art-video-player .art-control-danmaku::after,
+.art-video-player .art-control-danmuku::before,
+.art-video-player .art-control-danmuku::after,
+.art-video-player .apd-danmaku::before,
+.art-video-player .apd-danmaku::after {
   bottom: calc(100% + 5px) !important;
 }
