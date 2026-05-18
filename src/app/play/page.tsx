@@ -4721,13 +4721,13 @@ function PlayPageClient() {
             }
 
             .artplayer-plugin-danmuku .apd-config-panel-inner {
-              /* 🌟 将流光毛玻璃质感与布局内边距精确应用在真正容纳内容的内层卡片上 */
-              background: rgba(20, 20, 25, 0.82) !important;
-              border: 1px solid rgba(255, 255, 255, 0.12) !important;
-              backdrop-filter: blur(25px) !important;
-              -webkit-backdrop-filter: blur(25px) !important;
-              border-radius: 12px !important;
-              box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55) !important;
+              /* 🌟 回归最早期、对齐齿轮设置菜单的高端纯暗色调风格，舍弃流光毛玻璃与白边框 */
+              background: rgba(18, 18, 18, 0.98) !important;
+              border: none !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
+              border-radius: 8px !important;
+              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
               padding: 16px !important;
               width: 100% !important;
               box-sizing: border-box !important;
@@ -4749,17 +4749,24 @@ function PlayPageClient() {
               pointer-events: auto !important;
             }
 
-            /* 面板内部滑块与交互微调 */
+            /* 🌟 对齐齿轮设置菜单：复选框使用相同的荧光蓝色调 */
+            .artplayer-plugin-danmuku .apd-config-panel input[type="checkbox"],
+            .artplayer-plugin-danmuku .apd-style-panel input[type="checkbox"] {
+              accent-color: #3b82f6 !important;
+              cursor: pointer !important;
+            }
+
+            /* 面板内部滑块与交互微调：对齐齿轮设置菜单滑块风格，去绿光/蓝光，白圆滑块 */
             .artplayer-plugin-danmuku .apd-config-panel .apd-slider-track {
-              background: rgba(255, 255, 255, 0.15) !important;
+              background: rgba(255, 255, 255, 0.2) !important;
               height: 4px !important;
               border-radius: 2px !important;
             }
 
             .artplayer-plugin-danmuku .apd-config-panel .apd-slider-thumb {
               background: #ffffff !important;
-              border: 2px solid #00ff66 !important; /* 经典流光绿呼吸感 */
-              box-shadow: 0 0 8px rgba(0, 255, 102, 0.4) !important;
+              border: none !important;
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
             }
 
             /* 🎨 弹幕样式按钮与面板高阶美化 (对齐配置面板设计) */
@@ -4799,13 +4806,13 @@ function PlayPageClient() {
             }
 
             .artplayer-plugin-danmuku .apd-style-panel-inner {
-              /* 🌟 将流光毛玻璃质感与布局内边距精确应用在真正容纳内容的内层卡片上 */
-              background: rgba(20, 20, 25, 0.82) !important;
-              border: 1px solid rgba(255, 255, 255, 0.12) !important;
-              backdrop-filter: blur(25px) !important;
-              -webkit-backdrop-filter: blur(25px) !important;
-              border-radius: 12px !important;
-              box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55) !important;
+              /* 🌟 回归最早期、对齐齿轮设置菜单的高端纯暗色调风格，舍弃流光毛玻璃与白边框 */
+              background: rgba(18, 18, 18, 0.98) !important;
+              border: none !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
+              border-radius: 8px !important;
+              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
               padding: 16px !important;
               width: 100% !important;
               box-sizing: border-box !important;
@@ -4825,15 +4832,15 @@ function PlayPageClient() {
             }
  
             .artplayer-plugin-danmuku .apd-style-panel .apd-slider-track {
-              background: rgba(255, 255, 255, 0.15) !important;
+              background: rgba(255, 255, 255, 0.2) !important;
               height: 4px !important;
               border-radius: 2px !important;
             }
  
             .artplayer-plugin-danmuku .apd-style-panel .apd-slider-thumb {
               background: #ffffff !important;
-              border: 2px solid #00ff66 !important;
-              box-shadow: 0 0 8px rgba(0, 255, 102, 0.4) !important;
+              border: none !important;
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
             }
           `;
           document.head.appendChild(style);
