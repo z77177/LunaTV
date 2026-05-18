@@ -81,8 +81,8 @@
 
 .art-video-player .hint--top:before,
 .art-video-player .hint--top:after {
-  /* 🚀 优雅向上浮动，完美避开底部的毛玻璃进度条与圆点，防止遮挡与重叠，高度微调更紧凑 */
-  bottom: calc(100% + 10px);
+  /* 🚀 对齐第四张图：完美下移触碰进度栏与圆点，达到最极致的紧凑设计 */
+  bottom: calc(100% - 1px);
   left: 50%;
 }
 
@@ -95,11 +95,11 @@
 }
 
 .art-video-player .hint--top:hover:before {
-  transform: translateY(-8px);
+  transform: translateY(-2px);
 }
 
 .art-video-player .hint--top:hover:after {
-  transform: translateX(-50%) translateY(-8px);
+  transform: translateX(-50%) translateY(-2px);
 }
 
 /* ===== Position: Bottom ===== */
