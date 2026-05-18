@@ -81,7 +81,8 @@
 
 .art-video-player .hint--top:before,
 .art-video-player .hint--top:after {
-  bottom: 100%;
+  /* 🚀 优雅向上浮动，完美避开底部的毛玻璃进度条与圆点，防止遮挡与重叠 */
+  bottom: calc(100% + 15px);
   left: 50%;
 }
 
