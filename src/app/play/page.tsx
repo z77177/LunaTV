@@ -4699,8 +4699,8 @@ function PlayPageClient() {
             .artplayer-plugin-danmuku .apd-config-panel {
               /* 使用绝对定位而不是fixed，让ArtPlayer的动态定位生效 */
               position: absolute !important;
-              /* 🚀 对齐主设置与发射器菜单：默认悬浮于控制按钮正上方 45px 处，实现水平像素级对齐 */
-              bottom: 45px !important;
+              /* 🚀 微调至 39px 抵消父容器的 flex 布局高度差，实现与主设置菜单完全像素级对齐 */
+              bottom: 39px !important;
               /* 保留z-index确保层级正确 */
               z-index: 2147483647 !important; /* 使用最大z-index确保在全屏模式下也能显示在最顶层 */
               /* 🚀 极其关键的体验加固：默认非 Hover/非激活状态下，配置面板彻底取消鼠标事件拦截，允许点击完美穿透，不影响进度栏与播放/暂停点击！ */
@@ -4787,8 +4787,8 @@ function PlayPageClient() {
             
             .artplayer-plugin-danmuku .apd-style-panel {
               position: absolute !important;
-              /* 🚀 对齐主设置与发射器菜单：默认悬浮于控制按钮正上方 45px 处，实现水平像素级对齐 */
-              bottom: 45px !important;
+              /* 🚀 微调至 39px 抵消父容器的 flex 布局高度差，实现与主设置菜单完全像素级对齐 */
+              bottom: 39px !important;
               z-index: 2147483647 !important;
               /* 🚀 极其关键的体验加固：默认非 Hover/非激活状态下，样式面板彻底取消鼠标事件拦截，允许点击完美穿透，不影响进度栏与播放/暂停点击！ */
               pointer-events: none !important;
