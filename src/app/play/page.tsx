@@ -70,6 +70,163 @@ interface WakeLockSentinel {
   removeEventListener(type: 'release', listener: () => void): void;
 }
 
+// 季数、续集、年份解析接口与函数
+interface TitleMetadata {
+  season: number | null;
+  sequel: number | null;
+  year: number | null;
+}
+
+/**
+ * 将中文数字转换为阿拉伯数字（支持一到九十九）
+ */
+function chineseToNumber(cn: string): number | null {
+  const mapping: { [key: string]: number } = {
+    '零': 0, '一': 1, '二': 2, '两': 2, '三': 3, '四': 4, '五': 5,
+    '六': 6, '七': 7, '八': 8, '九': 9, '十': 10
+  };
+  if (/^\d+$/.test(cn)) {
+    return parseInt(cn, 10);
+  }
+  const str = cn.trim();
+  if (str.length === 1) {
+    return mapping[str] ?? null;
+  }
+  if (str.length === 2) {
+    if (str[0] === '十') {
+      return 10 + (mapping[str[1]] ?? 0);
+    }
+    if (str[1] === '十') {
+      return (mapping[str[0]] ?? 0) * 10;
+    }
+  }
+  if (str.length === 3 && str[1] === '十') {
+    return (mapping[str[0]] ?? 0) * 10 + (mapping[str[2]] ?? 0);
+  }
+  return null;
+}
+
+/**
+ * 解析标题的季数、续集数 and 年份等元数据
+ */
+function parseTitleMetadata(rawTitle: string): TitleMetadata {
+  const title = rawTitle.trim();
+  let season: number | null = null;
+  let sequel: number | null = null;
+  let year: number | null = null;
+
+  // 1. 提取年份 (1900-2099)
+  const yearMatches = title.match(/(19\d{2}|20\d{2})/g);
+  if (yearMatches && yearMatches.length > 0) {
+    year = parseInt(yearMatches[yearMatches.length - 1], 10);
+  }
+
+  // 2. 提取中文季数/部数: 第[一二三四五六七八九十两\d+]季/部/阶段/章/代
+  const cnSeasonMatch = title.match(/第\s*([一二三四五六七八九十两\d]+)\s*(季|部|阶段|章|代)/);
+  if (cnSeasonMatch) {
+    const numVal = chineseToNumber(cnSeasonMatch[1]);
+    if (numVal !== null) {
+      season = numVal;
+    }
+  }
+
+  // 3. 提取英文季数: Season \d+ 或 S\d+
+  if (season === null) {
+    const engSeasonMatch = title.match(/(?:\b|[^a-zA-Z0-9]|^)(?:season|s)\s*(\d+)(?:\b|[^a-zA-Z0-9]|$)/i);
+    if (engSeasonMatch) {
+      season = parseInt(engSeasonMatch[1], 10);
+    }
+  }
+
+  // 4. 提取末尾阿拉伯数字续集，如果与年份重合则视为年份
+  const trailingArabicMatch = title.match(/(\d+)$/);
+  if (trailingArabicMatch) {
+    const num = parseInt(trailingArabicMatch[1], 10);
+    if (num >= 1900 && num <= 2099) {
+      if (year === null) {
+        year = num;
+      }
+    } else {
+      sequel = num;
+    }
+  }
+
+  // 5. 提取末尾罗马数字续集
+  if (sequel === null) {
+    const trailingRomanMatch = title.match(/(?:[^a-zA-Z]|^)(i|ii|iii|iv|v|vi|vii|viii|ix|x)$/i);
+    if (trailingRomanMatch) {
+      const romanStr = trailingRomanMatch[1].toUpperCase();
+      const romanMapping: { [key: string]: number } = {
+        'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+        'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
+      };
+      if (romanMapping[romanStr] !== undefined) {
+        sequel = romanMapping[romanStr];
+      }
+    }
+  }
+
+  return { season, sequel, year };
+}
+
+/**
+ * 判断两个标题元数据是否发生版本/季数冲突
+ */
+function isMetadataMismatch(meta1: TitleMetadata, meta2: TitleMetadata): boolean {
+  // 1. 比较季数 (若一方为 null 则视为第 1 季，避免“庆余年”匹配到“第二季”)
+  const s1 = meta1.season ?? 1;
+  const s2 = meta2.season ?? 1;
+  if (s1 !== s2) {
+    return true;
+  }
+
+  // 2. 比较续集 (若一方为 null 则视为首部，避免“流浪地球”匹配到“流浪地球2”)
+  const seq1 = meta1.sequel ?? 1;
+  const seq2 = meta2.sequel ?? 1;
+  if (seq1 !== seq2) {
+    return true;
+  }
+
+  // 3. 比较年份 (只有双方均有明确年份且不一致时才判定冲突，避免单侧年份丢失被误杀)
+  if (meta1.year !== null && meta2.year !== null) {
+    if (meta1.year !== meta2.year) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * 提取归一化核心基础标题 (Base Title)，剥离所有非关键噪点
+ */
+function cleanBaseTitle(title: string): string {
+  let cleaned = title.toLowerCase();
+
+  // 移除括号年份，例如 (2024)、（2024）
+  cleaned = cleaned.replace(/[\(\uff08]\s*(?:19\d{2}|20\d{2})\s*[\)\uff09]/g, '');
+
+  // 移除常见的质量、音频、版本、分发平台等非核心干扰词
+  const tagsToRemove = [
+    /蓝光版?/g, /4k/g, /1080p/g, /720p/g, /hd/g, /bd/g, /web-dl/g, /webdl/g, /dvd版?/g, /抢先版?/g, /tc版?/g, /ts版?/g, /超清/g, /高清/g,
+    /国语版?/g, /粤语版?/g, /英语版?/g, /韩语版?/g, /日语版?/g, /双语版?/g, /国粤双语/g, /国语/g, /粤语/g, /英语/g, /韩语/g, /日语/g, /双语/g, /原声版?/g, /原声/g, /中字/g, /中英双字/g, /双语字幕/g,
+    /未删减版?/g, /未删减/g, /删减版?/g, /无删减/g, /完整版?/g, /精简版?/g, /加长版?/g, /剪辑版?/g, /导演剪辑版?/g, /特别版?/g, /纪念版?/g, /重制版?/g, /修复版?/g, /公映版?/g, /剧场版?/g, /电影版?/g,
+    /tv版?/g, /网络版?/g, /腾讯版?/g, /爱奇艺版?/g, /优酷版?/g, /芒果版?/g, /b站版?/g, /极速版?/g, /高码版?/g, /修正版?/g, /完美版?/g, /全新版?/g,
+    /电视剧$/g, /电影$/g, /动漫$/g, /综艺$/g,
+    /第\s*[一二三四五六七八九十两\d]+\s*(季|部|阶段|章|代)/g,
+    /(?:season|s)\s*\d+/g
+  ];
+
+  for (const pattern of tagsToRemove) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+
+  // 移除所有空格和标点符号，只保留中英文字符和数字
+  cleaned = cleaned.replace(/[^\w\u4e00-\u9fff]/g, '');
+
+  return cleaned.trim();
+}
+
 function PlayPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2462,6 +2619,18 @@ function PlayPageClient() {
                   return result.douban_id === videoDoubanIdRef.current;
                 }
 
+                // 1. 强力校验：检测季数、续集、年份元数据是否存在强冲突
+                const queryMeta = parseTitleMetadata(videoTitleRef.current);
+                const resultMeta = parseTitleMetadata(result.title);
+                if (isMetadataMismatch(queryMeta, resultMeta)) {
+                  return false;
+                }
+
+                // 2. 强力校验：基础标题（Base Title）必须等价匹配，杜绝“滤镜”与“滤镜冠军”等前缀模糊错误匹配
+                if (cleanBaseTitle(videoTitleRef.current) !== cleanBaseTitle(result.title)) {
+                  return false;
+                }
+
                 const queryTitle = videoTitleRef.current.replaceAll(' ', '').toLowerCase();
                 const resultTitle = result.title.replaceAll(' ', '').toLowerCase();
 
@@ -2525,6 +2694,18 @@ function PlayPageClient() {
             console.log('英文关键词:', queryWords);
 
             relevantMatches = allCandidates.filter(result => {
+              // 1. 强力校验：检测季数、续集、年份元数据是否存在强冲突
+              const queryMeta = parseTitleMetadata(videoTitleRef.current);
+              const resultMeta = parseTitleMetadata(result.title);
+              if (isMetadataMismatch(queryMeta, resultMeta)) {
+                return false;
+              }
+
+              // 2. 强力校验：基础标题（Base Title）必须等价匹配，防止如“滤镜”错误宽松匹配到“滤镜冠军”
+              if (cleanBaseTitle(videoTitleRef.current) !== cleanBaseTitle(result.title)) {
+                return false;
+              }
+
               const title = result.title.toLowerCase();
               const titleWords = title.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(word => word.length > 1);
 
@@ -2549,6 +2730,18 @@ function PlayPageClient() {
             // 中文查询：宽松匹配，保持现有行为
             console.log('使用中文宽松匹配策略');
             relevantMatches = allCandidates.filter(result => {
+              // 1. 强力校验：检测季数、续集、年份元数据是否存在强冲突
+              const queryMeta = parseTitleMetadata(videoTitleRef.current);
+              const resultMeta = parseTitleMetadata(result.title);
+              if (isMetadataMismatch(queryMeta, resultMeta)) {
+                return false;
+              }
+
+              // 2. 强力校验：基础标题（Base Title）必须等价匹配，防止如“滤镜”错误宽松匹配到“滤镜冠军”
+              if (cleanBaseTitle(videoTitleRef.current) !== cleanBaseTitle(result.title)) {
+                return false;
+              }
+
               const title = result.title.toLowerCase();
               const normalizedQuery = queryTitle.replace(/[^\w\u4e00-\u9fff]/g, '');
               const normalizedTitle = title.replace(/[^\w\u4e00-\u9fff]/g, '');
