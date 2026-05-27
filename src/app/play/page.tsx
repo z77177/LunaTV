@@ -36,7 +36,6 @@ import artplayerPluginLiquidGlass from '@/lib/artplayer-plugin-liquid-glass';
 import { useImmersiveMode } from '@/hooks/useImmersiveMode';
 import { useDraggableControlBar } from '@/hooks/useDraggableControlBar';
 import { ImmersivePlayerOverlay } from '@/components/ImmersivePlayerOverlay';
-import { MobileEpisodeDrawer } from '@/components/MobileEpisodeDrawer';
 import { ClientCache } from '@/lib/client-cache';
 import {
   deleteFavorite,
@@ -509,7 +508,6 @@ function PlayPageClient() {
   // 🚀 沉浸模式相关状态
   const { settings: immersiveSettings, isLoaded: isImmersiveLoaded, toggleImmersiveMode, updateSetting: updateImmersiveSetting } = useImmersiveMode();
   useDraggableControlBar(artPlayerRef, isPlayerFullscreen, immersiveSettings.enabled, immersiveSettings.opacity, immersiveSettings.hideTimeout);
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
 
   useEffect(() => {
@@ -6278,19 +6276,7 @@ function PlayPageClient() {
         </ImmersivePlayerOverlay>
       )}
 
-      {/* 沉浸式组件：移动端全屏滑动抽屉 */}
-      {isMobileDevice && (
-        <MobileEpisodeDrawer
-          isOpen={isMobileDrawerOpen}
-          onOpen={() => setIsMobileDrawerOpen(true)}
-          onClose={() => setIsMobileDrawerOpen(false)}
-          artPlayerRef={artPlayerRef}
-          isFullscreen={isPlayerFullscreen && immersiveSettings.enabled}
-          opacity={immersiveSettings.opacity}
-        >
-          {episodeSelectorContent}
-        </MobileEpisodeDrawer>
-      )}
+
     </>
   );
 }
