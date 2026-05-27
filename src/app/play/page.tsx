@@ -4181,10 +4181,22 @@ function PlayPageClient() {
             tooltip: '倍速',
             click: function (art: any, event: Event) {
               const rates = [1, 1.25, 1.5, 2];
-              const currentRate = art.playbackRate;
-              const nextIndex = (rates.indexOf(currentRate) + 1) % rates.length;
+              // 🎯 读取 HTML5 原生 video 上的实际播放速度，防止 wrapper 状态不置
+              const currentRate = art.video ? Number(art.video.playbackRate) : 1;
+              
+              // 🎯 寻找最接近的倍速档位，防止浮点数精度误差
+              let nextIndex = 0;
+              const idx = rates.findIndex(r => Math.abs(r - currentRate) < 0.05);
+              if (idx !== -1) {
+                nextIndex = (idx + 1) % rates.length;
+              }
               const nextRate = rates[nextIndex];
+
+              // 🎯 同时作用于 ArtPlayer 状态与底层原生 Video 元素，确保移动端硬件解码器强制变速生效！
               art.playbackRate = nextRate;
+              if (art.video) {
+                art.video.playbackRate = nextRate;
+              }
               
               // 🎯 通过 event 触发 DOM 更新，并采用 document.querySelector 查找 .mobile-speed-btn 作为 100% 稳妥的 fallback
               const target = event?.currentTarget as HTMLElement;
