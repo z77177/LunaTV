@@ -4179,9 +4179,12 @@ function PlayPageClient() {
             index: 10,
             html: '<span class="mobile-speed-btn" style="font-size: 13px; font-weight: bold; color: rgba(255, 255, 255, 0.9); padding: 0 4px;">1.0x</span>',
             tooltip: '倍速',
-            click: function (art: any, event: Event) {
+            click: function (control: any) {
+              const art = artPlayerRef.current;
+              if (!art) return;
+
               const rates = [1, 1.25, 1.5, 2];
-              // 🎯 读取 HTML5 原生 video 上的实际播放速度，防止 wrapper 状态不置
+              // 🎯 读取 HTML5 原生 video 上的实际播放速度，防止 wrapper 状态不一致
               const currentRate = art.video ? Number(art.video.playbackRate) : 1;
               
               // 🎯 寻找最接近的倍速档位，防止浮点数精度误差
@@ -4198,11 +4201,8 @@ function PlayPageClient() {
                 art.video.playbackRate = nextRate;
               }
               
-              // 🎯 通过 event 触发 DOM 更新，并采用 document.querySelector 查找 .mobile-speed-btn 作为 100% 稳妥的 fallback
-              const target = event?.currentTarget as HTMLElement;
-              const btn = target?.querySelector('.mobile-speed-btn') || 
-                          (event?.target as HTMLElement)?.closest('.mobile-speed-btn') ||
-                          document.querySelector('.mobile-speed-btn');
+              // 🎯 更新 UI 文本：由于第一个参数 control 是 DOM 元素，直接在其内部查找即可
+              const btn = control?.querySelector('.mobile-speed-btn') || document.querySelector('.mobile-speed-btn');
               if (btn) {
                 btn.textContent = `${nextRate}x`;
               }
