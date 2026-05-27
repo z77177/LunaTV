@@ -5037,6 +5037,46 @@ function PlayPageClient() {
               border: none !important;
               box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
             }
+
+            /* 📱 移动端竖屏（非全屏）体验特优：底栏抽屉模式，彻底释放视频窗口 */
+            @media (max-width: 1023px) {
+              .artplayer:not([data-fullscreen="true"]) .artplayer-plugin-danmuku .apd-config-panel,
+              .artplayer:not([data-fullscreen="true"]) .artplayer-plugin-danmuku .apd-style-panel {
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
+                transform: translateY(0) !important;
+                z-index: 99999999 !important;
+                pointer-events: auto !important;
+              }
+
+              .artplayer:not([data-fullscreen="true"]) .artplayer-plugin-danmuku .apd-config-panel-inner,
+              .artplayer:not([data-fullscreen="true"]) .artplayer-plugin-danmuku .apd-style-panel-inner {
+                background: rgba(18, 18, 18, 0.98) !important;
+                border-radius: 24px 24px 0 0 !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+                box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8) !important;
+                padding: 20px 24px 32px 24px !important;
+                box-sizing: border-box !important;
+                max-height: 48vh !important;
+                overflow-y: auto !important;
+                width: 100vw !important;
+              }
+
+              /* 优化移动端触控条与字号间距，更显精致且便于触控 */
+              .artplayer-plugin-danmuku .apd-config-panel-inner,
+              .artplayer-plugin-danmuku .apd-style-panel-inner {
+                font-size: 13px !important;
+              }
+
+              .artplayer-plugin-danmuku .apd-config-panel-inner input[type="range"],
+              .artplayer-plugin-danmuku .apd-style-panel-inner input[type="range"] {
+                height: 6px !important;
+              }
+            }
           `;
           document.head.appendChild(style);
         };
