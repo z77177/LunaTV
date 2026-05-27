@@ -3876,7 +3876,7 @@ function PlayPageClient() {
         // iOS设备需要静音才能自动播放，参考ArtPlayer源码处理
         muted: isIOS || isSafari,
         autoplay: true,
-        pip: true,
+        pip: !isMobile,
         autoSize: false,
         autoMini: false,
         screenshot: !isMobile, // 桌面端启用截图功能
@@ -4179,16 +4179,18 @@ function PlayPageClient() {
             index: 10,
             html: '<span class="mobile-speed-btn" style="font-size: 13px; font-weight: bold; color: rgba(255, 255, 255, 0.9); padding: 0 4px;">1.0x</span>',
             tooltip: '倍速',
-            click: function (control: any) {
-              const art = artPlayerRef.current;
-              if (!art) return;
+            click: function (art: any, event: Event) {
               const rates = [1, 1.25, 1.5, 2];
               const currentRate = art.playbackRate;
               const nextIndex = (rates.indexOf(currentRate) + 1) % rates.length;
               const nextRate = rates[nextIndex];
               art.playbackRate = nextRate;
               
-              const btn = control.querySelector('.mobile-speed-btn');
+              // 🎯 通过 event 触发 DOM 更新，并采用 document.querySelector 查找 .mobile-speed-btn 作为 100% 稳妥的 fallback
+              const target = event?.currentTarget as HTMLElement;
+              const btn = target?.querySelector('.mobile-speed-btn') || 
+                          (event?.target as HTMLElement)?.closest('.mobile-speed-btn') ||
+                          document.querySelector('.mobile-speed-btn');
               if (btn) {
                 btn.textContent = `${nextRate}x`;
               }
