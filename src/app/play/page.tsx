@@ -172,17 +172,10 @@ function parseTitleMetadata(rawTitle: string): TitleMetadata {
  * 判断两个标题元数据是否发生版本/季数冲突
  */
 function isMetadataMismatch(meta1: TitleMetadata, meta2: TitleMetadata): boolean {
-  // 1. 比较季数 (若一方为 null 则视为第 1 季，避免“庆余年”匹配到“第二季”)
-  const s1 = meta1.season ?? 1;
-  const s2 = meta2.season ?? 1;
-  if (s1 !== s2) {
-    return true;
-  }
-
-  // 2. 比较续集 (若一方为 null 则视为首部，避免“流浪地球”匹配到“流浪地球2”)
-  const seq1 = meta1.sequel ?? 1;
-  const seq2 = meta2.sequel ?? 1;
-  if (seq1 !== seq2) {
+  // 比较季数/续集 (合并为统一的版本/代数进行比较，解决 "第二季" 与 "2" 的匹配问题)
+  const v1 = meta1.season ?? meta1.sequel ?? 1;
+  const v2 = meta2.season ?? meta2.sequel ?? 1;
+  if (v1 !== v2) {
     return true;
   }
 
@@ -1233,10 +1226,12 @@ function PlayPageClient() {
 
   // 检查是否包含查询中的所有关键词（与downstream评分逻辑保持一致）
   const checkAllKeywordsMatch = (queryTitle: string, resultTitle: string): boolean => {
-    const queryWords = queryTitle.replace(/[^\w\s\u4e00-\u9fff]/g, '').split(/\s+/).filter(w => w.length > 0);
+    // 移除所有标点，分割为单词，然后每个单词在结果中进行模糊/精确查找
+    const normalizeWord = (w: string) => w.toLowerCase().replace(/[^\w\u4e00-\u9fff]/g, '');
+    const queryWords = queryTitle.split(/\s+/).map(normalizeWord).filter(w => w.length > 0);
+    const resultTitleNorm = normalizeWord(resultTitle);
 
-    // 检查结果标题是否包含查询中的所有关键词
-    return queryWords.every(word => resultTitle.includes(word));
+    return queryWords.every(word => resultTitleNorm.includes(word));
   };
 
   // 网盘搜索函数
@@ -2590,77 +2585,88 @@ function PlayPageClient() {
         
         const allResults: SearchResult[] = [];
         let bestResults: SearchResult[] = [];
-        
-        // 依次尝试每个搜索变体，采用早期退出策略
-        for (const variant of searchVariants) {
-          console.log('尝试搜索变体:', variant);
 
-          const response = await fetch(
-            `/api/search?q=${encodeURIComponent(variant)}`
-          );
-          if (!response.ok) {
-            console.warn(`搜索变体 "${variant}" 失败:`, response.statusText);
-            continue;
-          }
-          const data = await response.json();
-
-          if (data.results && data.results.length > 0) {
-            allResults.push(...data.results);
-
-            // 移除早期退出策略，让downstream的相关性评分发挥作用
-
-            // 处理搜索结果，使用智能模糊匹配（与downstream评分逻辑保持一致）
-            const filteredResults = data.results.filter(
-              (result: SearchResult) => {
-                // 如果有 douban_id，优先使用 douban_id 精确匹配
-                if (videoDoubanIdRef.current && videoDoubanIdRef.current > 0 && result.douban_id) {
-                  return result.douban_id === videoDoubanIdRef.current;
-                }
-
-                // 1. 强力校验：检测季数、续集、年份元数据是否存在强冲突
-                const queryMeta = parseTitleMetadata(videoTitleRef.current);
-                const resultMeta = parseTitleMetadata(result.title);
-                if (isMetadataMismatch(queryMeta, resultMeta)) {
-                  return false;
-                }
-
-                // 2. 强力校验：基础标题（Base Title）必须等价匹配，杜绝“滤镜”与“滤镜冠军”等前缀模糊错误匹配
-                if (cleanBaseTitle(videoTitleRef.current) !== cleanBaseTitle(result.title)) {
-                  return false;
-                }
-
-                const queryTitle = videoTitleRef.current.replaceAll(' ', '').toLowerCase();
-                const resultTitle = result.title.replaceAll(' ', '').toLowerCase();
-
-                // 智能标题匹配：支持数字变体和标点符号变化
-                // 优先使用精确包含匹配，避免短标题（如"玫瑰"）匹配到包含该字的其他电影（如"玫瑰的故事"）
-                const titleMatch = resultTitle.includes(queryTitle) ||
-                  queryTitle.includes(resultTitle) ||
-                  // 移除数字和标点后匹配（针对"死神来了：血脉诅咒" vs "死神来了6：血脉诅咒"）
-                  resultTitle.replace(/\d+|[：:]/g, '') === queryTitle.replace(/\d+|[：:]/g, '') ||
-                  // 通用关键词匹配：仅当查询标题较长时（4个字符以上）才使用关键词匹配
-                  // 避免短标题（如"玫瑰"2字）被拆分匹配
-                  (queryTitle.length > 4 && checkAllKeywordsMatch(queryTitle, resultTitle));
-
-                const yearMatch = videoYearRef.current
-                  ? result.year.toLowerCase() === videoYearRef.current.toLowerCase()
-                  : true;
-                const typeMatch = searchType
-                  ? (searchType === 'tv' && result.episodes.length > 1) ||
-                    (searchType === 'movie' && result.episodes.length === 1)
-                  : true;
-
-                return titleMatch && yearMatch && typeMatch;
-              }
+        // 并行请求所有变体以获取全部可能的结果，避免早期退出漏掉其他源
+        const variantPromises = searchVariants.map(async (variant) => {
+          try {
+            console.log('并行搜索变体:', variant);
+            const response = await fetch(
+              `/api/search?q=${encodeURIComponent(variant)}`
             );
-
-            if (filteredResults.length > 0) {
-              console.log(`变体 "${variant}" 找到 ${filteredResults.length} 个精确匹配结果`);
-              bestResults = filteredResults;
-              break; // 找到精确匹配就停止
+            if (!response.ok) {
+              console.warn(`搜索变体 "${variant}" 失败:`, response.statusText);
+              return [];
             }
+            const data = await response.json();
+            return data.results || [];
+          } catch (err) {
+            console.error(`搜索变体 "${variant}" 请求异常:`, err);
+            return [];
           }
-        }
+        });
+
+        const resultsArray = await Promise.all(variantPromises);
+        resultsArray.forEach((res) => {
+          if (res && res.length > 0) {
+            allResults.push(...res);
+          }
+        });
+
+        // 对所有抓取到的结果进行过滤（智能模糊匹配）
+        const filteredResults = allResults.filter(
+          (result: SearchResult) => {
+            // 如果有 douban_id，优先使用 douban_id 精确匹配
+            if (videoDoubanIdRef.current && videoDoubanIdRef.current > 0 && result.douban_id) {
+              return result.douban_id === videoDoubanIdRef.current;
+            }
+
+            // 1. 强力校验：检测季数、续集、年份元数据是否存在强冲突
+            const queryMeta = parseTitleMetadata(videoTitleRef.current);
+            const resultMeta = parseTitleMetadata(result.title);
+            if (isMetadataMismatch(queryMeta, resultMeta)) {
+              return false;
+            }
+
+            // 2. 强力校验：基础标题（Base Title）必须等价匹配，杜绝“滤镜”与“滤镜冠军”等前缀模糊错误匹配
+            if (cleanBaseTitle(videoTitleRef.current) !== cleanBaseTitle(result.title)) {
+              return false;
+            }
+
+            // 核心标题去空格和标点符号归一化，解决空格和标点符号输入差异问题
+            const normalizeTitleForMatching = (t: string) => t.replaceAll(' ', '').replace(/[^\w\u4e00-\u9fff]/g, '').toLowerCase();
+            const queryTitle = normalizeTitleForMatching(videoTitleRef.current);
+            const resultTitle = normalizeTitleForMatching(result.title);
+
+            // 智能标题匹配：支持数字变体和标点符号变化
+            const titleMatch = resultTitle.includes(queryTitle) ||
+              queryTitle.includes(resultTitle) ||
+              // 通用关键词匹配：仅当查询标题较长时（4个字符以上）才使用关键词匹配
+              (queryTitle.length > 4 && checkAllKeywordsMatch(videoTitleRef.current.toLowerCase(), result.title.toLowerCase()));
+
+            // 智能年份匹配：只有当双方都有明确年份且不一致时才算冲突（兼容空年份/0/unknown，避免误杀）
+            const yearMatch = (() => {
+              if (!videoYearRef.current || !result.year) return true;
+              const qYear = videoYearRef.current.trim();
+              const rYear = result.year.trim();
+              if (!qYear || !rYear || rYear === '0' || rYear.toLowerCase() === 'unknown') return true;
+              return qYear.toLowerCase() === rYear.toLowerCase();
+            })();
+
+            const typeMatch = searchType
+              ? (searchType === 'tv' && result.episodes.length > 1) ||
+                (searchType === 'movie' && result.episodes.length === 1)
+              : true;
+
+            return titleMatch && yearMatch && typeMatch;
+          }
+        );
+
+        // 去重合并
+        const uniqueResults = Array.from(
+          new Map(filteredResults.map(item => [`${item.source}-${item.id}`, item])).values()
+        );
+        console.log(`智能搜索并去重后，共找到 ${uniqueResults.length} 个匹配结果`);
+        bestResults = uniqueResults;
         
         // 智能匹配：英文标题严格匹配，中文标题宽松匹配
         let finalResults = bestResults;
