@@ -2549,7 +2549,7 @@ function PlayPageClient() {
           );
         } else {
           detailResponse = await fetch(
-            `/api/detail?source=${source}&id=${id}`
+            `/api/detail?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}`
           );
         }
 
