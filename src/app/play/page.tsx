@@ -5907,19 +5907,7 @@ function PlayPageClient() {
         // 必须有集数数据（所有源包括短剧源都必须满足）
         if (!source.episodes || source.episodes.length < 1) return false;
 
-        // 短剧源不受集数差异限制（但必须有集数数据）
-        if (source.source === 'shortdrama') return true;
-
-        // 如果当前有 detail，只显示集数相近的源（允许 ±30% 的差异）
-        if (detail && detail.episodes && detail.episodes.length > 0) {
-          const currentEpisodes = detail.episodes.length;
-          const sourceEpisodes = source.episodes.length;
-          const tolerance = Math.max(5, Math.ceil(currentEpisodes * 0.3)); // 至少5集的容差
-
-          // 在合理范围内
-          return Math.abs(sourceEpisodes - currentEpisodes) <= tolerance;
-        }
-
+        // 不再针对非短剧源进行与当前播放源的集数差异（±30%）过滤，防止完整版/已完结的源被过滤
         return true;
       })}
       sourceSearchLoading={sourceSearchLoading}
