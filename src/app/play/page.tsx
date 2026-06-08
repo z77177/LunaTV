@@ -2549,7 +2549,7 @@ function PlayPageClient() {
           );
         } else {
           detailResponse = await fetch(
-            `/api/detail?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}`
+            `/api/detail?source=${source}&id=${id}`
           );
         }
 
@@ -2575,7 +2575,7 @@ function PlayPageClient() {
         // setAvailableSources([detailData]);
         return [detailData];
       } catch (err) {
-        console.error('获取视频详情失败:', err);
+        console.error(`获取视频详情失败 [source=${source}, id=${id}]:`, err);
         return [];
       } finally {
         setSourceSearchLoading(false);
@@ -2815,17 +2815,22 @@ function PlayPageClient() {
           setAvailableSources([]);
         }
       } else {
-        // 其他情况先搜索所有视频源
-        sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
-
-        if (
-          currentSource &&
-          currentId &&
-          !sourcesInfo.some(
-            (source) => source.source === currentSource && source.id === currentId
-          )
-        ) {
-          sourcesInfo = await fetchSourceDetail(currentSource, currentId);
+        // 当明确指定了 source+id（如从源浏览器跳转）时，并行获取指定源详情和全源搜索
+        // 确保指定源不会因标题匹配过滤而丢失
+        if (currentSource && currentId) {
+          const [directResult, searchResults] = await Promise.all([
+            fetchSourceDetail(currentSource, currentId),
+            fetchSourcesData(searchTitle || videoTitle),
+          ]);
+          // 指定源强制放在最前面，搜索结果去重后追加
+          const directIds = new Set(directResult.map(r => `${r.source}-${r.id}`));
+          sourcesInfo = [
+            ...directResult,
+            ...searchResults.filter(r => !directIds.has(`${r.source}-${r.id}`)),
+          ];
+        } else {
+          // 未指定源时，仅搜索所有视频源
+          sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
         }
 
         // 如果有 shortdrama_id，额外添加短剧源到可用源列表

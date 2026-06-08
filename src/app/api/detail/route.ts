@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(errorResponse, { status: 400 });
   }
 
-  if (!/^[a-zA-Z0-9_\-\.\/%+=&?#:]+$/.test(id) || id.includes('..')) {
+  if (!/^[\w.\-:]+$/.test(id) || id.includes('..')) {
     const errorResponse = { error: '无效的视频ID格式' };
     const errorSize = Buffer.byteLength(JSON.stringify(errorResponse), 'utf8');
 
