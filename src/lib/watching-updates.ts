@@ -300,7 +300,7 @@ async function checkSingleRecordUpdate(
     }
 
     // 使用映射后的key调用API（使用 fetchFromApi 增加重试和 Single-Flight）
-    const apiUrl = `/api/detail?source=${encodeURIComponent(sourceKey)}&id=${encodeURIComponent(videoId)}`;
+    const apiUrl = `/api/detail?source=${sourceKey}&id=${videoId}`;
     const detailData = await fetchFromApi<any>(apiUrl);
     
     if (!detailData || !detailData.episodes) {
