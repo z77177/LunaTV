@@ -2302,6 +2302,70 @@ function PlayPageClient() {
   function filterAdsFromM3U8(m3u8Content: string): string {
     if (!m3u8Content) return '';
 
+    // 1. 统计原始分段数
+    let originalSegmentCount = 0;
+    const originalLines = m3u8Content.split('\n');
+    for (const line of originalLines) {
+      if (line.includes('#EXTINF:')) {
+        originalSegmentCount++;
+      }
+    }
+
+    // 默认去广告规则实现
+    const runDefaultFilter = (content: string): string => {
+      if (!content) return '';
+      const adKeywords = [
+        'sponsor',
+        '/ad/',
+        '/ads/',
+        'advert',
+        'advertisement',
+        '/adjump',
+        'redtraffic'
+      ];
+
+      const lines = content.split('\n');
+      const filteredLines: string[] = [];
+
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+
+        // 处理 #EXT-X-DISCONTINUITY 标识：
+        // 保留该标记以通知播放器重置解码器，并合并连续的标记避免冗余
+        if (line.includes('#EXT-X-DISCONTINUITY')) {
+          if (filteredLines.length > 0 && filteredLines[filteredLines.length - 1] !== '#EXT-X-DISCONTINUITY') {
+            filteredLines.push('#EXT-X-DISCONTINUITY');
+          }
+          i++;
+          continue;
+        }
+
+        // 如果是 EXTINF 行，检查下一行 URL 是否包含广告关键字
+        if (line.includes('#EXTINF:')) {
+          if (i + 1 < lines.length) {
+            const nextLine = lines[i + 1];
+            const containsAdKeyword = adKeywords.some(keyword =>
+              nextLine.toLowerCase().includes(keyword.toLowerCase())
+            );
+
+            if (containsAdKeyword) {
+              // 跳过 EXTINF 行和 URL 行
+              i += 2;
+              continue;
+            }
+          }
+        }
+
+        filteredLines.push(line);
+        i++;
+      }
+
+      return filteredLines.join('\n');
+    };
+
+    let filteredContent = '';
+
     // 如果有自定义去广告代码，优先使用
     const customCode = customAdFilterCodeRef.current;
     if (customCode && customCode.trim()) {
@@ -2317,66 +2381,34 @@ function PlayPageClient() {
         const customFunction = new Function('type', 'm3u8Content',
           jsCode + '\nreturn filterAdsFromM3U8(type, m3u8Content);'
         );
-        const result = customFunction(currentSourceRef.current, m3u8Content);
+        filteredContent = customFunction(currentSourceRef.current, m3u8Content);
         console.log('✅ 使用自定义去广告代码');
-        return result;
       } catch (err) {
         console.error('执行自定义去广告代码失败,降级使用默认规则:', err);
-        // 继续使用默认规则
+        filteredContent = runDefaultFilter(m3u8Content);
       }
+    } else {
+      filteredContent = runDefaultFilter(m3u8Content);
     }
 
-    // 默认去广告规则
-    if (!m3u8Content) return '';
-
-    // 广告关键字列表
-    const adKeywords = [
-      'sponsor',
-      '/ad/',
-      '/ads/',
-      'advert',
-      'advertisement',
-      '/adjump',
-      'redtraffic'
-    ];
-
-    // 按行分割M3U8内容
-    const lines = m3u8Content.split('\n');
-    const filteredLines = [];
-
-    let i = 0;
-    while (i < lines.length) {
-      const line = lines[i];
-
-      // 跳过 #EXT-X-DISCONTINUITY 标识
-      if (line.includes('#EXT-X-DISCONTINUITY')) {
-        i++;
-        continue;
-      }
-
-      // 如果是 EXTINF 行，检查下一行 URL 是否包含广告关键字
-      if (line.includes('#EXTINF:')) {
-        // 检查下一行 URL 是否包含广告关键字
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1];
-          const containsAdKeyword = adKeywords.some(keyword =>
-            nextLine.toLowerCase().includes(keyword.toLowerCase())
-          );
-
-          if (containsAdKeyword) {
-            // 跳过 EXTINF 行和 URL 行
-            i += 2;
-            continue;
-          }
+    // 2. 统计过滤后的分段数，触发防误杀保护
+    if (originalSegmentCount > 0) {
+      let keptSegmentCount = 0;
+      const filteredLines = filteredContent.split('\n');
+      for (const line of filteredLines) {
+        if (line.includes('#EXTINF:')) {
+          keptSegmentCount++;
         }
       }
 
-      // 保留当前行
-      filteredLines.push(line);
-      i++;
+      // 如果剩余分段比例低于 50%，判定为误杀，降级返回原内容
+      if (keptSegmentCount / originalSegmentCount < 0.5) {
+        console.warn(`[去广告] 警告：过滤后仅剩 ${keptSegmentCount}/${originalSegmentCount} 个分段（剩余比例 ${(keptSegmentCount/originalSegmentCount*100).toFixed(1)}%），判定为广告拦截误杀，自动降级恢复原视频内容以防止整集跳过。`);
+        return m3u8Content;
+      }
     }
 
-    return filteredLines.join('\n');
+    return filteredContent;
   }
 
   const formatTime = (seconds: number): string => {
