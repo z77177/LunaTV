@@ -1,26 +1,31 @@
-name: Sync to Hugging Face Spaces
+name: Sync to Hugging Face
 
 on:
   push:
     branches: [ main ]
-
-  # 允许手动触发（可选）
   workflow_dispatch:
 
 jobs:
-  sync-to-hub:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          lfs: true # 如果你的仓库包含 Git LFS 大文件，请开启
+          lfs: true # 确保下载拉取 LFS 文件
 
-      - name: Push to HF
+      # ====== 新增：在环境中安装并配置 Git LFS ======
+      - name: Setup Git LFS
+        run: |
+          git lfs install
+          
+      - name: Force Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # 将 Hugging Face Space 设为远程仓库，并直接强推更新
-          # 请将下面 URL 中的 <你的用户名> 和 <你的Space名称> 替换为实际内容
-          git push --force https://chuanxin:$HF_TOKEN@huggingface.co/spaces/z77177/BrooklynTV main
+          # 临时配置凭证，让 git lfs push 也能正确使用 token
+          git config --global credential.helper store
+          
+          # 强推到 Hugging Face
+          git push --force https://z77177:$HF_TOKEN@huggingface.co/spaces/z77177/BrooklynTV main
