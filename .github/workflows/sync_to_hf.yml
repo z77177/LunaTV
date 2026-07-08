@@ -1,0 +1,26 @@
+name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches: [ main ]
+
+  # 允许手动触发（可选）
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true # 如果你的仓库包含 Git LFS 大文件，请开启
+
+      - name: Push to HF
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # 将 Hugging Face Space 设为远程仓库，并直接强推更新
+          # 请将下面 URL 中的 <你的用户名> 和 <你的Space名称> 替换为实际内容
+          git push --force https://chuanxin:$HF_TOKEN@huggingface.co/spaces/z77177/BrooklynTV main
