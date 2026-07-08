@@ -1,4 +1,4 @@
-name: Sync to Hugging Face
+name: Sync to Hugging Face via API
 
 on:
   push:
@@ -6,26 +6,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync:
+  sync-to-hub:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          lfs: true # 确保下载拉取 LFS 文件
 
-      # ====== 新增：在环境中安装并配置 Git LFS ======
-      - name: Setup Git LFS
-        run: |
-          git lfs install
-          
-      - name: Force Push to Hugging Face Space
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Hugging Face Hub
+        run: pip install huggingface_hub
+
+      - name: Upload to Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # 临时配置凭证，让 git lfs push 也能正确使用 token
-          git config --global credential.helper store
+          python -c "
+          from huggingface_hub import HfApi
+          api = HfApi(token='${{ secrets.HF_TOKEN }}')
           
-          # 强推到 Hugging Face
-          git push --force https://z77177:$HF_TOKEN@huggingface.co/spaces/z77177/BrooklynTV main
+          # 使用官方高端 API 直接同步整个文件夹，它会自动处理二进制大文件
+          api.upload_folder(
+              folder_path='.',
+              repo_id='z77177/BrooklynTV',
+              repo_type='space',
+              delete_allow_list=['*'] # 类似于 git push --force，保持两端文件完全一致
+          )
+          "
