@@ -1,3 +1,13 @@
+---
+title: BrooklynTV
+emoji: 🎬
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 3000
+pinned: false
+---
+
 <div align="center">
 
 [![English Doc](https://img.shields.io/badge/Doc-English-blue)](README_EN.md)
@@ -38,6 +48,7 @@
 ### 💡 核心增强亮点
 
 #### 🎥 内容生态扩展
+
 - **YouTube 集成**：完整的 YouTube 搜索、播放、直播功能，支持无 Cookie 域名减少验证
 - **网盘搜索 (PanSou)**：集成高级筛选和缓存管理的网盘资源搜索
 - **ACG种子搜索**：集成ACG动漫种子资源搜索功能，提供丰富的动漫资源获取渠道
@@ -49,6 +60,7 @@
 - **2026年份筛选**：为豆瓣内容添加2026年份筛选选项，轻松查找最新上映影视
 
 #### 🤖 智能推荐系统
+
 - **AI 智能助手**：全局AI推荐按钮（ModernNav导航栏），支持 GPT-5/o 系列模型，动态提示词管理，85-90% 输入延迟优化，流式传输、编排器、视频上下文支持，集成豆瓣和TMDB数据，支持ID缺失时自动TMDB搜索
 - **短剧AI聊天**：为ShortDramaCard组件添加AI聊天功能，智能推荐和内容分析
 - **Tavily搜索模式**：支持无需AI API的Tavily搜索模式，提供灵活的API验证，SSE流式传输，友好的用户指导
@@ -59,6 +71,7 @@
 - **TanStack Query状态管理**：实现TanStack Query进行全局状态管理，优化数据获取和缓存
 
 #### 💬 弹幕生态系统
+
 - **第三方弹幕 API**：集成腾讯视频、爱奇艺、优酷、B站等主流平台，智能内容匹配防预告
 - **智能性能优化**：基于设备性能的分级渲染、Web Worker 加速、硬件加速
 - **综合设置面板**：集成到全局设置的完整弹幕配置面板，支持字号、速度、透明度、显示区域、防重叠等全方位调节
@@ -66,6 +79,7 @@
 - **Web端专用输入**：简洁"弹字"按钮，一键快速发送弹幕（移动端自动隐藏）
 
 #### 🎬 豆瓣预告片系统
+
 - **移动API自动刷新**：豆瓣预告片URL过期自动检测和刷新机制
 - **专用刷新端点**：独立的预告片刷新API端点，支持手动触发更新
 - **localStorage持久化**：预告片URL本地存储，减少重复请求
@@ -82,6 +96,7 @@
   - **缓存统计API**：`GET /api/video-cache/stats` 查看缓存使用情况
 
 #### 📊 性能与监控系统
+
 - **性能监控仪表板**：完整的性能监控系统，支持所有API（豆瓣、搜索、列表、详情、播放记录、收藏、跳过配置、短剧）的性能监控
 - **行业基准评级**：内置行业基准评级系统，实时评估API性能表现
 - **流量监控系统**：真实流量监控、外部流量域名分解、请求列表显示和可折叠区域
@@ -90,6 +105,7 @@
 - **Kvrocks持久化**：为cron、豆瓣搜索API和外部流量监控添加Kvrocks持久化
 
 #### 🔧 代理配置系统
+
 - **双层代理架构**：TVBox和视频播放独立代理配置，互不干扰
 - **智能URL替换**：自动识别并替换视频源中的播放地址
 - **状态检测**：代理服务器健康检查和连通性测试
@@ -97,6 +113,7 @@
 - **源级别应用**：代理配置应用到源验证端点和源测试API
 
 #### ⚡ M3U8下载器升级
+
 - **6倍速度提升**：并发下载速度从单线程提升到6线程
 - **下载设置UI**：可视化的下载配置界面，支持自定义并发数
 - **边下边存自动检测**：智能检测并启用流式下载模式
@@ -105,6 +122,7 @@
 - **时间范围显示**：为下载任务添加片段时长追踪和时间范围显示，完整视频显示总时长
 
 #### 📺 EPG系统增强
+
 - **调试API端点**：专用EPG调试接口，提供完整解析信息
 - **完整解析调试**：详细的EPG数据解析日志和错误信息
 - **名称回退匹配**：tvg-id优先，支持多种频道名称匹配策略
@@ -114,6 +132,7 @@
 - **节目单完整性**：支持<dl>结构、单行programme元素、内联title标签
 
 #### ⚡ 直播直连模式
+
 - **智能CORS检测**：自动检测直播源是否支持跨域访问
 - **客户端直连播放**：绕过服务器代理，节省带宽和服务器资源
 - **Mixed Content处理**：优化CORS检测处理混合内容情况
@@ -121,17 +140,20 @@
 - **自动降级**：CORS不可用时自动切换到代理模式
 
 #### 🔐 信任网络模式
+
 - **内网部署免登录**：内网/局域网部署可配置跳过登录认证，方便家庭环境使用
 - **IP白名单**：支持配置可信任的IP地址或CIDR范围
 - **IPv6支持**：完整支持IPv6地址白名单配置
 - **24小时缓存优化**：通过cookie版本号机制实现配置变更立即生效
 
 #### ⚖️ 视频源权重系统
+
 - **源优先级配置**：为每个视频源设置权重值，控制播放源选择优先级
 - **智能源排序**：根据权重自动排序可用播放源
 - **灵活调整**：在管理后台可视化调整源权重
 
 #### 📊 用户管理增强
+
 - **多Provider OIDC认证**：支持同时配置多个OAuth提供商（Google、Microsoft、GitHub、Facebook、微信、Apple、LinuxDo），用户可选择喜欢的方式登录
   - **GitHub OAuth**：自动适配非标准OIDC实现，支持私有邮箱获取，专用API headers
   - **Apple Sign In**：完整支持form_post响应模式，id_token解析，JWKS签名验证
@@ -151,6 +173,7 @@
 - **非活跃用户清理**：智能自动清理机制，详细配置和日志
 
 #### 🎮 播放器功能强化
+
 - **Liquid-glass 毛玻璃控制栏**：现代化的毛玻璃效果控制栏，12px 模糊背景，响应式按钮自适应，完美解决移动端按钮溢出问题
 - **多人观影房功能**：外部服务器集成的实时同步观影体验
   - **全局按钮**：观影房按钮集成到全局布局，位于返回顶部按钮上方
@@ -175,6 +198,7 @@
 - **选集分组滚动翻页**：播放页选集支持滚动翻页，大量集数流畅浏览
 
 #### 📱 界面体验优化
+
 - **Netflix风格HeroBanner**：首页带预告片自动播放和背景图的Netflix风格横幅，支持backdrop占位符，豆瓣预告片URL过期自动刷新（localStorage持久化 + 403错误自动重试），完美解决预告片缓存过期问题
   - **高清背景图**：背景图始终使用高清版本
   - **有效URL渲染**：仅渲染有效的预告片URL
@@ -206,6 +230,7 @@
 - **移动端布局优化**：减少头部高度，紧凑布局设计，修复过度间距问题
 
 #### 🔐 安全与存储
+
 - **TVBox 安全集成**：IP 白名单、用户专属 Token 认证、完整 API 兼容、智能搜索代理、手动源开关控制、完整源解析支持
 - **TVBox 智能搜索代理**：成人内容过滤、路径前缀支持、UI 控制开关
 - **成人内容管理**：双层过滤系统、自动检测、批量操作、用户/组级别控制
@@ -239,6 +264,7 @@
 ### 📜 开源协议
 
 本项目采用 **CC BY-NC-SA 4.0 协议**，具体条款：
+
 - ❌ **禁止任何商业化行为**
 - ✅ **允许个人学习和使用**
 - ✅ **允许二次开发和分发**
@@ -249,6 +275,7 @@
 ## ✨ 完整功能列表
 
 ### 🎬 内容聚合
+
 - ✅ 多源影视聚合搜索（流式输出、智能变体、语言感知过滤、备用 API 支持、繁体中文支持）
 - ✅ YouTube 集成（搜索、直播、iframe 播放、时间筛选和排序）
 - ✅ 网盘搜索（PanSou 集成、高级筛选、缓存管理）
@@ -261,6 +288,7 @@
 - ✅ 2026年份筛选（豆瓣内容年份筛选）
 
 ### 🤖 智能推荐
+
 - ✅ AI 推荐系统（GPT-5/o 支持、动态提示词）
 - ✅ 短剧AI聊天（ShortDramaCard组件AI聊天功能、智能推荐和内容分析）
 - ✅ TanStack Query状态管理（全局状态管理、优化数据获取和缓存）
@@ -269,6 +297,7 @@
 - ✅ 智能搜索优化（语言感知、模糊匹配）
 
 ### 💬 弹幕系统
+
 - ✅ 第三方弹幕 API（腾讯、爱奇艺、优酷、B站、caiji.cyou多平台聚合）
 - ✅ 智能内容匹配（自动过滤解说、预告等不相关内容）
 - ✅ 智能性能优化（设备分级、Web Worker、硬件加速、分段加载）
@@ -278,6 +307,7 @@
 - ✅ EXT-X-MEDIA URI处理（防止HLS音轨加载错误）
 
 ### 📊 用户管理
+
 - ✅ Telegram Magic Link 认证（安全便捷登录、自动配置 webhook）
 - ✅ 用户等级系统（取代大数字登录次数）
 - ✅ 播放统计（观看时长、影片数量、最近记录、全局/个人选项卡切换）
@@ -289,6 +319,7 @@
 - ✅ 登录时间追踪（增强管理员分析能力）
 
 ### 🎮 播放器增强
+
 - ✅ Liquid-glass 毛玻璃控制栏（12px 模糊、响应式按钮、移动端完美适配）
 - ✅ Chromecast 投屏
 - ✅ iPad/iOS 优化（HLS.js 配置、自动播放）
@@ -299,6 +330,7 @@
 - ✅ 剧集切换优化（防抖、状态管理）
 
 ### 🎨 界面体验
+
 - ✅ 英雄横幅（首页自动轮播、渐变背景、视觉吸引力提升、全品类内容支持）
 - ✅ 现代化导航UI（桌面水平顶栏、移动Liquid Glass底部导航、响应式切换）
 - ✅ 移动端横幅优化（滑动卡片式布局、触摸手势导航、更适合移动设备）
@@ -319,6 +351,7 @@
 - ✅ z-index层级优化（卡片、徽章、模态框正确叠加显示）
 
 ### 🔐 安全与存储
+
 - ✅ TVBox 完整 API（IP 白名单、用户专属Token认证、智能搜索代理、手动源开关、完整源解析）
 - ✅ TVBox 智能搜索代理（成人内容过滤、路径前缀支持、UI控制）
 - ✅ 信任网络模式（内网部署免登录、IP白名单、IPv6支持、24小时缓存优化）
@@ -339,6 +372,7 @@
 - ✅ 广告过滤增强（基于关键词的智能广告检测、自动识别和过滤广告内容）
 
 ### 🛠️ 技术优化
+
 - ✅ ArtPlayer 5.3.0 + HLS.js 1.6.15
 - ✅ 弹幕插件 5.2.0（Web Worker 加速）
 - ✅ Next.js SSR 兼容性
@@ -378,18 +412,18 @@
 
 ## 🔧 技术栈
 
-| 分类      | 主要依赖                                                                                              |
-| --------- | ----------------------------------------------------------------------------------------------------- |
-| 前端框架  | [Next.js 16.1.0](https://nextjs.org/) · App Router                                                        |
-| UI & 样式 | [Tailwind CSS 4.1.18](https://tailwindcss.com/) · [Framer Motion 12.18.1](https://www.framer.com/motion/)                                                       |
-| 语言      | TypeScript 5.8.3                                                                                          |
-| 播放器    | [ArtPlayer 5.3.0](https://github.com/zhw2590582/ArtPlayer) · [HLS.js 1.6.15](https://github.com/video-dev/hls.js/)  · [artplayer-plugin-danmuku 5.2.0](https://github.com/zhw2590582/ArtPlayer) |
-| 状态管理  | React 19.0.0 Context API · React Hooks                                                                              |
-| 数据存储  | Kvrocks · Redis · Upstash · localStorage                                                                              |
-| 虚拟化  | [react-window 2.2.3](https://github.com/bvaughn/react-window) · ResizeObserver                                                                              |
-| UI 组件  | [@headlessui/react 2.2.4](https://headlessui.com/) · [Lucide Icons 0.438.0](https://lucide.dev/) · [React Icons 5.4.0](https://react-icons.github.io/react-icons/)                                                                              |
-| 代码质量  | ESLint 9.28.0 · Prettier 3.5.3 · Jest 29.7.0 · Husky 7.0.4                                                                              |
-| 部署      | Docker · Docker Compose · pnpm 10.14.0                                                                    |
+| 分类      | 主要依赖                                                                                                                                                                                       |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 前端框架  | [Next.js 16.1.0](https://nextjs.org/) · App Router                                                                                                                                             |
+| UI & 样式 | [Tailwind CSS 4.1.18](https://tailwindcss.com/) · [Framer Motion 12.18.1](https://www.framer.com/motion/)                                                                                      |
+| 语言      | TypeScript 5.8.3                                                                                                                                                                               |
+| 播放器    | [ArtPlayer 5.3.0](https://github.com/zhw2590582/ArtPlayer) · [HLS.js 1.6.15](https://github.com/video-dev/hls.js/) · [artplayer-plugin-danmuku 5.2.0](https://github.com/zhw2590582/ArtPlayer) |
+| 状态管理  | React 19.0.0 Context API · React Hooks                                                                                                                                                         |
+| 数据存储  | Kvrocks · Redis · Upstash · localStorage                                                                                                                                                       |
+| 虚拟化    | [react-window 2.2.3](https://github.com/bvaughn/react-window) · ResizeObserver                                                                                                                 |
+| UI 组件   | [@headlessui/react 2.2.4](https://headlessui.com/) · [Lucide Icons 0.438.0](https://lucide.dev/) · [React Icons 5.4.0](https://react-icons.github.io/react-icons/)                             |
+| 代码质量  | ESLint 9.28.0 · Prettier 3.5.3 · Jest 29.7.0 · Husky 7.0.4                                                                                                                                     |
+| 部署      | Docker · Docker Compose · pnpm 10.14.0                                                                                                                                                         |
 
 ---
 
@@ -400,17 +434,20 @@
 为确保流畅运行，建议服务器满足以下最低配置：
 
 #### Docker 自托管部署
+
 - **CPU**: 2 核心（推荐 4 核心）
 - **内存**: 2GB RAM（推荐 4GB）
 - **存储**: 10GB 可用空间（推荐 20GB，用于视频缓存和数据库）
 - **网络**: 10Mbps 上行带宽（推荐 100Mbps）
 
 #### Zeabur / Vercel 云端部署
+
 - **无需自备服务器**：平台自动分配资源
 - **Zeabur**: Developer Plan 提供最多 2 vCPU 和 4GB RAM（$5/月含 $5 credit，用量不超过则免费）
 - **Vercel**: 无服务器架构，按需自动扩容
 
 #### ⚠️ 常见卡顿原因
+
 - ❌ **CPU 不足**：单核或低频 CPU 会导致视频转码和搜索缓慢
 - ❌ **内存不足**：少于 2GB 内存会导致频繁 OOM（内存溢出）
 - ❌ **网络带宽低**：上行带宽低于 5Mbps 会导致视频播放卡顿
@@ -427,6 +464,7 @@
 [![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/2425O0/deploy)
 
 **优势**：
+
 - ✅ 无需配置，一键启动（自动部署完整环境）
 - ✅ 自动 HTTPS 和全球 CDN 加速
 - ✅ 持久化存储，数据永不丢失
@@ -459,12 +497,12 @@ services:
       - PASSWORD=your_secure_password
       - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
       - KVROCKS_URL=redis://moontv-kvrocks:6666
-      - VIDEO_CACHE_DIR=/app/video-cache  # 视频缓存目录
+      - VIDEO_CACHE_DIR=/app/video-cache # 视频缓存目录
       # 可选：站点配置
       - SITE_BASE=https://your-domain.com
       - NEXT_PUBLIC_SITE_NAME=LunaTV Enhanced
     volumes:
-      - video-cache:/app/video-cache  # 视频缓存持久化
+      - video-cache:/app/video-cache # 视频缓存持久化
     networks:
       - moontv-network
     depends_on:
@@ -485,7 +523,7 @@ networks:
 
 volumes:
   kvrocks-data:
-  video-cache:  # 视频缓存 volume
+  video-cache: # 视频缓存 volume
 ```
 
 ### 🔴 Redis 存储（有数据丢失风险）
@@ -627,11 +665,11 @@ Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以�
    - 配置端口：`6666` (TCP)
    - **记住服务名称**（通常是 `apachekvrocks`）
    - **配置持久化卷（重要）**：
-     * 在服务设置中找到 "Volumes" 部分
-     * 点击 "Add Volume" 添加新卷
-     * Volume ID: `kvrocks-data`（可自定义，仅支持字母、数字、连字符）
-     * Path: `/var/lib/kvrocks/db`
-     * 保存配置
+     - 在服务设置中找到 "Volumes" 部分
+     - 点击 "Add Volume" 添加新卷
+     - Volume ID: `kvrocks-data`（可自定义，仅支持字母、数字、连字符）
+     - Path: `/var/lib/kvrocks/db`
+     - 保存配置
 
    > 💡 **重要提示**：持久化卷路径必须设置为 `/var/lib/kvrocks/db`（KVRocks 数据目录），这样配置文件保留在容器内，数据库文件持久化，重启后数据不会丢失！
 
@@ -675,12 +713,12 @@ Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以�
 
 #### 5. 设置访问域名（必须）
 
-   - 在 LunaTV 服务页面，点击 "Networking" 或 "网络" 标签
-   - 点击 "Generate Domain" 生成 Zeabur 提供的免费域名（如 `xxx.zeabur.app`）
-   - 或者绑定自定义域名：
-     * 点击 "Add Domain" 添加你的域名
-     * 按照提示配置 DNS CNAME 记录指向 Zeabur 提供的目标地址
-   - 设置完域名后即可通过域名访问 LunaTV
+- 在 LunaTV 服务页面，点击 "Networking" 或 "网络" 标签
+- 点击 "Generate Domain" 生成 Zeabur 提供的免费域名（如 `xxx.zeabur.app`）
+- 或者绑定自定义域名：
+  - 点击 "Add Domain" 添加你的域名
+  - 按照提示配置 DNS CNAME 记录指向 Zeabur 提供的目标地址
+- 设置完域名后即可通过域名访问 LunaTV
 
 6. **绑定自定义域名（可选）**
    - 在服务设置中点击 "Domains"
@@ -701,6 +739,7 @@ Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以�
    - Zeabur 会自动拉取最新的 `latest` 镜像并重新部署
 
 > 💡 **提示**：
+>
 > - 使用 `latest` 标签时，Restart 会自动拉取最新镜像
 > - 生产环境推荐使用固定版本标签（如 `v5.5.6`）避免意外更新
 
@@ -771,14 +810,14 @@ Zeabur 是一站式云端部署平台，使用预构建的 Docker 镜像可以�
 
    在 Space 页面点击 `Settings` > `Variables and secrets`，添加以下 Secrets：
 
-   | 变量名 | 说明 | 示例值 |
-   |--------|------|--------|
-   | `USERNAME` | 管理员账号 | `admin` |
-   | `PASSWORD` | 管理员密码 | `your_secure_password` |
-   | `NEXT_PUBLIC_STORAGE_TYPE` | 存储类型 | `upstash` |
-   | `UPSTASH_URL` | Upstash REST URL | `https://xxx.upstash.io` |
-   | `UPSTASH_TOKEN` | Upstash Token | `AxxxQ==` |
-   | `DISABLE_HERO_TRAILER` | 禁用首页预告片 | `true` |
+   | 变量名                     | 说明             | 示例值                   |
+   | -------------------------- | ---------------- | ------------------------ |
+   | `USERNAME`                 | 管理员账号       | `admin`                  |
+   | `PASSWORD`                 | 管理员密码       | `your_secure_password`   |
+   | `NEXT_PUBLIC_STORAGE_TYPE` | 存储类型         | `upstash`                |
+   | `UPSTASH_URL`              | Upstash REST URL | `https://xxx.upstash.io` |
+   | `UPSTASH_TOKEN`            | Upstash Token    | `AxxxQ==`                |
+   | `DISABLE_HERO_TRAILER`     | 禁用首页预告片   | `true`                   |
 
    > ⚠️ **注意**：HF Space 无持久化存储，必须使用 Upstash 等外部数据库
    >
@@ -1045,22 +1084,23 @@ your-space/
 
 ### 必填变量
 
-| 变量                     | 说明           | 示例值                |
-| ------------------------ | -------------- | --------------------- |
-| `USERNAME`               | 站长账号       | `admin`               |
-| `PASSWORD`               | 站长密码       | `your_secure_password`|
-| `NEXT_PUBLIC_STORAGE_TYPE` | 存储类型     | `kvrocks` / `redis` / `upstash` |
+| 变量                       | 说明     | 示例值                          |
+| -------------------------- | -------- | ------------------------------- |
+| `USERNAME`                 | 站长账号 | `admin`                         |
+| `PASSWORD`                 | 站长密码 | `your_secure_password`          |
+| `NEXT_PUBLIC_STORAGE_TYPE` | 存储类型 | `kvrocks` / `redis` / `upstash` |
 
 ### 存储配置
 
-| 变量              | 说明                 | 示例值                          |
-| ----------------- | -------------------- | ------------------------------- |
-| `KVROCKS_URL`     | Kvrocks 连接 URL      | `redis://moontv-kvrocks:6666`   |
-| `REDIS_URL`       | Redis 连接 URL        | `redis://moontv-redis:6379`     |
-| `UPSTASH_URL`     | Upstash 端点          | `https://xxx.upstash.io`        |
-| `UPSTASH_TOKEN`   | Upstash Token         | `AxxxxxxxxxxxxxxxxxxxxxxxxxxxQ==`|
+| 变量            | 说明             | 示例值                            |
+| --------------- | ---------------- | --------------------------------- |
+| `KVROCKS_URL`   | Kvrocks 连接 URL | `redis://moontv-kvrocks:6666`     |
+| `REDIS_URL`     | Redis 连接 URL   | `redis://moontv-redis:6379`       |
+| `UPSTASH_URL`   | Upstash 端点     | `https://xxx.upstash.io`          |
+| `UPSTASH_TOKEN` | Upstash Token    | `AxxxxxxxxxxxxxxxxxxxxxxxxxxxQ==` |
 
 > 💡 **Redis 兼容服务**：`REDIS_URL` 支持所有 Redis 协议兼容的服务，包括：
+>
 > - 自建 Redis / KVRocks
 > - [Redis Cloud](https://redis.io/cloud/) - 官方云服务，免费 30MB
 > - [Aiven Valkey](https://aiven.io/valkey) - 免费 1GB，Redis 7.2 兼容
@@ -1070,21 +1110,22 @@ your-space/
 
 ### 可选配置
 
-| 变量                                | 说明                 | 默认值      | 可选值                    |
-| ----------------------------------- | -------------------- | ----------- | ------------------------- |
-| `SITE_BASE`                         | 站点 URL             | 空          | `https://example.com`     |
-| `NEXT_PUBLIC_SITE_NAME`             | 站点名称             | `MoonTV`    | 任意字符串                |
-| `ANNOUNCEMENT`                      | 站点公告             | 默认公告     | 任意字符串                |
-| `NEXT_PUBLIC_SEARCH_MAX_PAGE`       | 搜索最大页数         | `5`         | `1-50`                    |
-| `NEXT_PUBLIC_DOUBAN_PROXY_TYPE`     | 豆瓣数据代理类型     | `direct`    | `direct` / `cors-proxy-zwei` / `cmliussss-cdn-tencent` / `cmliussss-cdn-ali` / `custom` |
-| `NEXT_PUBLIC_DOUBAN_PROXY`          | 自定义豆瓣代理       | 空          | URL prefix                |
-| `NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE`| 豆瓣图片代理类型    | `direct`    | `direct` / `server` / `img3` / `cmliussss-cdn-tencent` / `cmliussss-cdn-ali` / `custom` |
-| `NEXT_PUBLIC_DOUBAN_IMAGE_PROXY`    | 自定义图片代理       | 空          | URL prefix                |
-| `NEXT_PUBLIC_DISABLE_YELLOW_FILTER` | 关闭色情内容过滤     | `false`     | `true` / `false`          |
-| `NEXT_PUBLIC_FLUID_SEARCH`          | 流式搜索输出         | `true`      | `true` / `false`          |
-| `DISABLE_HERO_TRAILER`              | 禁用首页预告片       | `false`     | `true` / `false`          |
+| 变量                                  | 说明             | 默认值   | 可选值                                                                                  |
+| ------------------------------------- | ---------------- | -------- | --------------------------------------------------------------------------------------- |
+| `SITE_BASE`                           | 站点 URL         | 空       | `https://example.com`                                                                   |
+| `NEXT_PUBLIC_SITE_NAME`               | 站点名称         | `MoonTV` | 任意字符串                                                                              |
+| `ANNOUNCEMENT`                        | 站点公告         | 默认公告 | 任意字符串                                                                              |
+| `NEXT_PUBLIC_SEARCH_MAX_PAGE`         | 搜索最大页数     | `5`      | `1-50`                                                                                  |
+| `NEXT_PUBLIC_DOUBAN_PROXY_TYPE`       | 豆瓣数据代理类型 | `direct` | `direct` / `cors-proxy-zwei` / `cmliussss-cdn-tencent` / `cmliussss-cdn-ali` / `custom` |
+| `NEXT_PUBLIC_DOUBAN_PROXY`            | 自定义豆瓣代理   | 空       | URL prefix                                                                              |
+| `NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE` | 豆瓣图片代理类型 | `direct` | `direct` / `server` / `img3` / `cmliussss-cdn-tencent` / `cmliussss-cdn-ali` / `custom` |
+| `NEXT_PUBLIC_DOUBAN_IMAGE_PROXY`      | 自定义图片代理   | 空       | URL prefix                                                                              |
+| `NEXT_PUBLIC_DISABLE_YELLOW_FILTER`   | 关闭色情内容过滤 | `false`  | `true` / `false`                                                                        |
+| `NEXT_PUBLIC_FLUID_SEARCH`            | 流式搜索输出     | `true`   | `true` / `false`                                                                        |
+| `DISABLE_HERO_TRAILER`                | 禁用首页预告片   | `false`  | `true` / `false`                                                                        |
 
 > 💡 **DISABLE_HERO_TRAILER**：首页 HeroBanner 预告片会消耗较多流量，且预告片 URL 带时间戳会定时过期。
+>
 > - **Vercel**：自动禁用（无需设置）
 > - **Docker/VPS（可挂载持久化卷）**：无需禁用，视频会缓存到本地（`VIDEO_CACHE_DIR`），URL 过期后自动刷新并重新缓存
 > - **ClawCloud、HF Space、EdgeOne Pages 等无持久化平台**：建议设置 `DISABLE_HERO_TRAILER=true`，因为无法缓存视频，URL 过期后每次刷新都要重新下载
@@ -1092,6 +1133,7 @@ your-space/
 ### 豆瓣代理说明
 
 **DOUBAN_PROXY_TYPE 选项**：
+
 - `direct`：服务器直接请求豆瓣（可能被墙）
 - `cors-proxy-zwei`：通过 [Zwei](https://github.com/bestzwei) 提供的 CORS 代理
 - `cmliussss-cdn-tencent`：[CMLiussss](https://github.com/cmliu) 提供的腾讯云 CDN
@@ -1099,6 +1141,7 @@ your-space/
 - `custom`：自定义代理（需设置 `DOUBAN_PROXY`）
 
 **DOUBAN_IMAGE_PROXY_TYPE 选项**：
+
 - `direct`：浏览器直接请求豆瓣图片域名
 - `server`：服务器代理请求
 - `img3`：豆瓣官方阿里云 CDN
@@ -1121,6 +1164,7 @@ your-space/
 管理后台提供以下功能模块（部分功能仅站长可见）：
 
 #### 📁 配置文件（仅站长）
+
 - **配置订阅**：
   - 订阅 URL 设置
   - 自动拉取远程配置
@@ -1130,6 +1174,7 @@ your-space/
   - 在线保存配置
 
 #### ⚙️ 站点配置
+
 - **基础设置**：
   - 站点名称
   - 站点公告
@@ -1151,6 +1196,7 @@ your-space/
   - 功能启用开关
 
 #### 👥 用户配置
+
 - **用户注册设置**（仅站长）：
   - 用户注册开关
   - 非活跃用户自动清理
@@ -1167,6 +1213,7 @@ your-space/
   - 删除用户
 
 #### 🎬 视频源配置
+
 - **视频源管理**：
   - 添加视频源（名称、API 地址）
   - 批量启用/禁用/删除
@@ -1181,6 +1228,7 @@ your-space/
   - 侧抽屉测试结果展示
 
 #### 📺 直播源配置
+
 - **直播源管理**：
   - 添加直播源（名称、m3u/m3u8 地址）
   - 刷新直播源数据
@@ -1188,12 +1236,14 @@ your-space/
   - 编辑/删除直播源
 
 #### 🏷️ 分类配置
+
 - **自定义分类**：
   - 添加/编辑自定义分类
   - 拖拽排序
   - 基于豆瓣搜索的分类
 
 #### 🔍 网盘搜索配置
+
 - **基础设置**：
   - 网盘搜索功能开关
   - PanSou 服务地址
@@ -1205,25 +1255,30 @@ your-space/
   - 磁力链接、电驴链接
 
 #### 🤖 AI 推荐配置
+
 - OpenAI API 配置
 - 模型选择和参数设置
 - 推荐提示词管理
 
 #### 🎥 YouTube 配置
+
 - YouTube Data API v3 密钥
 - 搜索和缓存配置
 - 功能启用开关
 
 #### 🔐 TVBox 安全配置
+
 - IP 白名单管理
 - Token 认证配置
 - TVBox API 设置
 
 #### 🗄️ 缓存管理（仅站长）
+
 - 各类缓存查看和清理
 - YouTube、网盘、豆瓣、弹幕缓存统计
 
 #### 📦 数据迁移（仅站长）
+
 - 导入/导出整站数据
 - 数据库迁移工具
 
@@ -1261,10 +1316,12 @@ services:
 [Selene](https://github.com/XWF8188/Selene) 是由 MoonTV 原作者开发的官方移动端应用，基于 Flutter 构建，专为手机端优化。
 
 #### 支持平台
+
 - **Android**：5.0+ (API 21)，仅支持 ARM64 架构
 - **iOS**：12.0+
 
 #### 主要特性
+
 - 🎨 Modern Material Design 3 界面
 - 🌗 深色/浅色主题支持
 - 🔍 多源聚合搜索（支持 SSE 实时搜索）
@@ -1284,6 +1341,7 @@ services:
 5. 所有播放记录和收藏将与网页端自动同步
 
 #### 注意事项
+
 - ⚠️ Selene 专为手机端优化，**不兼容平板、电视、模拟器**等设备
 - ⚠️ 如需在 Android TV 或平板上使用，请使用下方的 OrionTV
 
@@ -1296,6 +1354,7 @@ services:
 本项目可配合 [OrionTV](https://github.com/zimplexing/OrionTV) 在 Android TV 和平板上使用。
 
 #### 适用场景
+
 - Android TV / 智能电视
 - Android 平板
 - 大屏设备
@@ -1316,6 +1375,7 @@ services:
 ### 最新版本：v6.1.1 (2026-02-01)
 
 #### 新增功能
+
 - 🔍 搜索历史UX优化：清空输入时始终显示搜索历史
 - 💾 ACG搜索数据库缓存：为ACG搜索添加数据库缓存，提升搜索体验
 - ✏️ 视频源编辑功能：添加视频源编辑功能，改进短剧处理逻辑
@@ -1332,6 +1392,7 @@ services:
 - 📚 部署文档更新：添加HF Space和EdgeOne Pages部署指南
 
 #### 性能优化
+
 - 🔨 重构短剧源聚合：动态分类检测，改进短剧源聚合逻辑
 - ⚡ Cron API全面优化：并发处理、超时控制、监控、重试机制、任务统计和并行化
 - ⚡ 直播频道性能优化：添加超时控制和EPG缓存
@@ -1342,6 +1403,7 @@ services:
 - ⚡ 信任网络缓存优化：24小时缓存，通过cookie版本号立即刷新配置
 
 #### Bug 修复
+
 - 🐛 修复UserMenu导航卡死：通过router优化解决导航卡死问题
 - 🐛 修复ACG搜索按钮显示：改进动漫内容的ACG搜索按钮显示逻辑
 - 🐛 修复短剧系统：替换失效API、解决CORS问题、验证空数据、修复字段映射、自动选择分类、隐藏零评分、防止空缓存
@@ -1412,6 +1474,7 @@ services:
 本项目采用 [CC BY-NC-SA 4.0 协议](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans) 开源。
 
 **这意味着**：
+
 - ✅ 您可以自由地分享、复制和修改本项目
 - ✅ 您必须给予适当的署名，提供指向本许可协议的链接
 - ❌ 您不得将本项目用于商业目的
@@ -1426,11 +1489,13 @@ services:
 ## 🙏 致谢
 
 ### 原始项目
+
 - [MoonTV](https://github.com/MoonTechLab/LunaTV) — 项目原始版本
 - [Selene](https://github.com/MoonTechLab/Selene) — 官方移动端 APP
 - [LibreTV](https://github.com/LibreSpark/LibreTV) — 灵感来源
 
 ### 核心依赖
+
 - [Next.js](https://nextjs.org/) — React 框架
 - [ArtPlayer](https://github.com/zhw2590582/ArtPlayer) — 强大的网页视频播放器
 - [HLS.js](https://github.com/video-dev/hls.js) — HLS 流媒体支持
@@ -1438,6 +1503,7 @@ services:
 - [Tailwind CSS](https://tailwindcss.com/) — CSS 框架
 
 ### 数据源与服务
+
 - [豆瓣](https://movie.douban.com/) — 影视信息数据
 - [TMDB](https://www.themoviedb.org/) — 电影数据库
 - [Bangumi](https://bangumi.tv/) — 动漫信息
@@ -1445,13 +1511,16 @@ services:
 - [CMLiussss](https://github.com/cmliu) — 豆瓣 CDN 服务
 
 ### 设计与实现参考
+
 本项目在开发过程中参考了以下优秀开源项目的设计思路和实现方案：
+
 - **[MoonTVPlus](https://github.com/mtvpls/MoonTVPlus)** — 观影室同步播放、移动端优化等功能实现参考
 - **[DecoTV](https://github.com/Decohererk/DecoTV)** — TVBox 安全策略、性能优化、UI 设计等实现参考
 
 感谢这些项目及其作者的开源贡献和优秀实现！
 
 ### 特别感谢
+
 - 所有提供免费影视接口的站点
 - 开源社区的贡献者们
 - 使用并反馈问题的用户们
