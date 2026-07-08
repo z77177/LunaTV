@@ -2,8 +2,8 @@ name: Sync to Hugging Face via API
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ main ] # 你的默认分支名，如果是 master 请改为 master
+  workflow_dispatch:   # 允许你在 GitHub 网页端手动点击按钮触发同步
 
 jobs:
   sync-to-hub:
@@ -18,21 +18,34 @@ jobs:
           python-version: '3.10'
 
       - name: Install Hugging Face Hub
-        run: pip install huggingface_hub
+        run: |
+          pip install --upgrade pip
+          pip install huggingface_hub
 
       - name: Upload to Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           python -c "
+          import os
           from huggingface_hub import HfApi
-          api = HfApi(token='${{ secrets.HF_TOKEN }}')
           
-          # 使用官方高端 API 直接同步整个文件夹，它会自动处理二进制大文件
+          # 从 GitHub Secrets 中安全读取 Token
+          hf_token = os.environ.get('HF_TOKEN')
+          if not hf_token:
+              raise ValueError('GitHub Secret 中的 HF_TOKEN 未配置或为空！')
+          
+          api = HfApi(token=hf_token)
+          
+          print('🚀 开始同步文件到 Hugging Face Space...')
+          
+          # 使用官方 API 进行目录同步，完美绕过 Git 对图片等二进制文件的拦截
           api.upload_folder(
               folder_path='.',
               repo_id='z77177/BrooklynTV',
               repo_type='space',
-              delete_allow_list=['*'] # 类似于 git push --force，保持两端文件完全一致
+              delete_patterns='*' # 清理云端多余文件，保持与 GitHub 完全一致（等同于 git push --force）
           )
+          
+          print('✅ 同步完成！Space 正在重新构建...')
           "
