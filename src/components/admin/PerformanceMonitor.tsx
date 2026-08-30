@@ -423,7 +423,7 @@ export default function PerformanceMonitor() {
           </div>
         </div>
 
-        {/* 进程内存（LunaTV 专属） */}
+        {/* 进程内存（布鲁克林影视 专属） */}
         <div className='bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
           <div className='flex items-center justify-between mb-2'>
             <span className='text-sm text-gray-600 dark:text-gray-400'>进程内存</span>

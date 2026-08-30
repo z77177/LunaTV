@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>视频解析 - LunaTV</title>
+    <title>视频解析 - 布鲁克林影视</title>
     <style>
         body { margin: 0; padding: 0; background: #000; }
         iframe { width: 100vw; height: 100vh; border: none; }

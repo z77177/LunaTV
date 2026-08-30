@@ -11,7 +11,7 @@ import { yellowWords } from '@/lib/yellow';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: '极简点播 - LunaTV Lite',
+  title: '极简点播 - 布鲁克林影视 Lite',
   description: '专为老旧设备与极速播放设计的极简点播页',
 };
 
@@ -25,16 +25,17 @@ export default async function LitePage({ searchParams }: PageProps) {
   const source = typeof params.source === 'string' ? params.source : '';
   const id = typeof params.id === 'string' ? params.id : '';
   const ep = typeof params.ep === 'string' ? params.ep : '0';
+  const mode = typeof params.mode === 'string' ? params.mode : 'proxy'; // 默认走中继代理，解决混合内容与跨域
 
   const config = await getConfig();
-  const siteName = config.SiteConfig?.SiteName || 'LunaTV';
+  const siteName = config.SiteConfig?.SiteName || '布鲁克林影视';
   const apiSites = await getAvailableApiSites('guest');
 
   let searchResults: SearchResult[] = [];
   let detail: SearchResult | null = null;
   let errorMsg = '';
 
-  // 1. 如果指定了 source 和 id，获取剧集详情
+  // 1. 获取剧集详情
   if (source && id) {
     const currentSite = apiSites.find((s) => s.key === source);
     if (currentSite) {
@@ -49,7 +50,7 @@ export default async function LitePage({ searchParams }: PageProps) {
     }
   }
 
-  // 2. 如果有搜索词 q，且没有在查看详情（或者为了在底部展示备用源），执行服务端搜索
+  // 2. 执行服务端搜索
   if (q && (!detail || searchResults.length === 0)) {
     try {
       const searchVariants = generateSearchVariants(q);
@@ -99,9 +100,24 @@ export default async function LitePage({ searchParams }: PageProps) {
     0,
     Math.min(parseInt(ep, 10) || 0, episodes.length > 0 ? episodes.length - 1 : 0)
   );
-  const currentEpUrl = episodes[currentEpIndex] || '';
+  const currentRawUrl = episodes[currentEpIndex] || '';
   const currentEpTitle =
     episodeTitles[currentEpIndex] || (episodes.length > 0 ? `第 ${currentEpIndex + 1} 集` : '');
+
+  // 计算播放器实际加载的视频流 URL（中继代理 vs 直连）
+  const proxiedStreamUrl = currentRawUrl
+    ? `/api/lite-stream?url=${encodeURIComponent(currentRawUrl)}`
+    : '';
+  const activePlayUrl = mode === 'direct' ? currentRawUrl : proxiedStreamUrl;
+
+  // VLC 唤醒链接（支持官方 x-callback 协议与纯域名协议）
+  const vlcCallbackUrl = currentRawUrl
+    ? `vlc-x-callback://x-callback-url/stream?url=${encodeURIComponent(currentRawUrl)}`
+    : '';
+  const vlcDirectUrl = currentRawUrl
+    ? `vlc://${currentRawUrl.replace(/^https?:\/\//, '')}`
+    : '';
+  const nplayerUrl = currentRawUrl ? `nplayer-${currentRawUrl}` : '';
 
   // 热门搜索关键词
   const hotKeywords = ['庆余年', '柯南', '三体', '繁花', '凡人修仙传', '间谍过家家', '狂飙', '甄嬛传'];
@@ -244,6 +260,26 @@ export default async function LitePage({ searchParams }: PageProps) {
             color: #fff;
             margin-bottom: 8px;
           }
+          .lite-mode-switch {
+            display: inline-flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            background: #161616;
+            padding: 3px;
+            border-radius: 6px;
+            border: 1px solid #333;
+          }
+          .lite-mode-btn {
+            padding: 3px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            color: #888;
+          }
+          .lite-mode-btn.active {
+            background: #2563eb;
+            color: #fff;
+            font-weight: bold;
+          }
           .lite-action-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -251,7 +287,7 @@ export default async function LitePage({ searchParams }: PageProps) {
           }
           .lite-btn {
             display: inline-block;
-            padding: 8px 14px;
+            padding: 8px 12px;
             border-radius: 6px;
             font-size: 13px;
             font-weight: bold;
@@ -260,6 +296,10 @@ export default async function LitePage({ searchParams }: PageProps) {
           }
           .lite-btn-vlc {
             background: #ea580c;
+            color: #fff !important;
+          }
+          .lite-btn-nplayer {
+            background: #059669;
             color: #fff !important;
           }
           .lite-btn-link {
@@ -451,14 +491,14 @@ export default async function LitePage({ searchParams }: PageProps) {
           <div className='lite-player-card'>
             {/* 原生视频播放器 */}
             <div className='lite-video-wrap'>
-              {currentEpUrl ? (
+              {activePlayUrl ? (
                 <video
                   controls
                   playsInline
                   preload='auto'
-                  src={currentEpUrl}
+                  src={activePlayUrl}
                   poster={detail.poster}
-                  key={currentEpUrl}
+                  key={activePlayUrl}
                 >
                   <p style={{ color: '#fff', padding: '20px' }}>
                     您的浏览器不支持原生 HTML5 视频播放，请点击下方「在 VLC 中播放」。
@@ -476,14 +516,37 @@ export default async function LitePage({ searchParams }: PageProps) {
               <div className='lite-now-playing'>
                 {detail.title} - <span style={{ color: '#4da3ff' }}>{currentEpTitle}</span>
               </div>
+
+              {/* 播放模式切换 (中继代理 vs 原画直连) */}
+              <div className='lite-mode-switch'>
+                <a
+                  href={`/lite?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}&ep=${ep}&q=${encodeURIComponent(q)}&mode=proxy`}
+                  className={`lite-mode-btn ${mode !== 'direct' ? 'active' : ''}`}
+                >
+                  🛡️ 中继流代理 (推荐，防拦截)
+                </a>
+                <a
+                  href={`/lite?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}&ep=${ep}&q=${encodeURIComponent(q)}&mode=direct`}
+                  className={`lite-mode-btn ${mode === 'direct' ? 'active' : ''}`}
+                >
+                  ⚡ 原画直连 (直连视频源)
+                </a>
+              </div>
+
               <div className='lite-action-buttons'>
-                {currentEpUrl && (
+                {currentRawUrl && (
                   <>
-                    <a href={`vlc://${currentEpUrl}`} className='lite-btn lite-btn-vlc'>
-                      🚀 在 VLC 中播放
+                    <a href={vlcCallbackUrl} className='lite-btn lite-btn-vlc'>
+                      🚀 VLC 播放 (协议1)
+                    </a>
+                    <a href={vlcDirectUrl} className='lite-btn lite-btn-vlc'>
+                      🚀 VLC 播放 (协议2)
+                    </a>
+                    <a href={nplayerUrl} className='lite-btn lite-btn-nplayer'>
+                      📱 nPlayer 播放
                     </a>
                     <a
-                      href={currentEpUrl}
+                      href={currentRawUrl}
                       target='_blank'
                       rel='noreferrer'
                       className='lite-btn lite-btn-link'
@@ -513,7 +576,7 @@ export default async function LitePage({ searchParams }: PageProps) {
                   {episodes.map((_, i) => (
                     <a
                       key={i}
-                      href={`/lite?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}&ep=${i}&q=${encodeURIComponent(q || detail?.title || '')}`}
+                      href={`/lite?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}&ep=${i}&q=${encodeURIComponent(q || detail?.title || '')}&mode=${mode}`}
                       className={`lite-ep-item ${i === currentEpIndex ? 'active' : ''}`}
                     >
                       {episodeTitles[i] || `${i + 1}`}
@@ -606,14 +669,13 @@ export default async function LitePage({ searchParams }: PageProps) {
             <ul style={{ margin: '8px 0 0', paddingLeft: '20px', lineHeight: '1.7' }}>
               <li>
                 <strong>原生硬件加速秒播</strong>：在上方搜索任意电影或电视剧，点击剧集即可直接在
-                Safari 中通过原生播放器全屏观看（调用 iPad 独立 GPU 解码，零发热、不卡顿）。
+                Safari 中通过原生播放器全屏观看（默认开启中继代理，解决跨域与拦截，零发热、不卡顿）。
               </li>
               <li>
-                <strong>一键唤醒 VLC</strong>：如果播放部分格式遇到声音或画面问题，点击「在 VLC
-                中播放」按钮即可自动跳转至 iPad 上的 VLC App 全屏播放。
+                <strong>多协议唤醒 VLC / nPlayer</strong>：支持直接点击「VLC 播放 (协议1/2)」或「nPlayer 播放」唤醒 App 全屏播放。
               </li>
               <li>
-                <strong>收藏本页</strong>：建议在 Safari 中点击分享按钮，选择「添加到主屏幕」或「添加书签」，方便下次一键打开。
+                <strong>收藏本页</strong>：建议在 Safari 中点击分享按钮，选择「添加到主屏幕」，老 iPad 桌面就会生成独立点播图标。
               </li>
             </ul>
           </div>

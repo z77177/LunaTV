@@ -655,7 +655,7 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
             </span>
           </div>
 
-          {/* 上边距 - LunaTV独有功能！ */}
+          {/* 上边距 */}
           <div className='flex items-center gap-3'>
             <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
               <svg className='w-3.5 h-3.5 text-gray-400' viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -687,7 +687,7 @@ export const DanmuSettingsPanel = memo(function DanmuSettingsPanel({
             </span>
           </div>
 
-          {/* 下边距 - LunaTV独有功能！ */}
+          {/* 下边距 */}
           <div className='flex items-center gap-3'>
             <div className='flex items-center gap-1.5 text-xs text-gray-300 w-16 shrink-0'>
               <svg className='w-3.5 h-3.5 text-gray-400' viewBox="0 0 24 24" fill="none" stroke="currentColor">

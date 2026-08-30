@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       const loginUrl = `${tokenData.baseUrl}/api/telegram/verify?token=${token}`;
 
       // 发送登录链接
-      const message = `🔐 *登录到 ${config?.SiteConfig?.SiteName || 'LunaTV'}*\n\n点击下方链接完成登录：\n\n${loginUrl}\n\n⏰ 此链接将在 5 分钟后过期`;
+      const message = `🔐 *登录到 ${config?.SiteConfig?.SiteName || '布鲁克林影视'}*\n\n点击下方链接完成登录：\n\n${loginUrl}\n\n⏰ 此链接将在 5 分钟后过期`;
 
       await sendTelegramMessage(
         telegramConfig.botToken,

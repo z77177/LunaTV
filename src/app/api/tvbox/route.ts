@@ -593,7 +593,7 @@ export async function GET(request: NextRequest) {
           url: "Sequence"
         },
         {
-          name: "LunaTV内置解析",
+          name: "布鲁克林影视内置解析",
           type: 1,
           url: `${baseUrl}/api/parse?url=`,
           ext: {
@@ -673,7 +673,7 @@ export async function GET(request: NextRequest) {
         
         // 多个源时，创建一个聚合源
         return [{
-          name: "LunaTV聚合直播",
+          name: "布鲁克林影视聚合直播",
           type: 0,
           url: `${baseUrl}/api/live/merged`, // 新的聚合端点
           epg: enabledLives.find(live => live.epg)?.epg || "",

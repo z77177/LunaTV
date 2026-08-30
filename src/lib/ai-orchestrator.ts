@@ -371,7 +371,7 @@ export async function orchestrateDataSources(
   });
 
   // 2. 构建基础系统提示词
-  const siteName = config?.siteName || 'LunaTV';
+  const siteName = config?.siteName || '布鲁克林影视';
   let systemPrompt = `你是 ${siteName} 的 AI 影视助手，专门帮助用户发现和了解影视内容。
 
 ## 你的能力

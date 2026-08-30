@@ -172,7 +172,7 @@ export async function GET(request: Request) {
   <div class="container">
     <div class="icon">🔐</div>
     <h1>Telegram 登录确认</h1>
-    <p>点击下方按钮完成登录到 ${tokenData.baseUrl || 'LunaTV'}</p>
+    <p>点击下方按钮完成登录到 ${tokenData.baseUrl || '布鲁克林影视'}</p>
     <a href="/api/telegram/verify?token=${token}&confirm=1" class="btn">
       确认登录
     </a>
