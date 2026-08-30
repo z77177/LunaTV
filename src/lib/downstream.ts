@@ -24,6 +24,53 @@ interface ApiSearchItem {
 }
 
 /**
+ * 健壮的 vod_play_url 解析器
+ * 兼容标准分集格式、带签名参数的 m3u8、mp4 以及多组 $$$ 播放源
+ */
+export function parseVodPlayUrl(vodPlayUrl?: string): { episodes: string[]; titles: string[] } {
+  if (!vodPlayUrl) return { episodes: [], titles: [] };
+  let bestEpisodes: string[] = [];
+  let bestTitles: string[] = [];
+
+  const groups = vodPlayUrl.split('$$$');
+  for (const group of groups) {
+    const matchEpisodes: string[] = [];
+    const matchTitles: string[] = [];
+    const items = group.split('#');
+    for (const item of items) {
+      const trimmedItem = item.trim();
+      if (!trimmedItem) continue;
+      const parts = trimmedItem.split('$');
+      let title = '';
+      let url = '';
+      if (parts.length === 1) {
+        url = parts[0].trim();
+        title = `第 ${matchEpisodes.length + 1} 集`;
+      } else {
+        title = parts[0].trim();
+        url = parts.slice(1).join('$').trim();
+      }
+      // 只要包含有效视频 URL 格式 (http/https 或 .m3u8/.mp4)
+      if (
+        url.startsWith('http://') ||
+        url.startsWith('https://') ||
+        url.includes('.m3u8') ||
+        url.includes('.mp4') ||
+        url.includes('/')
+      ) {
+        matchTitles.push(title || `第 ${matchEpisodes.length + 1} 集`);
+        matchEpisodes.push(url);
+      }
+    }
+    if (matchEpisodes.length > bestEpisodes.length) {
+      bestEpisodes = matchEpisodes;
+      bestTitles = matchTitles;
+    }
+  }
+  return { episodes: bestEpisodes, titles: bestTitles };
+}
+
+/**
  * 通用的带缓存搜索函数
  */
 async function searchWithCache(
@@ -75,33 +122,13 @@ async function searchWithCache(
 
     // 处理结果数据
     const allResults = data.list.map((item: ApiSearchItem) => {
-      let episodes: string[] = [];
-      let titles: string[] = [];
+      let { episodes, titles } = parseVodPlayUrl(item.vod_play_url);
 
-      // 使用正则表达式从 vod_play_url 提取 m3u8 链接
-      if (item.vod_play_url) {
-        // 先用 $$$ 分割
-        const vod_play_url_array = item.vod_play_url.split('$$$');
-        // 分集之间#分割，标题和播放链接 $ 分割
-        vod_play_url_array.forEach((url: string) => {
-          const matchEpisodes: string[] = [];
-          const matchTitles: string[] = [];
-          const title_url_array = url.split('#');
-          title_url_array.forEach((title_url: string) => {
-            const episode_title_url = title_url.split('$');
-            if (
-              episode_title_url.length === 2 &&
-              episode_title_url[1].endsWith('.m3u8')
-            ) {
-              matchTitles.push(episode_title_url[0]);
-              matchEpisodes.push(episode_title_url[1]);
-            }
-          });
-          if (matchEpisodes.length > episodes.length) {
-            episodes = matchEpisodes;
-            titles = matchTitles;
-          }
-        });
+      // 如果播放源为空，则尝试从内容中解析 m3u8
+      if (episodes.length === 0 && item.vod_content) {
+        const matches = item.vod_content.match(M3U8_PATTERN) || [];
+        episodes = matches.map((link: string) => link.replace(/^\$/, ''));
+        titles = episodes.map((_, i) => `第 ${i + 1} 集`);
       }
 
       return {
@@ -477,23 +504,47 @@ export async function getDetailFromApi(
     return handleSpecialSourceDetail(id, apiSite);
   }
 
-  const detailUrl = `${apiSite.api}${API_CONFIG.detail.path}${id}`;
+  // 优先尝试 ?ac=videolist&ids=，若失败则尝试 ?ac=detail&ids=
+  let detailUrl = `${apiSite.api}${API_CONFIG.detail.path}${id}`;
+  let data: any = null;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-  const response = await fetch(detailUrl, {
-    headers: API_CONFIG.detail.headers,
-    signal: controller.signal,
-  });
+    const response = await fetch(detailUrl, {
+      headers: API_CONFIG.detail.headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
 
-  clearTimeout(timeoutId);
-
-  if (!response.ok) {
-    throw new Error(`详情请求失败: ${response.status}`);
+    if (response.ok) {
+      data = await response.json();
+    }
+  } catch {
+    // 忽略第一次失败，尝试备用接口
   }
 
-  const data = await response.json();
+  // 备用请求：部分采集站使用 ?ac=detail&ids=
+  if (!data || !data.list || !Array.isArray(data.list) || data.list.length === 0) {
+    try {
+      const backupUrl = `${apiSite.api}?ac=detail&ids=${id}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(backupUrl, {
+        headers: API_CONFIG.detail.headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        data = await response.json();
+      }
+    } catch {
+      // 备用请求失败
+    }
+  }
 
   if (
     !data ||
@@ -505,39 +556,13 @@ export async function getDetailFromApi(
   }
 
   const videoDetail = data.list[0];
-  let episodes: string[] = [];
-  let titles: string[] = [];
-
-  // 处理播放源拆分
-  if (videoDetail.vod_play_url) {
-    // 先用 $$$ 分割
-    const vod_play_url_array = videoDetail.vod_play_url.split('$$$');
-    // 分集之间#分割，标题和播放链接 $ 分割
-    vod_play_url_array.forEach((url: string) => {
-      const matchEpisodes: string[] = [];
-      const matchTitles: string[] = [];
-      const title_url_array = url.split('#');
-      title_url_array.forEach((title_url: string) => {
-        const episode_title_url = title_url.split('$');
-        if (
-          episode_title_url.length === 2 &&
-          episode_title_url[1].endsWith('.m3u8')
-        ) {
-          matchTitles.push(episode_title_url[0]);
-          matchEpisodes.push(episode_title_url[1]);
-        }
-      });
-      if (matchEpisodes.length > episodes.length) {
-        episodes = matchEpisodes;
-        titles = matchTitles;
-      }
-    });
-  }
+  let { episodes, titles } = parseVodPlayUrl(videoDetail.vod_play_url);
 
   // 如果播放源为空，则尝试从内容中解析 m3u8
   if (episodes.length === 0 && videoDetail.vod_content) {
     const matches = videoDetail.vod_content.match(M3U8_PATTERN) || [];
     episodes = matches.map((link: string) => link.replace(/^\$/, ''));
+    titles = episodes.map((_, i) => `第 ${i + 1} 集`);
   }
 
   return {

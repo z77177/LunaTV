@@ -12,11 +12,29 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: '极简点播 - 布鲁克林影视 Lite',
-  description: '专为老旧设备与极速播放设计的极简点播页',
+  description: '专为老旧设备与极速播放设计的聚合点播页',
 };
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+// 聚合影视条目结构
+interface AggregatedGroup {
+  key: string;
+  title: string;
+  poster: string;
+  year: string;
+  type_name?: string;
+  desc?: string;
+  sources: {
+    source: string;
+    source_name: string;
+    id: string;
+    episodes_count: number;
+    episodes: string[];
+    episodes_titles: string[];
+  }[];
 }
 
 export default async function LitePage({ searchParams }: PageProps) {
@@ -25,33 +43,19 @@ export default async function LitePage({ searchParams }: PageProps) {
   const source = typeof params.source === 'string' ? params.source : '';
   const id = typeof params.id === 'string' ? params.id : '';
   const ep = typeof params.ep === 'string' ? params.ep : '0';
-  const mode = typeof params.mode === 'string' ? params.mode : 'proxy'; // 默认走中继代理，解决混合内容与跨域
+  const mode = typeof params.mode === 'string' ? params.mode : 'proxy'; // 默认走中继代理，解决跨域与混合内容
 
   const config = await getConfig();
   const siteName = config.SiteConfig?.SiteName || '布鲁克林影视';
   const apiSites = await getAvailableApiSites('guest');
 
-  let searchResults: SearchResult[] = [];
+  let rawSearchResults: SearchResult[] = [];
+  let aggregatedList: AggregatedGroup[] = [];
   let detail: SearchResult | null = null;
   let errorMsg = '';
 
-  // 1. 获取剧集详情
-  if (source && id) {
-    const currentSite = apiSites.find((s) => s.key === source);
-    if (currentSite) {
-      try {
-        detail = await getDetailFromApi(currentSite, id);
-      } catch (err: any) {
-        console.error('Lite 获取详情失败:', err);
-        errorMsg = '获取剧集详情失败，该源可能已失效，请尝试其他来源。';
-      }
-    } else {
-      errorMsg = `未找到视频源 [${source}]，请返回重新搜索。`;
-    }
-  }
-
-  // 2. 执行服务端搜索
-  if (q && (!detail || searchResults.length === 0)) {
+  // 1. 如果有搜索词 q，先执行全网聚合搜索
+  if (q) {
     try {
       const searchVariants = generateSearchVariants(q);
       const searchPromises = apiSites.map((site) =>
@@ -87,13 +91,86 @@ export default async function LitePage({ searchParams }: PageProps) {
         });
       }
 
-      searchResults = filtered;
+      rawSearchResults = filtered;
+
+      // 聚合相同片名与年份的条目
+      const aggMap = new Map<string, AggregatedGroup>();
+      for (const item of rawSearchResults) {
+        const cleanTitle = item.title.trim().replace(/\s+/g, '');
+        const aggKey = `${cleanTitle}-${item.year || 'unknown'}`;
+        const existing = aggMap.get(aggKey);
+
+        const sourceItem = {
+          source: item.source,
+          source_name: item.source_name || item.source,
+          id: item.id,
+          episodes_count: item.episodes?.length || 0,
+          episodes: item.episodes || [],
+          episodes_titles: item.episodes_titles || [],
+        };
+
+        if (existing) {
+          if (!existing.poster && item.poster) existing.poster = item.poster;
+          if (!existing.desc && item.desc) existing.desc = item.desc;
+          if (!existing.sources.some((s) => s.source === item.source)) {
+            existing.sources.push(sourceItem);
+          }
+        } else {
+          aggMap.set(aggKey, {
+            key: aggKey,
+            title: item.title,
+            poster: item.poster,
+            year: item.year || '',
+            type_name: item.type_name,
+            desc: item.desc,
+            sources: [sourceItem],
+          });
+        }
+      }
+
+      aggregatedList = Array.from(aggMap.values());
     } catch (err: any) {
-      console.error('Lite 搜索失败:', err);
+      console.error('Lite 聚合搜索失败:', err);
     }
   }
 
-  // 处理当前播放集数
+  // 2. 如果指定了 source 和 id，获取剧集详情并播放
+  if (source && id) {
+    const currentSite = apiSites.find((s) => s.key === source);
+
+    // 首先尝试在当前搜索聚合缓存中直接匹配（避免重复请求）
+    const matchedFromSearch = rawSearchResults.find(
+      (r) => r.source === source && r.id === id && r.episodes && r.episodes.length > 0
+    );
+
+    if (matchedFromSearch) {
+      detail = matchedFromSearch;
+    } else if (currentSite) {
+      try {
+        detail = await getDetailFromApi(currentSite, id);
+      } catch (err: any) {
+        console.warn(`[Lite] getDetailFromApi 失败 (${source}-${id})，尝试按标题搜索兜底:`, err.message);
+        // 如果按 ID 获取失败，尝试按 q 或搜索匹配
+        if (q) {
+          try {
+            const fallbackResults = await searchFromApi(currentSite, q);
+            const found = fallbackResults.find((r) => r.id === id || r.title.includes(q));
+            if (found && found.episodes.length > 0) {
+              detail = found;
+            }
+          } catch {
+            // 搜索兜底也失败
+          }
+        }
+      }
+    }
+
+    if (!detail || !detail.episodes || detail.episodes.length === 0) {
+      errorMsg = `当前视频源 [${source}] 获取剧集列表为空，请在下方点击切换其他备用播放源。`;
+    }
+  }
+
+  // 计算当前播放集的各项数据
   const episodes = detail?.episodes || [];
   const episodeTitles = detail?.episodes_titles || [];
   const currentEpIndex = Math.max(
@@ -104,13 +181,13 @@ export default async function LitePage({ searchParams }: PageProps) {
   const currentEpTitle =
     episodeTitles[currentEpIndex] || (episodes.length > 0 ? `第 ${currentEpIndex + 1} 集` : '');
 
-  // 计算播放器实际加载的视频流 URL（中继代理 vs 直连）
+  // 视频流代理 URL
   const proxiedStreamUrl = currentRawUrl
     ? `/api/lite-stream?url=${encodeURIComponent(currentRawUrl)}`
     : '';
   const activePlayUrl = mode === 'direct' ? currentRawUrl : proxiedStreamUrl;
 
-  // VLC 唤醒链接（支持官方 x-callback 协议与纯域名协议）
+  // 外部播放器唤醒链接
   const vlcCallbackUrl = currentRawUrl
     ? `vlc-x-callback://x-callback-url/stream?url=${encodeURIComponent(currentRawUrl)}`
     : '';
@@ -119,7 +196,14 @@ export default async function LitePage({ searchParams }: PageProps) {
     : '';
   const nplayerUrl = currentRawUrl ? `nplayer-${currentRawUrl}` : '';
 
-  // 热门搜索关键词
+  // 寻找当前剧集的所有同名可用源（换源使用）
+  const currentAggGroup = detail
+    ? aggregatedList.find(
+        (g) => g.title.trim().replace(/\s+/g, '') === detail!.title.trim().replace(/\s+/g, '')
+      )
+    : null;
+
+  // 热门搜索词
   const hotKeywords = ['庆余年', '柯南', '三体', '繁花', '凡人修仙传', '间谍过家家', '狂飙', '甄嬛传'];
 
   return (
@@ -311,6 +395,31 @@ export default async function LitePage({ searchParams }: PageProps) {
             background: #2563eb;
             color: #fff !important;
           }
+          /* 换源条 */
+          .lite-source-switcher {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0;
+            padding: 8px;
+            background: #222;
+            border-radius: 6px;
+          }
+          .lite-source-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #2e2e2e;
+            border: 1px solid #444;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #ccc;
+          }
+          .lite-source-badge.active {
+            background: #2563eb;
+            color: #fff;
+            border-color: #3b82f6;
+            font-weight: bold;
+          }
           /* 选集网格 */
           .lite-section-title {
             font-size: 15px;
@@ -345,71 +454,68 @@ export default async function LitePage({ searchParams }: PageProps) {
             border-color: #3b82f6;
             font-weight: bold;
           }
-          /* 搜索结果列表 */
-          .lite-results-list {
+          /* 聚合搜索结果卡片 */
+          .lite-agg-list {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 12px;
             margin-top: 10px;
           }
-          .lite-result-card {
-            width: calc(25% - 9px);
-            min-width: 120px;
+          .lite-agg-card {
             background: #1e1e1e;
             border: 1px solid #333;
             border-radius: 8px;
-            overflow: hidden;
+            padding: 12px;
             display: flex;
-            flex-direction: column;
-            text-decoration: none;
+            gap: 12px;
           }
-          @media (max-width: 600px) {
-            .lite-result-card {
-              width: calc(50% - 6px);
-            }
-          }
-          .lite-poster-wrap {
-            width: 100%;
-            padding-top: 140%;
-            position: relative;
+          .lite-agg-poster {
+            width: 90px;
+            height: 125px;
             background: #2a2a2a;
-          }
-          .lite-poster-img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            border-radius: 6px;
             object-fit: cover;
+            flex-shrink: 0;
           }
-          .lite-card-info {
-            padding: 8px;
+          .lite-agg-body {
             flex: 1;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
           }
-          .lite-card-title {
-            font-size: 13px;
+          .lite-agg-title {
+            font-size: 16px;
             font-weight: bold;
             color: #fff;
             margin-bottom: 4px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
           }
-          .lite-card-meta {
-            font-size: 11px;
+          .lite-agg-meta {
+            font-size: 12px;
             color: #888;
+            margin-bottom: 8px;
           }
-          .lite-card-source {
-            display: inline-block;
-            background: #333;
+          .lite-agg-sources-label {
+            font-size: 12px;
             color: #aaa;
-            padding: 1px 4px;
-            border-radius: 3px;
-            font-size: 10px;
-            margin-top: 4px;
+            margin-bottom: 4px;
+          }
+          .lite-agg-sources-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+          }
+          .lite-source-btn {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #2b2b2b;
+            border: 1px solid #444;
+            color: #4da3ff;
+            border-radius: 4px;
+            font-size: 12px;
+          }
+          .lite-source-btn:active {
+            background: #2563eb;
+            color: #fff;
           }
           /* 详情与简介 */
           .lite-detail-desc {
@@ -448,7 +554,7 @@ export default async function LitePage({ searchParams }: PageProps) {
           <div className='lite-logo'>
             <Link href='/lite' style={{ color: '#ffffff' }}>
               🌕 {siteName}
-              <span className='lite-badge'>Lite 极简版</span>
+              <span className='lite-badge'>Lite 聚合点播</span>
             </Link>
           </div>
           <div>
@@ -465,7 +571,7 @@ export default async function LitePage({ searchParams }: PageProps) {
               type='text'
               name='q'
               defaultValue={q}
-              placeholder='输入电影、电视剧、动漫名称搜索...'
+              placeholder='输入电影、电视剧、动漫名称搜索（自动聚合多源）...'
               className='lite-search-input'
               autoComplete='off'
             />
@@ -474,7 +580,7 @@ export default async function LitePage({ searchParams }: PageProps) {
             </button>
           </form>
           <div className='lite-hot-tags'>
-            <span>大家都在搜：</span>
+            <span>热门推荐：</span>
             {hotKeywords.map((kw) => (
               <a key={kw} href={`/lite?q=${encodeURIComponent(kw)}`} className='lite-tag'>
                 {kw}
@@ -506,7 +612,7 @@ export default async function LitePage({ searchParams }: PageProps) {
                 </video>
               ) : (
                 <div style={{ padding: '40px 20px', color: '#888' }}>
-                  暂无有效播放地址，请尝试切换其他播放源。
+                  暂无有效播放地址，请在下方点击切换其他播放源。
                 </div>
               )}
             </div>
@@ -520,13 +626,13 @@ export default async function LitePage({ searchParams }: PageProps) {
               {/* 播放模式切换 (中继代理 vs 原画直连) */}
               <div className='lite-mode-switch'>
                 <a
-                  href={`/lite?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}&ep=${ep}&q=${encodeURIComponent(q)}&mode=proxy`}
+                  href={`/lite?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}&ep=${ep}&q=${encodeURIComponent(q || detail.title)}&mode=proxy`}
                   className={`lite-mode-btn ${mode !== 'direct' ? 'active' : ''}`}
                 >
                   🛡️ 中继流代理 (推荐，防拦截)
                 </a>
                 <a
-                  href={`/lite?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}&ep=${ep}&q=${encodeURIComponent(q)}&mode=direct`}
+                  href={`/lite?source=${encodeURIComponent(source)}&id=${encodeURIComponent(id)}&ep=${ep}&q=${encodeURIComponent(q || detail.title)}&mode=direct`}
                   className={`lite-mode-btn ${mode === 'direct' ? 'active' : ''}`}
                 >
                   ⚡ 原画直连 (直连视频源)
@@ -563,13 +669,33 @@ export default async function LitePage({ searchParams }: PageProps) {
               </div>
             </div>
 
+            {/* 聚合多源换源列表 */}
+            {currentAggGroup && currentAggGroup.sources.length > 1 && (
+              <div style={{ padding: '0 12px' }}>
+                <div className='lite-section-title'>
+                  <span>切换播放源（共聚合 {currentAggGroup.sources.length} 个来源）</span>
+                </div>
+                <div className='lite-source-switcher'>
+                  {currentAggGroup.sources.map((s) => (
+                    <a
+                      key={s.source}
+                      href={`/lite?source=${encodeURIComponent(s.source)}&id=${encodeURIComponent(s.id)}&ep=0&q=${encodeURIComponent(q || detail!.title)}&mode=${mode}`}
+                      className={`lite-source-badge ${s.source === source ? 'active' : ''}`}
+                    >
+                      {s.source_name} ({s.episodes_count}集)
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 选集网格 */}
             {episodes.length > 0 && (
               <div style={{ padding: '0 12px 12px' }}>
                 <div className='lite-section-title'>
                   <span>选集播放（共 {episodes.length} 集）</span>
                   <span style={{ fontSize: '12px', color: '#888' }}>
-                    来源: {detail.source_name || detail.source}
+                    当前来源: {detail.source_name || detail.source}
                   </span>
                 </div>
                 <div className='lite-ep-grid'>
@@ -600,36 +726,33 @@ export default async function LitePage({ searchParams }: PageProps) {
           </div>
         )}
 
-        {/* 搜索结果列表 */}
-        {searchResults.length > 0 && (
+        {/* 聚合搜索结果列表 */}
+        {aggregatedList.length > 0 && (
           <div>
             <div className='lite-section-title'>
               <span>
-                搜索结果（共 {searchResults.length} 条{q ? `，关键词: "${q}"` : ''}）
+                聚合搜索结果（共 {aggregatedList.length} 部影视{q ? `，关键词: "${q}"` : ''}）
               </span>
             </div>
-            <div className='lite-results-list'>
-              {searchResults.map((item) => (
-                <a
-                  key={`${item.source}_${item.id}`}
-                  href={`/lite?source=${encodeURIComponent(item.source)}&id=${encodeURIComponent(item.id)}&ep=0&q=${encodeURIComponent(q)}`}
-                  className='lite-result-card'
-                >
-                  <div className='lite-poster-wrap'>
-                    {item.poster ? (
+            <div className='lite-agg-list'>
+              {aggregatedList.map((group) => {
+                const primarySource = group.sources[0];
+                return (
+                  <div key={group.key} className='lite-agg-card'>
+                    {group.poster ? (
                       <img
-                        src={item.poster}
-                        alt={item.title}
-                        className='lite-poster-img'
+                        src={group.poster}
+                        alt={group.title}
+                        className='lite-agg-poster'
                         loading='lazy'
                       />
                     ) : (
                       <div
+                        className='lite-agg-poster'
                         style={{
-                          position: 'absolute',
-                          top: '40%',
-                          width: '100%',
-                          textAlign: 'center',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           color: '#666',
                           fontSize: '12px',
                         }}
@@ -637,26 +760,48 @@ export default async function LitePage({ searchParams }: PageProps) {
                         暂无封面
                       </div>
                     )}
-                  </div>
-                  <div className='lite-card-info'>
-                    <div className='lite-card-title' title={item.title}>
-                      {item.title}
-                    </div>
-                    <div className='lite-card-meta'>
-                      <span>{item.year || item.type_name || '点播'}</span>
+                    <div className='lite-agg-body'>
                       <div>
-                        <span className='lite-card-source'>{item.source_name || item.source}</span>
+                        <div className='lite-agg-title'>
+                          <a
+                            href={`/lite?source=${encodeURIComponent(primarySource.source)}&id=${encodeURIComponent(primarySource.id)}&ep=0&q=${encodeURIComponent(q)}`}
+                            style={{ color: '#fff' }}
+                          >
+                            {group.title}
+                          </a>
+                        </div>
+                        <div className='lite-agg-meta'>
+                          <span>{group.year || '未知年份'}</span> ·{' '}
+                          <span>{group.type_name || '点播'}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className='lite-agg-sources-label'>
+                          可用播放源（共 {group.sources.length} 个）：
+                        </div>
+                        <div className='lite-agg-sources-list'>
+                          {group.sources.map((s) => (
+                            <a
+                              key={s.source}
+                              href={`/lite?source=${encodeURIComponent(s.source)}&id=${encodeURIComponent(s.id)}&ep=0&q=${encodeURIComponent(q)}`}
+                              className='lite-source-btn'
+                            >
+                              ▶ {s.source_name} ({s.episodes_count}集)
+                            </a>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </a>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* 如果既没有详情也没有搜索结果 */}
-        {!detail && searchResults.length === 0 && q && (
+        {!detail && aggregatedList.length === 0 && q && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#888' }}>
             未找到与 &quot;{q}&quot; 相关的影视资源，请尝试缩短或更换搜索关键词。
           </div>
@@ -668,14 +813,16 @@ export default async function LitePage({ searchParams }: PageProps) {
             <strong>💡 老旧设备（iPad / 旧平板 / 电视）观影指南：</strong>
             <ul style={{ margin: '8px 0 0', paddingLeft: '20px', lineHeight: '1.7' }}>
               <li>
-                <strong>原生硬件加速秒播</strong>：在上方搜索任意电影或电视剧，点击剧集即可直接在
-                Safari 中通过原生播放器全屏观看（默认开启中继代理，解决跨域与拦截，零发热、不卡顿）。
+                <strong>全网智能聚合</strong>：在上方搜索任意电影或电视剧，系统会自动将全网几十个视频源聚合到同一部影片下，免去重复搜索与逐个排查。
+              </li>
+              <li>
+                <strong>一键切换播放源</strong>：若某一路源播放卡顿或失效，在播放器下方点击其他来源标签（如量子、非凡、红牛等）即可秒换源。
+              </li>
+              <li>
+                <strong>原生硬件加速秒播</strong>：默认开启中继流代理，解决跨域与拦截，调用 iPad 独立 GPU 硬解，零发热、不卡顿。
               </li>
               <li>
                 <strong>多协议唤醒 VLC / nPlayer</strong>：支持直接点击「VLC 播放 (协议1/2)」或「nPlayer 播放」唤醒 App 全屏播放。
-              </li>
-              <li>
-                <strong>收藏本页</strong>：建议在 Safari 中点击分享按钮，选择「添加到主屏幕」，老 iPad 桌面就会生成独立点播图标。
               </li>
             </ul>
           </div>
