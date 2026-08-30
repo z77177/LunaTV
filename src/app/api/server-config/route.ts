@@ -24,11 +24,20 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  if (isInternalRequest && requestedKey === 'UserConfig') {
+    return NextResponse.json({
+      AllowGuestMode: config.UserConfig?.AllowGuestMode !== false,
+      AllowRegister: config.UserConfig?.AllowRegister !== false,
+    });
+  }
+
   const result: any = {
     SiteName: config.SiteConfig.SiteName,
     StorageType: process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage',
     Version: CURRENT_VERSION,
     DownloadEnabled: config.DownloadConfig?.enabled ?? true,
+    AllowGuestMode: config.UserConfig?.AllowGuestMode !== false,
+    AllowRegister: config.UserConfig?.AllowRegister !== false,
   };
 
   // 添加 Telegram 登录配置（仅公开必要信息）

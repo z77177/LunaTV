@@ -250,6 +250,7 @@ async function getInitConfig(configFile: string, subConfig: {
     },
     UserConfig: {
       AllowRegister: true, // 默认允许注册
+      AllowGuestMode: true, // 默认允许游客模式
       Users: [],
     },
     SourceConfig: [],
@@ -408,9 +409,12 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     console.error('获取最新用户列表失败:', e);
     // 失败时继续使用现有配置
   }
-  // 确保 AllowRegister 有默认值
+  // 确保 AllowRegister 和 AllowGuestMode 有默认值
   if (adminConfig.UserConfig.AllowRegister === undefined) {
     adminConfig.UserConfig.AllowRegister = true;
+  }
+  if (adminConfig.UserConfig.AllowGuestMode === undefined) {
+    adminConfig.UserConfig.AllowGuestMode = true;
   }
   if (!adminConfig.SourceConfig || !Array.isArray(adminConfig.SourceConfig)) {
     adminConfig.SourceConfig = [];

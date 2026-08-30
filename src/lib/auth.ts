@@ -1,5 +1,9 @@
 import { NextRequest } from 'next/server';
 
+// 认证 Cookie 有效期（180天，长期保持登录状态）
+export const AUTH_COOKIE_MAX_AGE_DAYS = 180;
+export const AUTH_COOKIE_MAX_AGE_SECONDS = AUTH_COOKIE_MAX_AGE_DAYS * 24 * 60 * 60;
+
 // 从cookie获取认证信息 (服务端使用)
 export function getAuthInfoFromCookie(request: NextRequest): {
   password?: string;

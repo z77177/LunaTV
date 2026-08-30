@@ -90,6 +90,7 @@ function RegisterPageClient() {
   const [registrationDisabled, setRegistrationDisabled] = useState(false);
   const [disabledReason, setDisabledReason] = useState('');
   const [bingWallpaper, setBingWallpaper] = useState<string>('');
+  const [allowGuestMode, setAllowGuestMode] = useState(true);
 
   const { siteName } = useSite();
 
@@ -110,10 +111,20 @@ function RegisterPageClient() {
     fetchBingWallpaper();
   }, []);
 
-  // 检查注册是否可用
+  // 检查注册与游客模式是否可用
   useEffect(() => {
     const checkRegistrationAvailable = async () => {
       try {
+        // 获取服务端配置
+        fetch('/api/server-config')
+          .then((res) => res.json())
+          .then((cfg) => {
+            if (cfg.AllowGuestMode !== undefined) {
+              setAllowGuestMode(cfg.AllowGuestMode);
+            }
+          })
+          .catch(() => {});
+
         // 用空数据检测，这样不会创建用户但能得到正确的错误信息
         const res = await fetch('/api/register', {
           method: 'POST',
@@ -201,6 +212,10 @@ function RegisterPageClient() {
 
   // 访客登录处理
   const handleGuestLogin = () => {
+    if (!allowGuestMode) {
+      setError('游客模式已被管理员关闭，请登录或注册账户');
+      return;
+    }
     const guestAuth = {
       username: '访客',
       role: 'user',
@@ -420,28 +435,30 @@ function RegisterPageClient() {
             {loading ? '注册中...' : success ? '注册成功，正在跳转...' : '立即注册'}
           </button>
 
-          <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
-            <p className='text-center text-gray-600 dark:text-gray-400 text-sm mb-3'>
-              或者
-            </p>
-            <button
-              type='button'
-              onClick={handleGuestLogin}
-              className='group flex items-center justify-center gap-2 w-full px-6 py-2.5 rounded-lg bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
-            >
-              <User className='w-4 h-4' />
-              <span>以访客身份进入</span>
-            </button>
-
-            <div className='mt-4 flex items-center justify-center gap-2 text-sm'>
-              <p className='text-gray-600 dark:text-gray-400'>已有账户？</p>
-              <a
-                href='/login'
-                className='font-semibold text-blue-600 dark:text-blue-400 hover:underline'
+          {allowGuestMode && (
+            <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+              <p className='text-center text-gray-600 dark:text-gray-400 text-sm mb-3'>
+                或者
+              </p>
+              <button
+                type='button'
+                onClick={handleGuestLogin}
+                className='group flex items-center justify-center gap-2 w-full px-6 py-2.5 rounded-lg bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
               >
-                立即登录
-              </a>
+                <User className='w-4 h-4' />
+                <span>以访客身份进入</span>
+              </button>
             </div>
+          )}
+
+          <div className={`${allowGuestMode ? 'mt-4' : 'mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'} flex items-center justify-center gap-2 text-sm`}>
+            <p className='text-gray-600 dark:text-gray-400'>已有账户？</p>
+            <a
+              href='/login'
+              className='font-semibold text-blue-600 dark:text-blue-400 hover:underline'
+            >
+              立即登录
+            </a>
           </div>
         </form>
       </div>

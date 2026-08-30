@@ -868,8 +868,75 @@ const UserConfig = ({ config, role, refreshConfig }: UserConfigProps) => {
       {role === 'owner' && (
         <div>
           <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300 mb-3'>
-            注册设置
+            访问与注册设置
           </h4>
+
+          {/* 允许游客模式 */}
+          <div className='mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <div className='font-medium text-gray-900 dark:text-gray-100'>
+                  允许游客模式
+                </div>
+                <div className='text-sm text-gray-600 dark:text-gray-400'>
+                  开启后，未登录用户可作为访客直接浏览和观看；关闭后，所有未登录用户必须登录才能访问
+                </div>
+              </div>
+              <div className='flex items-center'>
+                <button
+                  type="button"
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 ${
+                    config.UserConfig.AllowGuestMode !== false ? buttonStyles.toggleOn : buttonStyles.toggleOff
+                  }`}
+                  role="switch"
+                  aria-checked={config.UserConfig.AllowGuestMode !== false}
+                  onClick={async () => {
+                    await withLoading('toggleAllowGuestMode', async () => {
+                      try {
+                        const newGuestMode = config.UserConfig.AllowGuestMode === false;
+                        const response = await fetch('/api/admin/config', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            ...config,
+                            UserConfig: {
+                              ...config.UserConfig,
+                              AllowGuestMode: newGuestMode
+                            }
+                          })
+                        });
+                        
+                        if (response.ok) {
+                          await refreshConfig();
+                          showAlert({
+                            type: 'success',
+                            title: '设置已更新',
+                            message: newGuestMode ? '已开启游客模式' : '已关闭游客模式（未登录用户将强制要求登录）',
+                            timer: 2000
+                          });
+                        } else {
+                          throw new Error('更新配置失败');
+                        }
+                      } catch (err) {
+                        showError(err instanceof Error ? err.message : '操作失败', showAlert);
+                      }
+                    });
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full ${buttonStyles.toggleThumb} shadow transform ring-0 transition duration-200 ease-in-out ${
+                      config.UserConfig.AllowGuestMode !== false ? buttonStyles.toggleThumbOn : buttonStyles.toggleThumbOff
+                    }`}
+                  />
+                </button>
+                <span className='ml-3 text-sm font-medium text-gray-900 dark:text-gray-100'>
+                  {config.UserConfig.AllowGuestMode !== false ? '开启' : '关闭'}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
             <div className='flex items-center justify-between'>
               <div>

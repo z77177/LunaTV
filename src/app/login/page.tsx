@@ -105,6 +105,9 @@ function LoginPageClient() {
   const [oidcButtonText, setOidcButtonText] = useState('使用OIDC登录');
   const [oidcIssuer, setOidcIssuer] = useState<string>('');
 
+  // 游客模式状态（由后台配置控制）
+  const [allowGuestMode, setAllowGuestMode] = useState(true);
+
   const { siteName } = useSite();
 
   // 获取 Bing 每日壁纸（通过代理 API）
@@ -165,6 +168,10 @@ function LoginPageClient() {
           setOidcIssuer(data.OIDCConfig.issuer || '');
         } else {
           console.log('[Login] OIDC is NOT enabled');
+        }
+        // 检查游客模式配置
+        if (data.AllowGuestMode !== undefined) {
+          setAllowGuestMode(data.AllowGuestMode);
         }
       } catch (error) {
         console.log('Failed to fetch server config:', error);
@@ -265,6 +272,10 @@ function LoginPageClient() {
 
   // 访客登录处理
   const handleGuestLogin = () => {
+    if (!allowGuestMode) {
+      setError('游客模式已被管理员关闭，请登录账户');
+      return;
+    }
     const guestAuth = {
       username: '访客',
       role: 'user',
@@ -403,17 +414,19 @@ function LoginPageClient() {
             </div>
           )}
 
-          {/* 访客登录按钮 */}
-          <div className='mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700'>
-            <button
-              type='button'
-              onClick={handleGuestLogin}
-              className='group flex items-center justify-center gap-1.5 sm:gap-2 w-full px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
-            >
-              <User className='w-3.5 h-3.5 sm:w-4 sm:h-4' />
-              <span>以访客身份进入</span>
-            </button>
-          </div>
+          {/* 访客登录按钮 - 仅在允许游客模式时显示 */}
+          {allowGuestMode && (
+            <div className='mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700'>
+              <button
+                type='button'
+                onClick={handleGuestLogin}
+                className='group flex items-center justify-center gap-1.5 sm:gap-2 w-full px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600 transition-all duration-300 hover:shadow-md hover:scale-[1.02] active:scale-100'
+              >
+                <User className='w-3.5 h-3.5 sm:w-4 sm:h-4' />
+                <span>以访客身份进入</span>
+              </button>
+            </div>
+          )}
         </form>
 
         {/* Telegram Magic Link 登录 */}

@@ -2,7 +2,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { AUTH_COOKIE_MAX_AGE_SECONDS, getAuthInfoFromCookie } from '@/lib/auth';
+
+// 游客模式配置缓存（从 API 获取）
+let guestModeCache: boolean | null = null;
+let guestModeCacheTime = 0;
 
 // 信任网络配置缓存（从 API 获取）
 let trustedNetworkCache: { enabled: boolean; trustedIPs: string[] } | null = null;
@@ -103,6 +107,37 @@ async function getTrustedNetworkConfig(request: NextRequest): Promise<{ enabled:
   return await getTrustedNetworkFromAPI(request);
 }
 
+// 获取游客模式配置（从 API 获取并缓存）
+async function getGuestModeConfig(request: NextRequest): Promise<boolean> {
+  const now = Date.now();
+  if (guestModeCache !== null && (now - guestModeCacheTime) < CACHE_TTL) {
+    return guestModeCache;
+  }
+
+  try {
+    const url = new URL('/api/server-config', request.url);
+    url.searchParams.set('key', 'UserConfig');
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'x-internal-request': 'true',
+      },
+    });
+
+    guestModeCacheTime = now;
+    if (response.ok) {
+      const data = await response.json();
+      guestModeCache = data.AllowGuestMode !== false;
+      return guestModeCache;
+    }
+  } catch {
+    // 失败时保持现有缓存或默认允许
+  }
+
+  if (guestModeCache !== null) return guestModeCache;
+  return true;
+}
+
 // 获取客户端 IP
 function getClientIP(request: NextRequest): string {
   // 按优先级获取客户端 IP
@@ -187,7 +222,7 @@ function generateTrustedAuthCookie(): NextResponse {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 天
+      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS, // 长期保持
     });
   } else {
     // 数据库模式：生成签名 cookie（需要异步，这里简化处理）
@@ -203,7 +238,7 @@ function generateTrustedAuthCookie(): NextResponse {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 天
+      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS, // 长期保持
     });
   }
 
@@ -302,21 +337,24 @@ async function handleAuthentication(
     return NextResponse.redirect(warningUrl);
   }
 
+  // 获取游客模式开关状态
+  const allowGuest = await getGuestModeConfig(request);
+
   // 从cookie获取认证信息
   const authInfo = getAuthInfoFromCookie(request);
 
   if (!authInfo) {
-    // 🔥 如果没有认证信息，自动生成一个访客会话（排除管理后台路径）
-    if (!pathname.startsWith('/admin') && !pathname.startsWith('/api/admin')) {
+    // 🔥 如果允许游客模式，自动生成一个访客会话（排除管理后台路径）
+    if (allowGuest && !pathname.startsWith('/admin') && !pathname.startsWith('/api/admin')) {
       console.log(`[Middleware] Auto-generating guest session for path: ${pathname}`);
       return generateGuestAuthCookie();
     }
     return handleAuthFailure(request, pathname);
   }
 
-  // 🚀 访客模式允许通行 (但不能进入管理后台)
+  // 🚀 访客模式 (如果已禁用游客模式，则拒绝访问并要求登录)
   if (authInfo.isGuest === true && authInfo.username === '访客') {
-    if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    if (!allowGuest || pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
       return handleAuthFailure(request, pathname);
     }
     return response || NextResponse.next();

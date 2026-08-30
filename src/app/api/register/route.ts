@@ -1,6 +1,7 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
+import { AUTH_COOKIE_MAX_AGE_DAYS } from '@/lib/auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
@@ -184,7 +185,7 @@ export async function POST(req: NextRequest) {
         false
       );
       const expires = new Date();
-      expires.setDate(expires.getDate() + 7); // 7天过期
+      expires.setDate(expires.getDate() + AUTH_COOKIE_MAX_AGE_DAYS); // 长期保存
 
       response.cookies.set('user_auth', cookieValue, {
         path: '/',

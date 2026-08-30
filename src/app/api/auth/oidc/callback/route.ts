@@ -1,6 +1,7 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
+import { AUTH_COOKIE_MAX_AGE_DAYS } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
@@ -335,7 +336,7 @@ export async function GET(request: NextRequest) {
       const response = NextResponse.redirect(new URL('/', origin));
       const cookieValue = await generateAuthCookie(username, userRole);
       const expires = new Date();
-      expires.setDate(expires.getDate() + 7);
+      expires.setDate(expires.getDate() + AUTH_COOKIE_MAX_AGE_DAYS);
 
       response.cookies.set('user_auth', cookieValue, {
         path: '/',

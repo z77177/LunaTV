@@ -29,6 +29,7 @@ export interface AdminConfig {
   };
   UserConfig: {
     AllowRegister?: boolean; // 是否允许用户注册，默认 true
+    AllowGuestMode?: boolean; // 是否允许游客模式访问，默认 true
     AutoCleanupInactiveUsers?: boolean; // 是否自动清理非活跃用户，默认 false
     InactiveUserDays?: number; // 非活跃用户保留天数，默认 7
     Users: {

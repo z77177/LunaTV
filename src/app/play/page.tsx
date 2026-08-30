@@ -1935,14 +1935,13 @@ function PlayPageClient() {
     return false;
   };
 
-  // 定期内存检查（仅在移动设备上）
+  // 定期内存检查与缓存清理（移动端30秒，桌面端60秒）
   useEffect(() => {
-    if (!isMobileGlobal) return;
-    
+    const intervalMs = isMobileGlobal ? 30000 : 60000;
     const memoryCheckInterval = setInterval(() => {
-      // 异步调用内存检查，不阻塞定时器
+      // 异步调用内存检查，不阻塞主线程
       checkMemoryPressure().catch(console.error);
-    }, 30000); // 每30秒检查一次
+    }, intervalMs);
     
     return () => {
       clearInterval(memoryCheckInterval);
@@ -2005,10 +2004,18 @@ function PlayPageClient() {
           }
         }
 
-        // 2. 销毁HLS实例
-        if (artPlayerRef.current.video.hls) {
-          artPlayerRef.current.video.hls.destroy();
-          console.log('HLS实例已销毁');
+        // 2. 销毁HLS实例与释放MSE缓冲区
+        if (artPlayerRef.current.video && (artPlayerRef.current.video as any).hls) {
+          try {
+            const hls = (artPlayerRef.current.video as any).hls;
+            hls.stopLoad?.();
+            hls.detachMedia?.();
+            hls.destroy?.();
+          } catch (e) {
+            console.warn('销毁HLS实例异常:', e);
+          }
+          (artPlayerRef.current.video as any).hls = null;
+          console.log('HLS实例已彻底销毁并释放MSE缓冲');
         }
 
         // 3. 销毁ArtPlayer实例 (使用false参数避免DOM清理冲突)
@@ -3829,6 +3836,11 @@ function PlayPageClient() {
         const isEpisodeChange = isEpisodeChangingRef.current;
         const currentTime = artPlayerRef.current.currentTime || 0;
 
+        // 切换集数前主动清理旧画面的 Anime4K 渲染循环与 WebGL 显存
+        if (isEpisodeChange) {
+          await cleanupAnime4K();
+        }
+
         let switchPromise: Promise<any>;
         if (isEpisodeChange) {
           console.log(`🎯 开始切换集数: ${videoUrl} (重置播放时间到0)`);
@@ -3956,7 +3968,14 @@ function PlayPageClient() {
             }
 
             if (video.hls) {
-              video.hls.destroy();
+              try {
+                video.hls.stopLoad();
+                video.hls.detachMedia();
+                video.hls.destroy();
+              } catch (e) {
+                console.warn('销毁旧 HLS 实例异常:', e);
+              }
+              video.hls = null;
             }
             
             // 在函数内部重新检测iOS13+设备
@@ -3979,7 +3998,7 @@ function PlayPageClient() {
                 : bufferConfig.maxBufferLength, // 桌面使用用户配置
               backBufferLength: isMobile
                 ? (localIsIOS13 ? 5 : isIOS ? 8 : 10)   // iOS13+更保守
-                : bufferConfig.backBufferLength, // 桌面使用用户配置
+                : bufferConfig.backBufferLength, // 桌面使用用户配置（自动释放已播放切片）
 
               /* 缓冲大小配置 - 基于官方 maxBufferSize - 桌面设备应用用户配置 */
               maxBufferSize: isMobile
@@ -3995,7 +4014,7 @@ function PlayPageClient() {
               liveBackBufferLength: isMobile ? (localIsIOS13 ? 3 : 5) : null, // 已废弃，保持兼容
 
               /* 高级优化配置 - 参考 StreamControllerConfig */
-              maxMaxBufferLength: isMobile ? (localIsIOS13 ? 60 : 120) : 600, // 最大缓冲长度限制
+              maxMaxBufferLength: isMobile ? (localIsIOS13 ? 60 : 120) : 180, // 最大缓冲长度限制收敛为180s，避免连续播放多集后内存暴涨
               maxFragLookUpTolerance: isMobile ? 0.1 : 0.25, // 片段查找容忍度
               
               /* ABR优化 - 参考 ABRControllerConfig */

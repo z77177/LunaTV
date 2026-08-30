@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
+import { AUTH_COOKIE_MAX_AGE_DAYS } from '@/lib/auth';
 import { getTelegramToken, verifyAndConsumeTelegramToken } from '@/lib/telegram-tokens';
 import { db } from '@/lib/db';
 import { clearConfigCache, getConfig } from '@/lib/config';
@@ -278,7 +279,7 @@ export async function GET(request: Request) {
     console.log(`[Verify ${requestId}] Auth data string length:`, authDataString.length);
 
     const expires = new Date();
-    expires.setDate(expires.getDate() + 7); // 7天过期
+    expires.setDate(expires.getDate() + AUTH_COOKIE_MAX_AGE_DAYS); // 长期保存
 
     // 获取当前域名和协议
     const url = new URL(request.url);
