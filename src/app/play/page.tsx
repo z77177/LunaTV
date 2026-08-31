@@ -3984,62 +3984,65 @@ function PlayPageClient() {
             // 获取用户的缓冲模式配置
             const bufferConfig = getHlsBufferConfig();
 
-            // 🚀 根据 HLS.js 官方源码的最佳实践配置
+            // 🚀 根据 HLS.js 官方源码与现代 PC 网页端最佳实践配置
             const hls = new Hls({
               debug: false,
               enableWorker: true,
-              // 参考 HLS.js config.ts：移动设备关闭低延迟模式以节省资源
-              lowLatencyMode: !isMobile,
+              // 点播（VOD）全面关闭低延迟模式，保障充足前向预加载缓冲，杜绝 PC 网页端瞬间卡死
+              lowLatencyMode: false,
 
-              // 🎯 官方推荐的缓冲策略 - iOS13+ 特别优化
-              /* 缓冲长度配置 - 参考 hlsDefaultConfig - 桌面设备应用用户配置 */
+              // 🎯 官方推荐的缓冲策略 - 桌面端与 iOS13+ 分级特别优化
+              /* 缓冲长度配置 - 桌面设备应用充足前向预载 */
               maxBufferLength: isMobile
                 ? (localIsIOS13 ? 8 : isIOS ? 10 : 15)  // iOS13+: 8s, iOS: 10s, Android: 15s
-                : bufferConfig.maxBufferLength, // 桌面使用用户配置
+                : Math.max(30, bufferConfig.maxBufferLength), // 桌面默认至少 30s 缓冲
               backBufferLength: isMobile
                 ? (localIsIOS13 ? 5 : isIOS ? 8 : 10)   // iOS13+更保守
                 : bufferConfig.backBufferLength, // 桌面使用用户配置（自动释放已播放切片）
 
-              /* 缓冲大小配置 - 基于官方 maxBufferSize - 桌面设备应用用户配置 */
+              /* 缓冲大小配置 - 桌面端放宽内存限制，允许预载更多高清 TS 切片 */
               maxBufferSize: isMobile
                 ? (localIsIOS13 ? 20 * 1000 * 1000 : isIOS ? 30 * 1000 * 1000 : 40 * 1000 * 1000) // iOS13+: 20MB, iOS: 30MB, Android: 40MB
-                : bufferConfig.maxBufferSize, // 桌面使用用户配置
+                : Math.max(60 * 1000 * 1000, bufferConfig.maxBufferSize), // 桌面默认至少 60MB
 
-              /* 网络加载优化 - 参考 defaultLoadPolicy */
-              maxLoadingDelay: isMobile ? (localIsIOS13 ? 2 : 3) : 4, // iOS13+设备更快超时
-              maxBufferHole: isMobile ? (localIsIOS13 ? 0.05 : 0.1) : 0.1, // 减少缓冲洞容忍度
+              /* 网络加载优化与微缝容错 */
+              maxLoadingDelay: isMobile ? (localIsIOS13 ? 2 : 3) : 4,
+              maxBufferHole: isMobile ? (localIsIOS13 ? 0.05 : 0.1) : 0.5, // 桌面端提升容忍度至 0.5s，自动跳过时间戳微小空洞
+              highBufferWatchdogPeriod: 2, // 开启缓冲看门狗，2秒检测一次卡顿
+              nudgeOffset: 0.1, // 遇到微缝自动向后跳跃 0.1s 恢复播放
+              nudgeMaxRetry: 5, // 最多尝试微调 5 次
               
-              /* Fragment管理 - 参考官方配置 */
-              liveDurationInfinity: false, // 避免无限缓冲 (官方默认false)
-              liveBackBufferLength: isMobile ? (localIsIOS13 ? 3 : 5) : null, // 已废弃，保持兼容
+              /* Fragment管理 */
+              liveDurationInfinity: false,
+              liveBackBufferLength: isMobile ? (localIsIOS13 ? 3 : 5) : null,
 
-              /* 高级优化配置 - 参考 StreamControllerConfig */
-              maxMaxBufferLength: isMobile ? (localIsIOS13 ? 60 : 120) : 180, // 最大缓冲长度限制收敛为180s，避免连续播放多集后内存暴涨
-              maxFragLookUpTolerance: isMobile ? 0.1 : 0.25, // 片段查找容忍度
+              /* 高级优化配置 */
+              maxMaxBufferLength: isMobile ? (localIsIOS13 ? 60 : 120) : 180, // 最大缓冲长度限制为180s
+              maxFragLookUpTolerance: isMobile ? 0.1 : 0.25,
               
-              /* ABR优化 - 参考 ABRControllerConfig */
-              abrEwmaFastLive: isMobile ? 2 : 3, // 移动端更快的码率切换
+              /* ABR优化 */
+              abrEwmaFastLive: isMobile ? 2 : 3,
               abrEwmaSlowLive: isMobile ? 6 : 9,
-              abrBandWidthFactor: isMobile ? 0.8 : 0.95, // 移动端更保守的带宽估计
+              abrBandWidthFactor: isMobile ? 0.8 : 0.95,
               
               /* 启动优化 */
-              startFragPrefetch: !isMobile, // 移动端关闭预取以节省资源
-              testBandwidth: !localIsIOS13, // iOS13+关闭带宽测试以快速启动
+              startFragPrefetch: true, // 桌面端开启预取首片，极速秒开
+              testBandwidth: !localIsIOS13,
               
-              /* Loader配置 - 参考官方 fragLoadPolicy */
+              /* Loader配置 - 快速重试与超时保护 */
               fragLoadPolicy: {
                 default: {
-                  maxTimeToFirstByteMs: isMobile ? 6000 : 10000,
-                  maxLoadTimeMs: isMobile ? 60000 : 120000,
+                  maxTimeToFirstByteMs: isMobile ? 6000 : 8000,
+                  maxLoadTimeMs: isMobile ? 60000 : 45000,
                   timeoutRetry: {
                     maxNumRetry: isMobile ? 2 : 4,
-                    retryDelayMs: 0,
-                    maxRetryDelayMs: 0,
+                    retryDelayMs: 500,
+                    maxRetryDelayMs: 3000,
                   },
                   errorRetry: {
                     maxNumRetry: isMobile ? 3 : 6,
                     retryDelayMs: 1000,
-                    maxRetryDelayMs: isMobile ? 4000 : 8000,
+                    maxRetryDelayMs: isMobile ? 4000 : 6000,
                   },
                 },
               },
@@ -4058,6 +4061,19 @@ function PlayPageClient() {
 
             hls.on(Hls.Events.ERROR, function (event: any, data: any) {
               console.error('HLS Error:', event, data);
+
+              // 处理缓冲区停顿卡死（自动微调播放进度自愈）
+              if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
+                console.warn('[HLS] 检测到缓冲区停顿，自动微调播放进度以恢复...');
+                try {
+                  if (video && !video.paused && video.buffered.length > 0) {
+                    video.currentTime += 0.1;
+                  }
+                } catch (e) {
+                  console.warn('[HLS] 自动微调失败:', e);
+                }
+                return;
+              }
 
               // v1.6.15 改进：优化了播放列表末尾空片段/间隙处理，改进了音频TS片段duration处理
               // v1.6.13 增强：处理片段解析错误（针对initPTS修复）
