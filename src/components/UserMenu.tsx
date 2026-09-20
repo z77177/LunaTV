@@ -14,6 +14,7 @@ import {
   LogIn,
   LogOut,
   PlayCircle,
+  RefreshCw,
   Settings,
   Shield,
   Tv,
@@ -52,6 +53,16 @@ interface AuthInfo {
   role?: 'owner' | 'admin' | 'user';
 }
 
+// 生成更新列表的唯一特征签名，用于精确比对是否有未读更新
+const getUpdatesSignature = (updates: WatchingUpdate | null): string => {
+  if (!updates || !Array.isArray(updates.updatedSeries)) return '';
+  return updates.updatedSeries
+    .filter((s) => s.hasNewEpisode)
+    .map((s) => `${s.sourceKey || s.source_name}+${s.videoId}:${s.totalEpisodes}`)
+    .sort()
+    .join(';');
+};
+
 export const UserMenu: React.FC = () => {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -74,6 +85,7 @@ export const UserMenu: React.FC = () => {
   const [playRecords, setPlayRecords] = useState<(PlayRecord & { key: string })[]>([]);
   const [favorites, setFavorites] = useState<(Favorite & { key: string })[]>([]);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
+  const [isRefreshingUpdates, setIsRefreshingUpdates] = useState(false);
   const [showWatchRoom, setShowWatchRoom] = useState(false);
   const watchRoomContext = useWatchRoomContextSafe();
 
@@ -389,13 +401,13 @@ export const UserMenu: React.FC = () => {
         console.log('getDetailedWatchingUpdates 返回:', updates);
         setWatchingUpdates(updates);
 
-        // 检测是否有新更新（只检查新剧集更新，不包括继续观看）
+        // 检测是否有新更新（基于更新内容特征签名精确判定，防止60秒死灰复燃）
         if (updates && (updates.updatedCount || 0) > 0) {
-          const lastViewed = parseInt(localStorage.getItem('watchingUpdatesLastViewed') || '0');
-          const currentTime = Date.now();
+          const currentSignature = getUpdatesSignature(updates);
+          const lastViewedSignature = localStorage.getItem('watchingUpdatesLastViewedSignature') || '';
 
-          // 如果从未查看过，或者距离上次查看超过1分钟，认为有新更新
-          const hasNewUpdates = lastViewed === 0 || (currentTime - lastViewed > 60000);
+          // 只要当前更新的剧集签名和上次查看的不一致，说明有新更新
+          const hasNewUpdates = currentSignature !== '' && currentSignature !== lastViewedSignature;
           setHasUnreadUpdates(hasNewUpdates);
         } else {
           setHasUnreadUpdates(false);
@@ -612,11 +624,11 @@ export const UserMenu: React.FC = () => {
         const updates = getDetailedWatchingUpdates();
         setWatchingUpdates(updates);
 
-        // 重新计算未读状态
+        // 重新计算未读状态（基于特征签名）
         if (updates && (updates.updatedCount || 0) > 0) {
-          const lastViewed = parseInt(localStorage.getItem('watchingUpdatesLastViewed') || '0');
-          const currentTime = Date.now();
-          const hasNewUpdates = lastViewed === 0 || (currentTime - lastViewed > 60000);
+          const currentSignature = getUpdatesSignature(updates);
+          const lastViewedSignature = localStorage.getItem('watchingUpdatesLastViewedSignature') || '';
+          const hasNewUpdates = currentSignature !== '' && currentSignature !== lastViewedSignature;
           setHasUnreadUpdates(hasNewUpdates);
         } else {
           setHasUnreadUpdates(false);
@@ -680,10 +692,33 @@ export const UserMenu: React.FC = () => {
   const handleWatchingUpdates = () => {
     setIsOpen(false);
     setIsWatchingUpdatesOpen(true);
-    // 标记为已读
+    // 标记为已读并记录已查看的更新特征签名
     setHasUnreadUpdates(false);
+    const signature = getUpdatesSignature(watchingUpdates);
+    if (signature) {
+      localStorage.setItem('watchingUpdatesLastViewedSignature', signature);
+    }
     const currentTime = Date.now();
     localStorage.setItem('watchingUpdatesLastViewed', currentTime.toString());
+  };
+
+  const handleManualRefresh = async () => {
+    if (isRefreshingUpdates) return;
+    setIsRefreshingUpdates(true);
+    try {
+      await checkWatchingUpdates(true);
+      const updates = getDetailedWatchingUpdates();
+      setWatchingUpdates(updates);
+      const signature = getUpdatesSignature(updates);
+      if (signature) {
+        localStorage.setItem('watchingUpdatesLastViewedSignature', signature);
+      }
+      setHasUnreadUpdates(false);
+    } catch (error) {
+      console.error('手动刷新更新失败:', error);
+    } finally {
+      setIsRefreshingUpdates(false);
+    }
   };
 
   const handleCloseWatchingUpdates = () => {
@@ -2187,13 +2222,24 @@ export const UserMenu: React.FC = () => {
                 )}
               </div>
             </div>
-            <button
-              onClick={handleCloseWatchingUpdates}
-              className='w-8 h-8 p-1 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
-              aria-label='Close'
-            >
-              <X className='w-full h-full' />
-            </button>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={handleManualRefresh}
+                disabled={isRefreshingUpdates}
+                className='p-1.5 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50'
+                title='立即刷新更新'
+                aria-label='Refresh'
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshingUpdates ? 'animate-spin text-blue-500' : ''}`} />
+              </button>
+              <button
+                onClick={handleCloseWatchingUpdates}
+                className='w-8 h-8 p-1 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
+                aria-label='Close'
+              >
+                <X className='w-full h-full' />
+              </button>
+            </div>
           </div>
 
           {/* 更新列表 */}

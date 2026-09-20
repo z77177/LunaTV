@@ -11,6 +11,7 @@ import { getSpiderJar } from '@/lib/spiderJar';
 import { SearchResult, Favorite, PlayRecord } from '@/lib/types';
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
 import { migrateOldCache, cleanupExpiredCache, validateCacheSize } from '@/lib/video-cache';
+import { isSeriesCompleted } from '@/lib/utils';
 
 export const runtime = 'nodejs';
 
@@ -664,8 +665,8 @@ async function refreshRecordAndFavorites() {
 
             // 🔥 优化 3: 仅刷新连载中的剧集（已完结的跳过）
             if (cronConfig.onlyRefreshOngoing) {
-              if (record.original_episodes && record.total_episodes >= record.original_episodes) {
-                console.log(`⏭️ 跳过已完结剧集: ${record.title} (${record.total_episodes}/${record.original_episodes})`);
+              if (isSeriesCompleted(record.remarks)) {
+                console.log(`⏭️ 跳过已完结剧集: ${record.title} (${record.remarks || '已完结'})`);
                 return null;
               }
             }

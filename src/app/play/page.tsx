@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Hls from 'hls.js';
 import { Heart, ChevronUp, Download, X } from 'lucide-react';
@@ -2031,6 +2031,22 @@ function PlayPageClient() {
         setPlayerReady(false); // 重置播放器就绪状态
       }
     }
+
+    // 🎵 清理 iOS / 系统级 MediaSession
+    if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+        navigator.mediaSession.setActionHandler('seekbackward', null);
+        navigator.mediaSession.setActionHandler('seekforward', null);
+        navigator.mediaSession.setActionHandler('previoustrack', null);
+        navigator.mediaSession.setActionHandler('nexttrack', null);
+      } catch (e) {
+        console.warn('清理 MediaSession 异常:', e);
+      }
+    }
   };
 
   // 初始化Anime4K超分
@@ -2468,6 +2484,80 @@ function PlayPageClient() {
     }
   }
 
+  // 🎵 注册并更新 iOS / 移动设备原生 MediaSession 控制中心
+  const updateMediaSession = useCallback(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+
+    const currentDetail = detailRef.current;
+    const currentIdx = currentEpisodeIndexRef.current;
+    const rawTitle = videoTitleRef.current || currentDetail?.title || '';
+    const episodeTitle = currentDetail?.episodes_titles?.[currentIdx];
+    const episodeDisplay = episodeTitle || (currentDetail?.episodes && currentDetail.episodes.length > 1 ? `第 ${currentIdx + 1} 集` : '');
+    const displayTitle = episodeDisplay && rawTitle ? `${rawTitle} - ${episodeDisplay}` : (rawTitle || episodeDisplay || '视频播放');
+
+    const artwork: MediaImage[] = [];
+    if (currentDetail?.poster) {
+      artwork.push(
+        { src: currentDetail.poster, sizes: '96x96', type: 'image/jpeg' },
+        { src: currentDetail.poster, sizes: '128x128', type: 'image/jpeg' },
+        { src: currentDetail.poster, sizes: '192x192', type: 'image/jpeg' },
+        { src: currentDetail.poster, sizes: '256x256', type: 'image/jpeg' },
+        { src: currentDetail.poster, sizes: '512x512', type: 'image/jpeg' }
+      );
+    }
+
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: displayTitle,
+        artist: currentDetail?.source_name || 'LunaTV',
+        album: currentDetail?.year ? `${currentDetail.year} · LunaTV` : 'LunaTV',
+        artwork,
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        artPlayerRef.current?.play();
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        artPlayerRef.current?.pause();
+      });
+
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const skipTime = details.seekOffset || 10;
+        if (artPlayerRef.current) {
+          artPlayerRef.current.currentTime = Math.max(0, artPlayerRef.current.currentTime - skipTime);
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const skipTime = details.seekOffset || 10;
+        if (artPlayerRef.current) {
+          const dur = artPlayerRef.current.duration || 0;
+          artPlayerRef.current.currentTime = Math.min(dur, artPlayerRef.current.currentTime + skipTime);
+        }
+      });
+
+      if (currentDetail?.episodes && currentDetail.episodes.length > 1) {
+        if (currentIdx > 0) {
+          navigator.mediaSession.setActionHandler('previoustrack', () => {
+            setCurrentEpisodeIndex(currentIdx - 1);
+          });
+        } else {
+          navigator.mediaSession.setActionHandler('previoustrack', null);
+        }
+
+        if (currentIdx < currentDetail.episodes.length - 1) {
+          navigator.mediaSession.setActionHandler('nexttrack', () => {
+            setCurrentEpisodeIndex(currentIdx + 1);
+          });
+        } else {
+          navigator.mediaSession.setActionHandler('nexttrack', null);
+        }
+      }
+    } catch (e) {
+      console.warn('更新 MediaSession 失败:', e);
+    }
+  }, []);
 
   // 🚀 优化的集数变化处理（防抖 + 状态保护）
   useEffect(() => {
@@ -2481,6 +2571,7 @@ function PlayPageClient() {
     }
 
     updateVideoUrl(detail, currentEpisodeIndex);
+    updateMediaSession();
 
     // 🚀 如果正在换源，跳过弹幕处理（换源会在完成后手动处理）
     if (isSourceChangingRef.current) {
@@ -3931,7 +4022,7 @@ function PlayPageClient() {
         // iOS设备需要静音才能自动播放，参考ArtPlayer源码处理
         muted: isIOS || isSafari,
         autoplay: true,
-        pip: !isMobile,
+        pip: true,
         autoSize: false,
         autoMini: false,
         screenshot: !isMobile, // 桌面端启用截图功能
@@ -3958,6 +4049,9 @@ function PlayPageClient() {
         airplay: isIOS || isSafari,
         moreVideoAttr: {
           crossOrigin: 'anonymous',
+          'webkit-playsinline': 'true',
+          playsinline: 'true',
+          'x-webkit-airplay': 'allow',
         },
         // HLS 支持配置
         customType: {
@@ -5564,13 +5658,19 @@ function PlayPageClient() {
         }
       });
 
-      // 监听播放状态变化，控制 Wake Lock
+      // 监听播放状态变化，控制 Wake Lock 与 MediaSession
       artPlayerRef.current.on('play', () => {
         requestWakeLock();
+        if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'playing';
+        }
       });
 
       artPlayerRef.current.on('pause', () => {
         releaseWakeLock();
+        if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'paused';
+        }
         // 🔥 关键修复：暂停时也检查是否在片尾，避免保存错误的进度
         const currentTime = artPlayerRef.current?.currentTime || 0;
         const duration = artPlayerRef.current?.duration || 0;
@@ -5584,6 +5684,9 @@ function PlayPageClient() {
 
       artPlayerRef.current.on('video:ended', () => {
         releaseWakeLock();
+        if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'none';
+        }
       });
 
       // 如果播放器初始化时已经在播放状态，则请求 Wake Lock
@@ -5615,6 +5718,7 @@ function PlayPageClient() {
 
       // 监听视频可播放事件，这时恢复播放进度更可靠
       artPlayerRef.current.on('video:canplay', () => {
+        updateMediaSession();
         // 🔥 重置 video:ended 处理标志，因为这是新视频
         videoEndedHandledRef.current = false;
 
@@ -5810,6 +5914,19 @@ function PlayPageClient() {
         if (saveNow - lastSaveTimeRef.current > interval && !isNearEnd) {
           saveCurrentPlayProgress();
           lastSaveTimeRef.current = saveNow;
+        }
+
+        // 🎵 同步锁屏和控制中心进度条
+        if (typeof window !== 'undefined' && 'mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+          if (duration && !isNaN(duration) && duration > 0 && currentTime !== undefined && !isNaN(currentTime)) {
+            try {
+              navigator.mediaSession.setPositionState({
+                duration: duration,
+                playbackRate: artPlayerRef.current?.playbackRate || 1,
+                position: Math.min(currentTime, duration),
+              });
+            } catch {}
+          }
         }
       });
 
