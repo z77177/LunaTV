@@ -16,7 +16,7 @@ import NetDiskSearchResults from '@/components/NetDiskSearchResults';
 import AcgSearch from '@/components/AcgSearch';
 import PageLayout from '@/components/PageLayout';
 import SkipController, { SkipSettingsButton } from '@/components/SkipController';
-import SafariHandoffModal, { SafariHandoffButton } from '@/components/SafariHandoffModal';
+import SafariPlayButton from '@/components/play/SafariPlayButton';
 import VideoCard from '@/components/VideoCard';
 import CommentSection from '@/components/play/CommentSection';
 import DownloadButtons from '@/components/play/DownloadButtons';
@@ -3610,24 +3610,32 @@ function PlayPageClient() {
     }
   };
 
-  // 🧭 iOS PWA 转 Safari 后台播放/画中画处理
-  const [isSafariModalOpen, setIsSafariModalOpen] = useState(false);
-  const [safariHandoffUrl, setSafariHandoffUrl] = useState('');
-  const [safariHandoffTime, setSafariHandoffTime] = useState(0);
+  // 🧭 Safari 外部接续播放处理
+  const [safariCopied, setSafariCopied] = useState(false);
+  const [safariToastMessage, setSafariToastMessage] = useState<string | null>(null);
 
-  const handleOpenInSafari = useCallback(() => {
+  const handleSafariHandoff = useCallback(async () => {
     const art = artPlayerRef.current;
-    const currentTime = art?.currentTime || 0;
-    setSafariHandoffTime(currentTime);
 
-    // 保存当前播放进度到历史记录
+    // 1. 🔥 第一动作：立即暂停当前正在播放的视频，彻底防止双重声音重叠！
+    if (art && !art.paused) {
+      try {
+        art.pause();
+      } catch (e) {
+        console.warn('暂停播放异常:', e);
+      }
+    }
+
+    const currentTime = art?.currentTime || 0;
+
+    // 2. 立即将当前进度存入历史
     try {
       saveCurrentPlayProgress();
     } catch (e) {
       console.warn('保存进度异常:', e);
     }
 
-    // 构造包含当前集数与秒数的完整目标 URL
+    // 3. 构建带当前选集与秒数参数的完整目标 URL
     let targetUrl = '';
     if (typeof window !== 'undefined') {
       try {
@@ -3639,38 +3647,45 @@ function PlayPageClient() {
         targetUrl = window.location.href;
       }
     }
-    setSafariHandoffUrl(targetUrl);
 
-    // 1. 自动写入剪贴板（作为最可靠的跨沙箱兜底）
+    // 4. 写入系统剪贴板
     if (typeof navigator !== 'undefined' && navigator.clipboard && targetUrl) {
-      navigator.clipboard.writeText(targetUrl).catch((err) => {
-        console.warn('写入剪贴板异常:', err);
-      });
-    }
-
-    // 2. 尝试唤起外部浏览器跳转
-    if (targetUrl) {
       try {
-        const a = document.createElement('a');
-        a.href = targetUrl;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch (e) {
-        console.warn('触发外部跳转异常:', e);
+        await navigator.clipboard.writeText(targetUrl);
+        setSafariCopied(true);
+        setTimeout(() => setSafariCopied(false), 3000);
+      } catch (err) {
+        console.warn('写入剪贴板异常:', err);
       }
     }
 
-    // 3. 打开引导弹窗以供用户查看进度状态或手动选择
-    setIsSafariModalOpen(true);
-  }, []);
+    // 5. 格式化提示文案
+    const m = Math.floor(currentTime / 60);
+    const s = Math.floor(currentTime % 60);
+    const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    const epDisplay = detailRef.current?.episodes_titles?.[currentEpisodeIndexRef.current] || (detailRef.current?.episodes && detailRef.current.episodes.length > 1 ? `第 ${currentEpisodeIndexRef.current + 1} 集` : '');
 
-  const handleOpenInSafariRef = useRef(handleOpenInSafari);
-  useEffect(() => {
-    handleOpenInSafariRef.current = handleOpenInSafari;
-  }, [handleOpenInSafari]);
+    // 6. 若支持 iOS 原生分享面板，尝试调用系统分享直接选择 Safari 打开或拷贝
+    let sharedNative = false;
+    if (typeof navigator !== 'undefined' && navigator.share && targetUrl) {
+      try {
+        await navigator.share({
+          title: `${videoTitleRef.current || '视频'}${epDisplay ? ` - ${epDisplay}` : ''}`,
+          text: `当前播放进度：${timeStr}，可在 Safari 中粘贴打开后台听剧`,
+          url: targetUrl,
+        });
+        sharedNative = true;
+      } catch {
+        // 用户取消分享或系统不支持时静默忽略
+      }
+    }
+
+    // 7. 若未调起原生分享或分享完成，弹出轻量非侵入式 Toast
+    if (!sharedNative) {
+      setSafariToastMessage(`已暂停并锁定进度（${epDisplay ? `${epDisplay} · ` : ''}${timeStr}）！链接已复制，在 Safari 粘贴即可继续播放。`);
+      setTimeout(() => setSafariToastMessage(null), 5000);
+    }
+  }, []);
 
   useEffect(() => {
     // 页面即将卸载时保存播放进度和清理资源
@@ -4461,16 +4476,6 @@ function PlayPageClient() {
               }
               art.notice.show = `播放速度: ${nextRate}x`;
             }
-          }] : []),
-          // 🚀 iOS PWA / 非原生环境后台播放快捷入口
-          ...(shouldShowSafariHandoff ? [{
-            position: 'right',
-            index: 9,
-            html: '<i class="art-icon flex" style="align-items:center;justify-content:center;" title="Safari 后台播放"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#34d399;"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></i>',
-            tooltip: 'Safari 后台/画中画播放',
-            click: function () {
-              handleOpenInSafariRef.current?.();
-            },
           }] : []),
           // 🚀 简单弹幕发送按钮（仅Web端显示）
           ...(isMobile ? [] : [{
@@ -6210,6 +6215,14 @@ function PlayPageClient() {
         <div className='space-y-2'>
           {/* 折叠控制 */}
           <div className='flex justify-end items-center gap-2 sm:gap-3'>
+            {/* Safari 后台听剧按钮 (外置在网页工具栏) */}
+            {shouldShowSafariHandoff && (
+              <SafariPlayButton
+                onHandoff={handleSafariHandoff}
+                copied={safariCopied}
+              />
+            )}
+
             {/* 网盘资源按钮 */}
             <NetDiskButton
               videoTitle={videoTitle}
@@ -6251,12 +6264,9 @@ function PlayPageClient() {
                   className='bg-black w-full h-full rounded-xl overflow-hidden shadow-lg'
                 ></div>
 
-                {/* 跳过设置与 Safari 后台播放按钮 - 播放器内右上角 */}
+                {/* 跳过设置按钮 - 播放器内右上角 */}
                 {currentSource && currentId && (
-                  <div className='absolute top-4 right-4 z-10 flex items-center gap-2'>
-                    {shouldShowSafariHandoff && (
-                      <SafariHandoffButton onClick={handleOpenInSafari} />
-                    )}
+                  <div className='absolute top-4 right-4 z-10'>
                     <SkipSettingsButton onClick={() => setIsSkipSettingOpen(true)} />
                   </div>
                 )}
@@ -6595,19 +6605,21 @@ function PlayPageClient() {
         </ImmersivePlayerOverlay>
       )}
 
-      {/* 🧭 iOS PWA 转 Safari 后台播放/画中画引导弹窗 */}
-      <SafariHandoffModal
-        isOpen={isSafariModalOpen}
-        onClose={() => setIsSafariModalOpen(false)}
-        targetUrl={safariHandoffUrl}
-        currentTitle={videoTitle || detail?.title || '当前视频'}
-        episodeTitle={
-          detail?.episodes_titles?.[currentEpisodeIndex] ||
-          (detail?.episodes && detail.episodes.length > 1 ? `第 ${currentEpisodeIndex + 1} 集` : undefined)
-        }
-        currentTime={safariHandoffTime}
-        duration={videoDuration}
-      />
+      {/* 🧭 Safari 外部接续播放轻量提示 Toast */}
+      {safariToastMessage && (
+        <div className='fixed top-6 left-1/2 -translate-x-1/2 z-[9999] max-w-md w-[92%] sm:w-auto px-4 py-3 bg-zinc-900/95 text-white text-xs sm:text-sm rounded-2xl border border-emerald-500/40 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-4 duration-300'>
+          <div className='flex items-center gap-2.5'>
+            <span className='text-base'>🧭</span>
+            <span className='leading-tight'>{safariToastMessage}</span>
+          </div>
+          <button
+            onClick={() => setSafariToastMessage(null)}
+            className='p-1 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors shrink-0'
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
     </>
   );
