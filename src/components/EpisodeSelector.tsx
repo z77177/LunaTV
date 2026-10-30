@@ -188,8 +188,10 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
     return false;
   });
 
-  // 当切换到换源tab并且有源数据时，异步获取视频信息 - 移除 attemptedSources 依赖避免循环触发
+  // 当切换到换源tab并且有源数据时，异步获取视频信息 - 限制并发批次避免阻塞PC端主线程与带宽
   useEffect(() => {
+    let isCancelled = false;
+
     const fetchVideoInfosInBatches = async () => {
       if (
         !optimizationEnabled || // 若关闭测速则直接退出
@@ -206,16 +208,21 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
 
       if (pendingSources.length === 0) return;
 
-      const batchSize = Math.ceil(pendingSources.length / 2);
+      // 限制每批次最多并发 2 个，防止同时创建大量 HLS 实例导致页面卡顿
+      const batchSize = 2;
 
       for (let start = 0; start < pendingSources.length; start += batchSize) {
+        if (isCancelled) break;
         const batch = pendingSources.slice(start, start + batchSize);
         await Promise.all(batch.map(getVideoInfo));
       }
     };
 
     fetchVideoInfosInBatches();
-    // 依赖项保持与之前一致
+
+    return () => {
+      isCancelled = true;
+    };
   }, [activeTab, availableSources, getVideoInfo, optimizationEnabled]);
 
   // 升序分页标签
@@ -241,49 +248,25 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
   const categoryContainerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  // 添加鼠标悬停状态管理
-  const [isCategoryHovered, setIsCategoryHovered] = useState(false);
-
-  // 阻止页面竖向滚动
-  const preventPageScroll = useCallback((e: WheelEvent) => {
-    if (isCategoryHovered) {
-      e.preventDefault();
-    }
-  }, [isCategoryHovered]);
-
-  // 处理滚轮事件，实现横向滚动
-  const handleWheel = useCallback((e: WheelEvent) => {
-    if (isCategoryHovered && categoryContainerRef.current) {
-      e.preventDefault(); // 阻止默认的竖向滚动
-
-      const container = categoryContainerRef.current;
-      const scrollAmount = e.deltaY * 2; // 调整滚动速度
-
-      // 根据滚轮方向进行横向滚动
-      container.scrollBy({
-        left: scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  }, [isCategoryHovered]);
-
-  // 添加全局wheel事件监听器
+  // 仅在分类标签容器自身绑定滚轮事件实现横向滚动，避免向全局 document 挂载非被动 wheel 监听阻塞页面滚动合成线程
   useEffect(() => {
-    if (isCategoryHovered) {
-      // 鼠标悬停时阻止页面滚动
-      document.addEventListener('wheel', preventPageScroll, { passive: false });
-      document.addEventListener('wheel', handleWheel, { passive: false });
-    } else {
-      // 鼠标离开时恢复页面滚动
-      document.removeEventListener('wheel', preventPageScroll);
-      document.removeEventListener('wheel', handleWheel);
-    }
+    const container = categoryContainerRef.current;
+    if (!container || activeTab !== 'episodes') return;
 
-    return () => {
-      document.removeEventListener('wheel', preventPageScroll);
-      document.removeEventListener('wheel', handleWheel);
+    const handleWheel = (e: WheelEvent) => {
+      if (container.scrollWidth <= container.clientWidth) return;
+      e.preventDefault();
+      container.scrollBy({
+        left: e.deltaY * 2,
+        behavior: 'smooth',
+      });
     };
-  }, [isCategoryHovered, preventPageScroll, handleWheel]);
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [activeTab, categories.length]);
 
   // 当分页切换时，将激活的分页标签滚动到视口中间
   useEffect(() => {
@@ -315,19 +298,20 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
     [descending, pageCount]
   );
 
-  const handleEpisodeClick = useCallback(
-    (episodeNumber: number) => {
-      onChange?.(episodeNumber);
-    },
-    [onChange]
-  );
+  const onChangeRef = useRef(onChange);
+  const onSourceChangeRef = useRef(onSourceChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    onSourceChangeRef.current = onSourceChange;
+  }, [onChange, onSourceChange]);
 
-  const handleSourceClick = useCallback(
-    (source: SearchResult) => {
-      onSourceChange?.(source.source, source.id, source.title);
-    },
-    [onSourceChange]
-  );
+  const handleEpisodeClick = useCallback((episodeNumber: number) => {
+    onChangeRef.current?.(episodeNumber);
+  }, []);
+
+  const handleSourceClick = useCallback((source: SearchResult) => {
+    onSourceChangeRef.current?.(source.source, source.id, source.title);
+  }, []);
 
   const currentStart = currentPage * episodesPerPage + 1;
   const currentEnd = Math.min(
@@ -393,8 +377,6 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
             <div
               className='flex-1 overflow-x-auto scrollbar-hide'
               ref={categoryContainerRef}
-              onMouseEnter={() => setIsCategoryHovered(true)}
-              onMouseLeave={() => setIsCategoryHovered(false)}
               style={{
                 WebkitOverflowScrolling: 'touch',
                 scrollbarWidth: 'none',
@@ -540,7 +522,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
             !sourceSearchError &&
             availableSources.length > 0 && (
               <div className='flex-1 overflow-y-auto space-y-2 sm:space-y-3 pb-20'>
-                {availableSources
+                {[...availableSources]
                   .sort((a, b) => {
                     const aIsCurrent =
                       a.source?.toString() === currentSource?.toString() &&
@@ -720,4 +702,19 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
   );
 };
 
-export default EpisodeSelector;
+export default React.memo(EpisodeSelector, (prev, next) => {
+  return (
+    prev.totalEpisodes === next.totalEpisodes &&
+    prev.episodes_titles === next.episodes_titles &&
+    prev.episodesPerPage === next.episodesPerPage &&
+    prev.value === next.value &&
+    prev.currentSource === next.currentSource &&
+    prev.currentId === next.currentId &&
+    prev.videoTitle === next.videoTitle &&
+    prev.videoYear === next.videoYear &&
+    prev.availableSources === next.availableSources &&
+    prev.sourceSearchLoading === next.sourceSearchLoading &&
+    prev.sourceSearchError === next.sourceSearchError &&
+    prev.precomputedVideoInfo === next.precomputedVideoInfo
+  );
+});

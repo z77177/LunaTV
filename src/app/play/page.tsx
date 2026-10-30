@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Hls from 'hls.js';
 import { Heart, ChevronUp, Download, X } from 'lucide-react';
@@ -486,6 +486,18 @@ function PlayPageClient() {
   // 换源相关状态
   const [availableSources, setAvailableSources] = useState<SearchResult[]>([]);
   const availableSourcesRef = useRef<SearchResult[]>([]);
+  const filteredAvailableSources = useMemo(
+    () =>
+      availableSources.filter((source) => {
+        if (!source.episodes || source.episodes.length < 1) return false;
+        return true;
+      }),
+    [availableSources]
+  );
+  const stableEpisodesTitles = useMemo(
+    () => detail?.episodes_titles || [],
+    [detail?.episodes_titles]
+  );
 
   const currentSourceRef = useRef(currentSource);
   const currentIdRef = useRef(currentId);
@@ -1525,11 +1537,11 @@ function PlayPageClient() {
 
   // 完整测速（桌面设备）
   const fullSpeedTest = async (sources: SearchResult[], weights: Record<string, number> = {}): Promise<SearchResult> => {
-    // 桌面设备使用小批量并发，避免创建过多实例
-    const concurrency = 3;
-    // 限制最大测试数量为20个源（平衡速度和覆盖率）
-    const maxTestCount = 20;
-    const topPriorityCount = 5; // 前5个优先级最高的源（已按权重排序）
+    // 桌面设备严格控制并发，避免创建过多HLS实例抢占带宽导致PC端卡顿
+    const concurrency = 2;
+    // 限制最大测试数量为6个高优源（平衡速度与桌面端性能）
+    const maxTestCount = 6;
+    const topPriorityCount = 4; // 前4个优先级最高的源（已按权重排序）
 
     // 🎯 混合策略：前5个（高权重）+ 随机15个
     let sourcesToTest: SearchResult[];
@@ -1623,12 +1635,13 @@ function PlayPageClient() {
         const speedMatch = loadSpeed.match(/^([\d.]+)\s*MB\/s$/);
         const speedMBps = speedMatch ? parseFloat(speedMatch[1]) : 0;
 
-        // 🛑 保守策略：只有非常优质的源才早停
-        const is4KHighSpeed = quality === '4K' && speedMBps >= 8;
-        const is2KHighSpeed = quality === '2K' && speedMBps >= 6;
+        // 🛑 早停策略：找到高清高速源即停止后续测速，减少后台HLS实例开销
+        const is4KHighSpeed = quality === '4K' && speedMBps >= 6;
+        const is2KHighSpeed = quality === '2K' && speedMBps >= 4;
+        const is1080pHighSpeed = quality === '1080p' && speedMBps >= 2;
 
-        if (is4KHighSpeed || is2KHighSpeed) {
-          console.log(`✓ 找到顶级优质源: ${result.source.source_name} (${quality}, ${loadSpeed})，停止测速`);
+        if (is4KHighSpeed || is2KHighSpeed || is1080pHighSpeed) {
+          console.log(`✓ 找到优质高速源: ${result.source.source_name} (${quality}, ${loadSpeed})，停止测速`);
           shouldStop = true;
           break;
         }
@@ -1839,6 +1852,8 @@ function PlayPageClient() {
           const newUrl = result.url || '';
           if (newUrl !== videoUrl) {
             setVideoUrl(newUrl);
+          } else if (isSourceChangingRef.current) {
+            setIsVideoLoading(false);
           }
         } else {
           // 读取API返回的错误信息
@@ -1860,6 +1875,8 @@ function PlayPageClient() {
       const newUrl = episodeData || '';
       if (newUrl !== videoUrl) {
         setVideoUrl(newUrl);
+      } else if (isSourceChangingRef.current) {
+        setIsVideoLoading(false);
       }
     }
   };
@@ -2662,58 +2679,56 @@ function PlayPageClient() {
     }
   }, [detail, currentEpisodeIndex]);
 
+  const fetchSourceDetail = async (
+    source: string,
+    id: string
+  ): Promise<SearchResult[]> => {
+    try {
+      let detailResponse;
+
+      // 判断是否为短剧源
+      if (source === 'shortdrama') {
+        // 传递 title 参数以支持备用API fallback
+        // 优先使用 URL 参数的 title，因为 videoTitleRef 可能还未初始化
+        const dramaTitle = searchParams.get('title') || videoTitleRef.current || '';
+        const titleParam = dramaTitle ? `&name=${encodeURIComponent(dramaTitle)}` : '';
+        detailResponse = await fetch(
+          `/api/shortdrama/detail?id=${id}&episode=1${titleParam}`
+        );
+      } else {
+        detailResponse = await fetch(
+          `/api/detail?source=${source}&id=${id}`
+        );
+      }
+
+      if (!detailResponse.ok) {
+        throw new Error('获取视频详情失败');
+      }
+      const detailData = (await detailResponse.json()) as SearchResult;
+
+      // 检查是否有有效的集数数据
+      if (!detailData.episodes || detailData.episodes.length === 0) {
+        throw new Error('该源没有可用的集数数据');
+      }
+
+      // 对于短剧源，还需要检查 title 和 poster 是否有效
+      if (source === 'shortdrama') {
+        if (!detailData.title || !detailData.poster) {
+          throw new Error('短剧源数据不完整（缺少标题或海报）');
+        }
+      }
+
+      return [detailData];
+    } catch (err) {
+      console.error(`获取视频详情失败 [source=${source}, id=${id}]:`, err);
+      return [];
+    } finally {
+      setSourceSearchLoading(false);
+    }
+  };
+
   // 进入页面时直接获取全部源信息
   useEffect(() => {
-    const fetchSourceDetail = async (
-      source: string,
-      id: string
-    ): Promise<SearchResult[]> => {
-      try {
-        let detailResponse;
-
-        // 判断是否为短剧源
-        if (source === 'shortdrama') {
-          // 传递 title 参数以支持备用API fallback
-          // 优先使用 URL 参数的 title，因为 videoTitleRef 可能还未初始化
-          const dramaTitle = searchParams.get('title') || videoTitleRef.current || '';
-          const titleParam = dramaTitle ? `&name=${encodeURIComponent(dramaTitle)}` : '';
-          detailResponse = await fetch(
-            `/api/shortdrama/detail?id=${id}&episode=1${titleParam}`
-          );
-        } else {
-          detailResponse = await fetch(
-            `/api/detail?source=${source}&id=${id}`
-          );
-        }
-
-        if (!detailResponse.ok) {
-          throw new Error('获取视频详情失败');
-        }
-        const detailData = (await detailResponse.json()) as SearchResult;
-
-        // 检查是否有有效的集数数据
-        if (!detailData.episodes || detailData.episodes.length === 0) {
-          throw new Error('该源没有可用的集数数据');
-        }
-
-        // 对于短剧源，还需要检查 title 和 poster 是否有效
-        if (source === 'shortdrama') {
-          if (!detailData.title || !detailData.poster) {
-            throw new Error('短剧源数据不完整（缺少标题或海报）');
-          }
-        }
-
-        // 只有数据有效时才设置 availableSources
-        // 注意：这里不应该直接设置，因为后续逻辑会统一设置
-        // setAvailableSources([detailData]);
-        return [detailData];
-      } catch (err) {
-        console.error(`获取视频详情失败 [source=${source}, id=${id}]:`, err);
-        return [];
-      } finally {
-        setSourceSearchLoading(false);
-      }
-    };
     const fetchSourcesData = async (query: string): Promise<SearchResult[]> => {
       // 使用智能搜索变体获取全部源信息
       try {
@@ -2962,16 +2977,24 @@ function PlayPageClient() {
         // 当明确指定了 source+id（如从源浏览器跳转）时，并行获取指定源详情和全源搜索
         // 确保指定源不会因标题匹配过滤而丢失
         if (currentSource && currentId) {
-          const [directResult, searchResults] = await Promise.all([
+          const initialQuery = searchTitle || videoTitle;
+          const [directResult, initialSearchResults] = await Promise.all([
             fetchSourceDetail(currentSource, currentId),
-            fetchSourcesData(searchTitle || videoTitle),
+            initialQuery ? fetchSourcesData(initialQuery) : Promise.resolve([]),
           ]);
+          // 如果初始 URL 没有 title，用详情返回的 title 补充搜索其他可用源
+          let searchResults = initialSearchResults;
+          if (!initialQuery && directResult.length > 0 && directResult[0].title) {
+            videoTitleRef.current = directResult[0].title;
+            searchResults = await fetchSourcesData(directResult[0].title);
+          }
           // 指定源强制放在最前面，搜索结果去重后追加
           const directIds = new Set(directResult.map(r => `${r.source}-${r.id}`));
           sourcesInfo = [
             ...directResult,
             ...searchResults.filter(r => !directIds.has(`${r.source}-${r.id}`)),
           ];
+          setAvailableSources(sourcesInfo);
         } else {
           // 未指定源时，仅搜索所有视频源
           sourcesInfo = await fetchSourcesData(searchTitle || videoTitle);
@@ -3024,10 +3047,15 @@ function PlayPageClient() {
       // 指定源和id且无需优选
       if (currentSource && currentId && !needPreferRef.current) {
         const target = sourcesInfo.find(
-          (source) => source.source === currentSource && source.id === currentId
+          (source) =>
+            String(source.source) === String(currentSource) &&
+            String(source.id) === String(currentId)
         );
         if (target) {
           detailData = target;
+        } else if (sourcesInfo.length > 0) {
+          // 指定源详情获取失败时，降级使用已搜索到的第一个可用源，避免页面报错崩溃
+          detailData = sourcesInfo[0];
         } else {
           setError('未找到匹配结果');
           setLoading(false);
@@ -3221,11 +3249,34 @@ function PlayPageClient() {
         }
       }
 
-      const newDetail = availableSources.find(
-        (source) => source.source === newSource && source.id === newId
-      );
+      const matchSource = (source: SearchResult) =>
+        String(source.source) === String(newSource) &&
+        String(source.id) === String(newId);
+
+      let newDetail =
+        availableSourcesRef.current.find(matchSource) ||
+        availableSources.find(matchSource);
+
+      // 如果内存中未找到或缺少集数，尝试请求详情接口兜底
+      if (!newDetail || !newDetail.episodes || newDetail.episodes.length === 0) {
+        const fetchedDetails = await fetchSourceDetail(newSource, String(newId));
+        if (fetchedDetails.length > 0) {
+          newDetail = fetchedDetails[0];
+          setAvailableSources((prev) => {
+            if (prev.some(matchSource)) return prev;
+            return [...prev, newDetail!];
+          });
+        }
+      }
+
       if (!newDetail) {
-        setError('未找到匹配结果');
+        isSourceChangingRef.current = false;
+        setIsVideoLoading(false);
+        if (detailRef.current && artPlayerRef.current) {
+          artPlayerRef.current.notice.show = '该播放源暂不可用，请尝试其他源';
+        } else {
+          setError('未找到匹配结果');
+        }
         return;
       }
 
@@ -3241,20 +3292,22 @@ function PlayPageClient() {
           // 🔥 集数变化时，清除保存的临时进度
           const tempProgressKey = `temp_progress_${newSource}_${newId}_${currentEpisodeIndex}`;
           sessionStorage.removeItem(tempProgressKey);
+          resumeTimeRef.current = 0;
         } else {
-          // 集数在范围内，保持不变
+          // 集数在范围内，保持不变，并同步待恢复进度
+          if (currentPlayTime > 1) {
+            resumeTimeRef.current = currentPlayTime;
+          }
           console.log(`✅ 换源保持当前集数: 第${targetIndex + 1}集`);
         }
       }
 
-      // 🔥 由于组件会重新挂载，不再需要设置 resumeTimeRef（进度已保存到 sessionStorage）
-      // 组件重新挂载后会自动从 sessionStorage 恢复进度
-
-      // 更新URL参数（不刷新页面）
+      // 更新URL参数（不刷新页面，同步完整参数）
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.set('source', newSource);
-      newUrl.searchParams.set('id', newId);
+      newUrl.searchParams.set('id', String(newId));
       newUrl.searchParams.set('year', newDetail.year);
+      newUrl.searchParams.set('title', newDetail.title || newTitle || videoTitleRef.current);
       newUrl.searchParams.set('index', targetIndex.toString());  // 🔥 同步URL的index参数
       window.history.replaceState({}, '', newUrl.toString());
 
@@ -4045,6 +4098,7 @@ function PlayPageClient() {
           if (switchPromiseRef.current === switchPromise) {
             artPlayerRef.current.title = `${videoTitle} - 第${currentEpisodeIndex + 1}集`;
             artPlayerRef.current.poster = videoCover;
+            setIsVideoLoading(false);
             console.log('✅ 源切换完成');
 
             // 🔥 重置集数切换标识
@@ -4530,6 +4584,8 @@ function PlayPageClient() {
             console.log(`🎯 设备性能等级: ${devicePerformance}`)
             
             // 🚀 激进性能优化：针对大量弹幕的渲染策略
+            let cachedVisibleDanmuCount = 0;
+            let lastVisibleCountCheckTime = 0;
             const getOptimizedConfig = () => {
               const baseConfig = {
                 danmuku: [], // 初始为空数组，后续通过load方法加载
@@ -4594,8 +4650,13 @@ function PlayPageClient() {
                       return;
                     }
 
-                    // 🎯 动态弹幕密度控制 - 根据当前屏幕上的弹幕数量决定是否显示
-                    const currentVisibleCount = document.querySelectorAll('.art-danmuku [data-state="emit"]').length;
+                    // 🎯 动态弹幕密度控制 - 500ms节流DOM查询，避免每条弹幕触发同步重排
+                    const checkTime = performance.now();
+                    if (checkTime - lastVisibleCountCheckTime > 500) {
+                      cachedVisibleDanmuCount = document.querySelectorAll('.art-danmuku [data-state="emit"]').length;
+                      lastVisibleCountCheckTime = checkTime;
+                    }
+                    const currentVisibleCount = cachedVisibleDanmuCount;
                     const maxConcurrentDanmu = devicePerformance === 'high' ? 60 :
                                              devicePerformance === 'medium' ? 40 : 25;
 
@@ -5991,9 +6052,11 @@ function PlayPageClient() {
         const duration = artPlayerRef.current.duration || 0;
         const now = performance.now(); // 使用performance.now()更精确
 
-        // 更新 SkipController 所需的时间信息
-        setCurrentPlayTime(currentTime);
-        setVideoDuration(duration);
+        // 更新 SkipController 所需的时间信息（按整秒节流，避免每250ms触发6600行顶层组件全量重渲染）
+        const flooredTime = Math.floor(currentTime);
+        const flooredDuration = Math.floor(duration);
+        setCurrentPlayTime((prev) => (prev === flooredTime ? prev : flooredTime));
+        setVideoDuration((prev) => (prev === flooredDuration ? prev : flooredDuration));
 
         // 保存播放进度逻辑 - 优化保存间隔以减少网络开销
         const saveNow = Date.now();
@@ -6105,39 +6168,25 @@ function PlayPageClient() {
 
   // 返回顶部功能相关
   useEffect(() => {
-    // 获取滚动位置的函数 - 专门针对 body 滚动
+    // 获取滚动位置的函数 - 兼容 body 与 window 滚动
     const getScrollTop = () => {
-      return document.body.scrollTop || 0;
+      return document.body.scrollTop || document.documentElement.scrollTop || window.scrollY || 0;
     };
 
-    // 使用 requestAnimationFrame 持续检测滚动位置
-    let isRunning = false;
-    const checkScrollPosition = () => {
-      if (!isRunning) return;
-
-      const scrollTop = getScrollTop();
-      const shouldShow = scrollTop > 300;
-      setShowBackToTop(shouldShow);
-
-      requestAnimationFrame(checkScrollPosition);
-    };
-
-    // 启动持续检测
-    isRunning = true;
-    checkScrollPosition();
-
-    // 监听 body 元素的滚动事件
+    // 监听滚动事件（移除高刷屏每秒144次的 requestAnimationFrame 死循环轮询）
     const handleScroll = () => {
       const scrollTop = getScrollTop();
-      setShowBackToTop(scrollTop > 300);
+      const shouldShow = scrollTop > 300;
+      setShowBackToTop((prev) => (prev === shouldShow ? prev : shouldShow));
     };
 
+    handleScroll();
     document.body.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      isRunning = false; // 停止 requestAnimationFrame 循环
-      // 移除 body 滚动事件监听器
       document.body.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
@@ -6176,20 +6225,14 @@ function PlayPageClient() {
   const episodeSelectorContent = (
     <EpisodeSelector
       totalEpisodes={totalEpisodes}
-      episodes_titles={detail?.episodes_titles || []}
+      episodes_titles={stableEpisodesTitles}
       value={currentEpisodeIndex + 1}
       onChange={handleEpisodeChange}
       onSourceChange={handleSourceChange}
       currentSource={currentSource}
       currentId={currentId}
       videoTitle={searchTitle || videoTitle}
-      availableSources={availableSources.filter(source => {
-        // 必须有集数数据（所有源包括短剧源都必须满足）
-        if (!source.episodes || source.episodes.length < 1) return false;
-
-        // 不再针对非短剧源进行与当前播放源的集数差异（±30%）过滤，防止完整版/已完结的源被过滤
-        return true;
-      })}
+      availableSources={filteredAvailableSources}
       sourceSearchLoading={sourceSearchLoading}
       sourceSearchError={sourceSearchError}
       precomputedVideoInfo={precomputedVideoInfo}
@@ -6638,9 +6681,8 @@ export default function PlayPage() {
 
 function PlayPageClientWrapper() {
   const searchParams = useSearchParams();
-  // 使用 source + id 作为 key，强制在切换源时重新挂载组件
-  // 参考：https://github.com/vercel/next.js/issues/2819
-  const key = `${searchParams.get('source')}-${searchParams.get('id')}-${searchParams.get('_reload') || ''}`;
+  // 仅在显式携带 _reload 参数时重新挂载组件，避免页内平滑换源时销毁组件丢失 availableSources 状态
+  const key = searchParams.get('_reload') || 'play-page-client';
 
   return <PlayPageClient key={key} />;
 }
