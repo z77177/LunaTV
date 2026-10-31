@@ -501,14 +501,16 @@ export default function NetDiskSearchResults({ results, loading, error, total }:
 
                       {/* 操作按钮 */}
                       <div className="sm:ml-4 shrink-0">
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center px-3 py-2 sm:py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors w-full sm:w-auto justify-center"
-                        >
-                          访问链接
-                        </a>
+                        {/^https?:\/\//i.test(link.url) && (
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-2 sm:py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors w-full sm:w-auto justify-center"
+                          >
+                            访问链接
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>

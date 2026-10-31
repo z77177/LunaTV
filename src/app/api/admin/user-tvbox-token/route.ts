@@ -35,8 +35,14 @@ export async function POST(request: NextRequest) {
     const config = await getConfig();
 
     // 检查权限：只有 owner 和 admin 可以管理用户 Token
+    const isOperatorOwner = authInfo.username === process.env.USERNAME;
     const currentUser = config.UserConfig.Users.find(u => u.username === authInfo.username);
-    if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) {
+    const operatorRole = isOperatorOwner
+      ? 'owner'
+      : currentUser && !currentUser.banned
+        ? currentUser.role
+        : null;
+    if (operatorRole !== 'owner' && operatorRole !== 'admin') {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
@@ -47,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // admin 不能修改 owner 和其他 admin 的配置
-    if (currentUser.role === 'admin' && (targetUser.role === 'owner' || targetUser.role === 'admin')) {
+    if (operatorRole === 'admin' && (targetUser.role === 'owner' || targetUser.role === 'admin' || username === process.env.USERNAME)) {
       return NextResponse.json({ error: 'Cannot modify admin or owner users' }, { status: 403 });
     }
 
@@ -98,8 +104,14 @@ export async function DELETE(request: NextRequest) {
     const config = await getConfig();
 
     // 检查权限
+    const isOperatorOwner = authInfo.username === process.env.USERNAME;
     const currentUser = config.UserConfig.Users.find(u => u.username === authInfo.username);
-    if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) {
+    const operatorRole = isOperatorOwner
+      ? 'owner'
+      : currentUser && !currentUser.banned
+        ? currentUser.role
+        : null;
+    if (operatorRole !== 'owner' && operatorRole !== 'admin') {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
@@ -110,7 +122,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // admin 不能修改 owner 和其他 admin 的配置
-    if (currentUser.role === 'admin' && (targetUser.role === 'owner' || targetUser.role === 'admin')) {
+    if (operatorRole === 'admin' && (targetUser.role === 'owner' || targetUser.role === 'admin' || username === process.env.USERNAME)) {
       return NextResponse.json({ error: 'Cannot modify admin or owner users' }, { status: 403 });
     }
 

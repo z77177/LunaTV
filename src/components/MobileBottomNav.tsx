@@ -4,7 +4,7 @@
 
 import { Box, Cat, Clover, Film, Globe, Home, PlaySquare, Radio, Star, Tv } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // 简单的 className 合并函数
@@ -37,11 +37,14 @@ interface MobileBottomNavProps {
  */
 const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
 
-  // 当前激活路径：优先使用传入的 activePath，否则回退到浏览器地址
-  const currentActive = activePath ?? pathname;
+  // 当前激活路径：优先使用传入的 activePath，否则回退到浏览器地址（拼接 searchParams）
+  const currentActive =
+    activePath ??
+    (searchParams?.toString() ? `${pathname}?${searchParams.toString()}` : pathname);
 
   // 导航项配置 - 包含渐变色映射
   const [navItems, setNavItems] = useState<NavItem[]>([

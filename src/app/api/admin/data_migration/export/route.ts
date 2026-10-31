@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promisify } from 'util';
 import { gzip } from 'zlib';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { getAdminRoleFromRequest } from '@/lib/admin-auth';
 import { SimpleCrypto } from '@/lib/crypto';
 import { db } from '@/lib/db';
 import { CURRENT_VERSION } from '@/lib/version';
@@ -24,15 +24,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 验证身份和权限
-    const authInfo = getAuthInfoFromCookie(req);
-    if (!authInfo || !authInfo.username) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 });
-    }
-
-    // 检查用户权限（只有站长可以导出数据）
-    if (authInfo.username !== process.env.USERNAME) {
-      return NextResponse.json({ error: '权限不足，只有站长可以导出数据' }, { status: 401 });
+    // 验证身份和权限（强制 HMAC 签名校验，仅限站长）
+    const role = await getAdminRoleFromRequest(req);
+    if (role !== 'owner') {
+      return NextResponse.json({ error: '权限不足，只有站长可以导出数据' }, { status: 403 });
     }
 
     const config = await db.getAdminConfig();

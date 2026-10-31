@@ -412,24 +412,31 @@ export abstract class BaseRedisStorage implements IStorage {
   // 修改用户密码
   async changePassword(userName: string, newPassword: string): Promise<void> {
     const hashedPassword = await this.hashPasswordWithSalt(newPassword);
-    await this.withRetry(() =>
-      this.client.set(this.userPwdKey(userName), hashedPassword)
-    );
-
-    // 同步更新 V2 用户信息中的密码哈希
-    try {
-      const userKey = this.userInfoKey(userName);
-      const exists = await this.withRetry(() => this.client.exists(userKey));
-      if (exists) {
-        await this.withRetry(() => this.client.hSet(userKey, 'password', hashedPassword));
-      }
-    } catch (err) {
-      console.warn(`同步更新用户 ${userName} V2 密码哈希失败:`, err);
+    const userKey = this.userInfoKey(userName);
+    const exists = await this.withRetry(() => this.client.exists(userKey));
+    if (exists) {
+      await this.withRetry(() => this.client.hSet(userKey, 'password', hashedPassword));
+      // 成功更新 V2 密码后，清理已废弃的 V1 密码键，防止旧明文/未加盐密码复活
+      await this.withRetry(() => this.client.del(this.userPwdKey(userName))).catch(() => {});
+    } else {
+      await this.withRetry(() =>
+        this.client.set(this.userPwdKey(userName), hashedPassword)
+      );
     }
   }
 
   // 删除用户及其所有数据
   async deleteUser(userName: string): Promise<void> {
+    // 先读取用户信息以获取 OIDC 映射，必须在删除 userInfoKey 之前执行
+    try {
+      const userInfo = await this.getUserInfoV2(userName);
+      if (userInfo?.oidcSub) {
+        await this.withRetry(() => this.client.del(this.oidcSubKey(userInfo.oidcSub!)));
+      }
+    } catch {
+      // 忽略读取异常
+    }
+
     // 删除用户密码 (V1)
     await this.withRetry(() => this.client.del(this.userPwdKey(userName)));
 
@@ -438,16 +445,6 @@ export abstract class BaseRedisStorage implements IStorage {
 
     // 从用户列表中移除 (V2)
     await this.withRetry(() => this.client.zRem(this.userListKey(), userName));
-
-    // 删除 OIDC 映射（如果存在）
-    try {
-      const userInfo = await this.getUserInfoV2(userName);
-      if (userInfo?.oidcSub) {
-        await this.withRetry(() => this.client.del(this.oidcSubKey(userInfo.oidcSub!)));
-      }
-    } catch (e) {
-      // 忽略错误，用户信息可能已被删除
-    }
 
     // 删除搜索历史
     await this.withRetry(() => this.client.del(this.shKey(userName)));
@@ -585,6 +582,10 @@ export abstract class BaseRedisStorage implements IStorage {
       this.client.hGetAll(this.userInfoKey(userName))
     );
 
+    if (!userInfo || Object.keys(userInfo).length === 0) {
+      return null;
+    }
+
     return this.parseUserInfo(userName, userInfo);
   }
 
@@ -592,13 +593,15 @@ export abstract class BaseRedisStorage implements IStorage {
    * 🚀 批量获取用户信息（Upstash 优化，使用 Pipeline 只算1条命令）
    */
   async getUsersInfoBatch(userNames: string[]): Promise<any[]> {
+    if (!userNames || userNames.length === 0) return [];
     await this.ensureConnected();
-    const pipeline = this.client.multi();
-    userNames.forEach(name => {
-      pipeline.hGetAll(this.userInfoKey(name));
+    const results = await this.withRetry(() => {
+      const pipeline = this.client.multi();
+      userNames.forEach(name => {
+        pipeline.hGetAll(this.userInfoKey(name));
+      });
+      return pipeline.exec();
     });
-    
-    const results = await this.withRetry(() => pipeline.exec());
     if (!results) return userNames.map(() => null);
 
     return results.map((userInfo: any, index: number) => {

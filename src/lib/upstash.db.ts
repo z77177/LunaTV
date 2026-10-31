@@ -299,24 +299,31 @@ export class UpstashRedisStorage implements IStorage {
   // 修改用户密码
   async changePassword(userName: string, newPassword: string): Promise<void> {
     const hashedPassword = await this.hashPasswordWithSalt(newPassword);
-    await withRetry(() =>
-      this.client.set(this.userPwdKey(userName), hashedPassword)
-    );
-
-    // 同步更新 V2 用户信息中的密码哈希
-    try {
-      const userKey = this.userInfoKey(userName);
-      const exists = await withRetry(() => this.client.exists(userKey));
-      if (exists) {
-        await withRetry(() => this.client.hset(userKey, { password: hashedPassword }));
-      }
-    } catch (err) {
-      console.warn(`同步更新用户 ${userName} V2 密码哈希失败:`, err);
+    const userKey = this.userInfoKey(userName);
+    const exists = await withRetry(() => this.client.exists(userKey));
+    if (exists) {
+      await withRetry(() => this.client.hset(userKey, { password: hashedPassword }));
+      // 成功更新 V2 密码后，清理已废弃的 V1 密码键，防止旧明文/未加盐密码复活
+      await withRetry(() => this.client.del(this.userPwdKey(userName))).catch(() => {});
+    } else {
+      await withRetry(() =>
+        this.client.set(this.userPwdKey(userName), hashedPassword)
+      );
     }
   }
 
   // 删除用户及其所有数据
   async deleteUser(userName: string): Promise<void> {
+    // 先读取用户信息以获取 OIDC 映射，必须在删除 userInfoKey 之前执行
+    try {
+      const userInfo = await this.getUserInfoV2(userName);
+      if (userInfo?.oidcSub) {
+        await withRetry(() => this.client.del(this.oidcSubKey(userInfo.oidcSub!)));
+      }
+    } catch {
+      // 忽略读取异常
+    }
+
     // 删除用户密码 (V1)
     await withRetry(() => this.client.del(this.userPwdKey(userName)));
 
@@ -325,16 +332,6 @@ export class UpstashRedisStorage implements IStorage {
 
     // 从用户列表中移除 (V2)
     await withRetry(() => this.client.zrem(this.userListKey(), userName));
-
-    // 删除 OIDC 映射（如果存在）
-    try {
-      const userInfo = await this.getUserInfoV2(userName);
-      if (userInfo?.oidcSub) {
-        await withRetry(() => this.client.del(this.oidcSubKey(userInfo.oidcSub!)));
-      }
-    } catch (e) {
-      // 忽略错误，用户信息可能已被删除
-    }
 
     // 删除搜索历史
     await withRetry(() => this.client.del(this.shKey(userName)));
@@ -457,24 +454,8 @@ export class UpstashRedisStorage implements IStorage {
     return isValid;
   }
 
-  // 获取用户信息（新版本）
-  async getUserInfoV2(userName: string): Promise<{
-    username: string;
-    role: 'owner' | 'admin' | 'user';
-    banned: boolean;
-    tags?: string[];
-    oidcSub?: string;
-    enabledApis?: string[];
-    createdAt?: number;
-  } | null> {
-    const userInfo = await withRetry(() =>
-      this.client.hgetall(this.userInfoKey(userName))
-    );
-
-    if (!userInfo || Object.keys(userInfo).length === 0) {
-      return null;
-    }
-
+  // 解析 Upstash Redis 用户哈希对象
+  private parseUserInfo(userName: string, userInfo: any): any {
     // 安全解析 tags 字段
     let parsedTags: string[] | undefined;
     if (userInfo.tags) {
@@ -532,6 +513,43 @@ export class UpstashRedisStorage implements IStorage {
       enabledApis: parsedApis,
       createdAt: userInfo.created_at ? parseInt(ensureString(userInfo.created_at), 10) : undefined,
     };
+  }
+
+  // 获取用户信息（新版本）
+  async getUserInfoV2(userName: string): Promise<{
+    username: string;
+    role: 'owner' | 'admin' | 'user';
+    banned: boolean;
+    tags?: string[];
+    oidcSub?: string;
+    enabledApis?: string[];
+    createdAt?: number;
+  } | null> {
+    const userInfo = await withRetry(() =>
+      this.client.hgetall(this.userInfoKey(userName))
+    );
+
+    if (!userInfo || Object.keys(userInfo).length === 0) {
+      return null;
+    }
+
+    return this.parseUserInfo(userName, userInfo);
+  }
+
+  // 批量获取用户信息（Upstash 优化：Pipeline 仅计 1 次命令）
+  async getUsersInfoBatch(userNames: string[]): Promise<any[]> {
+    if (!userNames || userNames.length === 0) return [];
+    const pipeline = this.client.pipeline();
+    userNames.forEach((name) => {
+      pipeline.hgetall(this.userInfoKey(name));
+    });
+    const results = await withRetry(() => pipeline.exec());
+    if (!results) return userNames.map(() => null);
+
+    return results.map((userInfo: any, index: number) => {
+      if (!userInfo || Object.keys(userInfo).length === 0) return null;
+      return this.parseUserInfo(userNames[index], userInfo);
+    });
   }
 
   // 检查用户是否存在（新版本）
@@ -692,7 +710,7 @@ export class UpstashRedisStorage implements IStorage {
     const configs: { [key: string]: EpisodeSkipConfig } = {};
 
     // 批量获取所有配置
-    const values = await withRetry(() => this.client.mget(keys));
+    const values = await withRetry(() => this.client.mget(...keys));
 
     keys.forEach((key, index) => {
       const value = values[index];
@@ -759,7 +777,7 @@ export class UpstashRedisStorage implements IStorage {
     const configs: { [key: string]: EpisodeSkipConfig } = {};
 
     // 批量获取所有配置
-    const values = await withRetry(() => this.client.mget(keys));
+    const values = await withRetry(() => this.client.mget(...keys));
 
     keys.forEach((key, index) => {
       const value = values[index];

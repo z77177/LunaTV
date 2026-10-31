@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 
 import { AdminConfig } from '@/lib/admin.types';
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { AUTH_COOKIE_MAX_AGE_SECONDS, getAuthInfoFromCookie, verifyAuthSignature } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 
 export type AdminRole = 'owner' | 'admin';
@@ -10,7 +10,7 @@ async function resolveRoleFromConfig(
   config: AdminConfig,
   username: string
 ): Promise<AdminRole | null> {
-  if (username === process.env.USERNAME) {
+  if (process.env.USERNAME && username === process.env.USERNAME) {
     return 'owner';
   }
 
@@ -45,7 +45,24 @@ export async function getAdminRoleFromRequest(
     return null;
   }
 
-  if (username === process.env.USERNAME) {
+  // 检查时效
+  if (
+    authInfo.timestamp &&
+    (Date.now() - authInfo.timestamp) / 1000 > AUTH_COOKIE_MAX_AGE_SECONDS
+  ) {
+    return null;
+  }
+
+  // 🛡️ 强制验证 Cookie HMAC 签名（含信任网络 Cookie，防止客户端伪造 trustedNetwork: true 提权）
+  if (!authInfo.signature || !process.env.PASSWORD) {
+    return null;
+  }
+  const isValid = await verifyAuthSignature(authInfo, process.env.PASSWORD);
+  if (!isValid) {
+    return null;
+  }
+
+  if (process.env.USERNAME && username === process.env.USERNAME) {
     return 'owner';
   }
 

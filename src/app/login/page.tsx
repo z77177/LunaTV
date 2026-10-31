@@ -17,17 +17,19 @@ import { OIDCProviderLogo, detectProvider, getProviderButtonStyle, getProviderBu
 
 // 版本显示组件
 function VersionDisplay() {
+  const [isAdmin, setIsAdmin] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     // 只有管理员能看到版本信息
     const auth = getAuthInfoFromBrowserCookie();
-    const isAdmin = auth?.role === 'admin' || auth?.role === 'owner';
-    if (!isAdmin) {
+    const admin = auth?.role === 'admin' || auth?.role === 'owner';
+    if (!admin) {
       setIsChecking(false);
       return;
     }
+    setIsAdmin(true);
 
     const checkUpdate = async () => {
       try {
@@ -43,8 +45,6 @@ function VersionDisplay() {
     checkUpdate();
   }, []);
 
-  const auth = getAuthInfoFromBrowserCookie();
-  const isAdmin = auth?.role === 'admin' || auth?.role === 'owner';
   if (!isAdmin) return null;
 
   return (
@@ -312,14 +312,6 @@ function LoginPageClient() {
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
         }}
       >
-        {/* Fallback for browsers without backdrop-filter support */}
-        <style jsx>{`
-          @supports (backdrop-filter: blur(24px)) or (-webkit-backdrop-filter: blur(24px)) {
-            div {
-              background-color: transparent !important;
-            }
-          }
-        `}</style>
         {/* 装饰性光效 */}
         <div className='absolute -top-20 -left-20 w-40 h-40 bg-gradient-to-br from-purple-400/30 to-pink-400/30 rounded-full blur-3xl animate-pulse' />
         <div className='absolute -bottom-20 -right-20 w-40 h-40 bg-gradient-to-br from-blue-400/30 to-cyan-400/30 rounded-full blur-3xl animate-pulse' style={{ animationDelay: '1s' }} />

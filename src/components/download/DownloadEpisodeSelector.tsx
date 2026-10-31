@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 interface DownloadEpisodeSelectorProps {
   /** 是否显示弹窗 */
@@ -43,6 +43,14 @@ const DownloadEpisodeSelector: React.FC<DownloadEpisodeSelectorProps> = ({
   // 当前分页索引（0 开始）
   const initialPage = Math.floor(currentEpisodeIndex / episodesPerPage);
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
+
+  // 当弹窗打开或视频集数切换时，同步重置选集与分页状态
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedEpisodes(new Set([currentEpisodeIndex]));
+      setCurrentPage(Math.floor(currentEpisodeIndex / episodesPerPage));
+    }
+  }, [isOpen, currentEpisodeIndex, totalEpisodes, episodesPerPage]);
 
   // 是否倒序显示
   const [descending, setDescending] = useState<boolean>(false);

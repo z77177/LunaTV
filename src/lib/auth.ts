@@ -162,15 +162,21 @@ export async function verifyAuthSignature(
 ): Promise<boolean> {
   if (!authInfo.username || !authInfo.signature || !secret) return false;
 
+  const role = authInfo.role || 'user';
+
   // 1. 优先校验新版签名：username:role:timestamp
   if (authInfo.timestamp) {
-    const role = authInfo.role || 'user';
     const payload = `${authInfo.username}:${role}:${authInfo.timestamp}`;
     const isValid = await verifySignature(payload, authInfo.signature, secret);
     if (isValid) return true;
   }
 
-  // 2. 向下兼容老版本签名（仅签署 username）
+  // 2. 向下兼容老版本签名（仅签署 username）：
+  // 🛡️ 严禁用于 admin / owner 高权限角色，防止普通用户利用旧版签名篡改 role 提权
+  if (role !== 'user') {
+    return false;
+  }
+
   return await verifySignature(authInfo.username, authInfo.signature, secret);
 }
 

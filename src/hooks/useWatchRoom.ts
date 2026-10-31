@@ -131,7 +131,7 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     newSocket.on('room:created', (room: Room) => {
       console.log('[WatchRoom] Room created:', room);
       setCurrentRoom(room);
-      setMembers([]);
+      setMembers((prev) => (prev.length > 0 ? prev : []));
       setMessages([]);
     });
 
@@ -390,9 +390,9 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     };
   }, [socket]);
 
-  // 计算当前用户是否为房主
+  // 计算当前用户是否为房主（优先按唯一 socket.id 匹配，防止多名“游客”同名误判为房主）
   const isOwner = currentRoom
-    ? members.find(m => m.name === userName)?.isOwner || false
+    ? members.find((m) => (socket?.id && m.id ? m.id === socket.id : m.name === userName))?.isOwner || false
     : false;
 
   return {

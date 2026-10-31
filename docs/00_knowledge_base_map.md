@@ -63,6 +63,66 @@
   * [`tvbox/diagnose`](file:///d:/Projects/brooklyntv/src/app/api/tvbox/diagnose/route.ts) 私网判断统一平替为标准的 `isSafeIp`；
   * 单元测试用例扩充至 24 项，100% 通过。
 
+### 1.5 第二轮全量深度审计：流缓冲 OOM 消除、Telegram/网关鉴权加固、SSRF IPv6 防御与前端风暴治理 (2026-10-31)
+- **消除全局 Fetch 拦截器全量缓冲 OOM 与敏感凭据泄漏**:
+  * [`fetch-interceptor.ts`](file:///d:/Projects/brooklyntv/src/lib/fetch-interceptor.ts) 与 [`external-traffic-monitor.ts`](file:///d:/Projects/brooklyntv/src/lib/external-traffic-monitor.ts) 移除 `await response.clone().text()` 全量内存缓冲，改用读取 `content-length` 响应头，并增加 `isInterceptorInitialized` 幂等锁与敏感 Query 参数（`api_key`、`token`、`secret` 等）脱敏。
+- **Telegram 魔法链接未授权登录绕过与旧版签名越权提权封堵**:
+  * [`telegram-tokens.ts`](file:///d:/Projects/brooklyntv/src/lib/telegram-tokens.ts)、[`send-magic-link`](file:///d:/Projects/brooklyntv/src/app/api/telegram/send-magic-link/route.ts)、[`webhook`](file:///d:/Projects/brooklyntv/src/app/api/telegram/webhook/route.ts) 与 [`verify`](file:///d:/Projects/brooklyntv/src/app/api/telegram/verify/route.ts) 强制要求 `verified: true` 且核验点击 `/start` 的用户与申请用户名一致，校验封禁状态并签发完整 `username:role:timestamp` 签名；
+  * [`auth.ts`](file:///d:/Projects/brooklyntv/src/lib/auth.ts) 限制旧版仅签名用户名的兜底逻辑仅允许 `role === 'user'`，阻断篡改 `role: 'owner'` 提权。
+- **网关中间件 `/adult/` 绕过、后台鉴权伪造与暴露路由收口**:
+  * [`admin-auth.ts`](file:///d:/Projects/brooklyntv/src/lib/admin-auth.ts) 增加 HMAC 签名与有效期核验；[`src/proxy.ts`](file:///d:/Projects/brooklyntv/src/proxy.ts) 修复 `/adult/` 重写提前返回导致的 `/adult/admin` 绕过与 Rewrite 丢失、收紧 `api/cron` 正则并移除 `api/watch-room/` 豁免；[`watch-room/config`](file:///d:/Projects/brooklyntv/src/app/api/watch-room/config/route.ts) 增加会话校验。
+- **SSRF IPv6 方括号绕过修复、Spider JAR 缓存投毒防御与 7 处盲区补齐**:
+  * [`ssrf.ts`](file:///d:/Projects/brooklyntv/src/lib/ssrf.ts) 剥离 IPv6 方括号 `[::1]` 与末尾点号 `localhost.`；[`spiderJar.ts`](file:///d:/Projects/brooklyntv/src/lib/spiderJar.ts) 增加 SSRF 校验并禁止 `customUrl` 污染全局缓存；补齐 [`proxy/key`](file:///d:/Projects/brooklyntv/src/app/api/proxy/key/route.ts)、[`video-proxy`](file:///d:/Projects/brooklyntv/src/app/api/video-proxy/route.ts) `HEAD`、[`tvbox/health`](file:///d:/Projects/brooklyntv/src/app/api/tvbox/health/route.ts)、[`live/precheck`](file:///d:/Projects/brooklyntv/src/app/api/live/precheck/route.ts)、[`oidc-discover`](file:///d:/Projects/brooklyntv/src/app/api/admin/oidc-discover/route.ts)、[`config_subscription/fetch`](file:///d:/Projects/brooklyntv/src/app/api/admin/config_subscription/fetch/route.ts)、[`ai-recommend/test`](file:///d:/Projects/brooklyntv/src/app/api/admin/ai-recommend/test/route.ts) 的 SSRF 与管理员鉴权。
+- **数据库/缓存层 Bug 与后台 RBAC 漏洞修复**:
+  * 修复 [`redis-base.db.ts`](file:///d:/Projects/brooklyntv/src/lib/redis-base.db.ts) 空对象真值判断、[`upstash.db.ts`](file:///d:/Projects/brooklyntv/src/lib/upstash.db.ts) `mget(...keys)` 展开参数与 `deleteUser` OIDC 映射清理顺序、[`database-cache.ts`](file:///d:/Projects/brooklyntv/src/lib/database-cache.ts) `scanKeys` 替代 `keys`、[`api/cache`](file:///d:/Projects/brooklyntv/src/app/api/cache/route.ts) 与 [`skipconfigs`](file:///d:/Projects/brooklyntv/src/app/api/skipconfigs/route.ts) 越权读写；
+  * 修复 [`admin/user`](file:///d:/Projects/brooklyntv/src/app/api/admin/user/route.ts)、[`user-tvbox-token`](file:///d:/Projects/brooklyntv/src/app/api/admin/user-tvbox-token/route.ts)、[`shortdrama`](file:///d:/Projects/brooklyntv/src/app/api/admin/shortdrama/route.ts)、[`danmu-api`](file:///d:/Projects/brooklyntv/src/app/api/admin/danmu-api/route.ts)、[`source/validate`](file:///d:/Projects/brooklyntv/src/app/api/admin/source/validate/route.ts)、[`tvbox/search`](file:///d:/Projects/brooklyntv/src/app/api/tvbox/search/route.ts) 及 [`start.js`](file:///d:/Projects/brooklyntv/start.js) 稳定性问题。
+- **前端 `<VideoCard>` N+1 大模型风暴消除、XSS 与観影室/直播页修复**:
+  * [`VideoCard.tsx`](file:///d:/Projects/brooklyntv/src/components/VideoCard.tsx) 模块级共享 AI 可用性探测 Promise 并包裹 `startTransition`，[`ai-recommend`](file:///d:/Projects/brooklyntv/src/app/api/ai-recommend/route.ts) 对 `ping` 请求零 Token 快速响应；
+  * 修复 [`layout.tsx`](file:///d:/Projects/brooklyntv/src/app/layout.tsx) JSON 注入与 [`live/page.tsx`](file:///d:/Projects/brooklyntv/src/app/live/page.tsx) 搜索高亮 XSS、[`ImmersivePlayerOverlay.tsx`](file:///d:/Projects/brooklyntv/src/components/ImmersivePlayerOverlay.tsx) 全屏右侧遮挡、[`SkipController.tsx`](file:///d:/Projects/brooklyntv/src/components/SkipController.tsx) SSR 报错与 0 秒片头、[`useWatchRoom.ts`](file:///d:/Projects/brooklyntv/src/hooks/useWatchRoom.ts) / [`useVoiceChat.ts`](file:///d:/Projects/brooklyntv/src/hooks/useVoiceChat.ts) 语音与房主判定、以及 [`shortdrama`](file:///d:/Projects/brooklyntv/src/app/shortdrama/page.tsx) / [`search`](file:///d:/Projects/brooklyntv/src/app/search/page.tsx) / [`douban`](file:///d:/Projects/brooklyntv/src/app/douban/page.tsx) 的 60fps `rAF` 空转循环。
+
+### 1.6 第三轮全量深度审计：配置重置封堵、HMAC 信任会话签名、SSRF 302 重定向校验、离线下载状态机与并发防雪崩 (2026-10-31)
+- **配置自检用户权限重置与信任网络免密签名绕过封堵 (Tier 1 P0)**:
+  * [`src/lib/config.ts`](file:///d:/Projects/brooklyntv/src/lib/config.ts): 在 `configSelfCheck()` 迁移与合并配置时，严格保留原有 V1 用户密码与角色字段（`existingUserConfig?.role`、`existingUserConfig?.banned`、`existingUserConfig?.showAdultContent`），杜绝服务重启或配置加载时用户角色被静默降级或解封；为环境变量 `process.env.USERNAME` 增加非空有效校验。
+  * [`src/lib/admin-auth.ts`](file:///d:/Projects/brooklyntv/src/lib/admin-auth.ts) & [`src/proxy.ts`](file:///d:/Projects/brooklyntv/src/proxy.ts) & [`src/app/api/watch-room/config/route.ts`](file:///d:/Projects/brooklyntv/src/app/api/watch-room/config/route.ts): 彻底移除对客户端 `authInfo.trustedNetwork === true` 的无条件验签放行逻辑，在服务端统一为其生成带真实 HMAC 签名的信任网络会话 Token，杜绝客户端通过伪造 `trustedNetwork: true` 伪造管理员权限。
+- **服务端 SSRF 302 重定向链多跳拦截与 8 处盲区全量接入 (Tier 1 P0)**:
+  * [`src/lib/ssrf.ts`](file:///d:/Projects/brooklyntv/src/lib/ssrf.ts): 实现并导出服务端安全请求包装器 `safeFetch`，强制采用 `redirect: 'manual'` 对每一跳 301/302/303/307/308 重定向目标 URL 进行 `isSafePublicUrl` 校验，彻底阻断利用外网 302 跨协议或跳向 127.0.0.1/私网的 SSRF 绕过；
+  * 全量接入 `safeFetch` 与 `isSafePublicUrl` 校验：[`src/lib/spiderJar.ts`](file:///d:/Projects/brooklyntv/src/lib/spiderJar.ts)、[`src/lib/live.ts`](file:///d:/Projects/brooklyntv/src/lib/live.ts)（包含直播订阅 URL、TVBox 配置解析与 `epgCache` 限制 20 条防内存溢出）、[`live/merged`](file:///d:/Projects/brooklyntv/src/app/api/live/merged/route.ts)、[`live/epg-debug`](file:///d:/Projects/brooklyntv/src/app/api/live/epg-debug/route.ts)、[`admin/live`](file:///d:/Projects/brooklyntv/src/app/api/admin/live/route.ts)、[`admin/danmu-api`](file:///d:/Projects/brooklyntv/src/app/api/admin/danmu-api/route.ts)、[`danmu-external`](file:///d:/Projects/brooklyntv/src/app/api/danmu-external/route.ts)、[`shortdrama/episode-count`](file:///d:/Projects/brooklyntv/src/app/api/shortdrama/episode-count/route.ts)、[`ai-recommend`](file:///d:/Projects/brooklyntv/src/app/api/ai-recommend/route.ts)、[`netdisk/search`](file:///d:/Projects/brooklyntv/src/app/api/netdisk/search/route.ts)、[`proxy-status`](file:///d:/Projects/brooklyntv/src/app/api/proxy-status/route.ts)（对普通用户脱敏底层代理真实 URL）、以及 [`admin/oidc-discover`](file:///d:/Projects/brooklyntv/src/app/api/admin/oidc-discover/route.ts)（严格校验 URL 协议并阻断参数拼接注入）。
+- **离线下载并发任务丢失、闭包陈旧与 AES 解密越界修复 (Tier 1 P0)**:
+  * [`DownloadContext.tsx`](file:///d:/Projects/brooklyntv/src/contexts/DownloadContext.tsx): 通过 `tasksRef` 保持任务状态同步，`startTask(taskId, newTask)` 消除添加新任务时的 React 闭包陈旧导致任务无法启动的严重缺陷；组件卸载时自动 abort 活跃下载请求；存在失败分片时标记为 `pause` 状态防误判完成；
+  * [`m3u8-downloader.ts`](file:///d:/Projects/brooklyntv/src/lib/download/m3u8-downloader.ts): 重试时保留已成功分片；修复大写 `0X` 校验与 16 字节默认全零 IV；AES 解密增加 `Math.max(0, sigBytes)` 防越界负值；
+  * [`stream-saver.ts`](file:///d:/Projects/brooklyntv/src/lib/download/stream-saver.ts): 增加 `typeof window !== 'undefined'` SSR 环境守卫，关闭时安全调用 `URL.revokeObjectURL` 并释放切片内存。
+- **数据库/缓存架构健壮性与管理端脱敏防御 (Tier 2 P1)**:
+  * [`db.client.ts`](file:///d:/Projects/brooklyntv/src/lib/db.client.ts) & [`client-cache.ts`](file:///d:/Projects/brooklyntv/src/lib/client-cache.ts): 在 `clearUserCache` 时同步清理内存缓存；服务端运行环境下动态直连数据库，彻底解决 TMDB 缓存调用报错；
+  * [`cache/route.ts`](file:///d:/Projects/brooklyntv/src/app/api/cache/route.ts): 增加鉴权校验、禁止游客写入并在删除时限定用户身份前缀，限制最长 TTL 为 30 天；
+  * [`redis-base.db.ts`](file:///d:/Projects/brooklyntv/src/lib/redis-base.db.ts) & [`upstash.db.ts`](file:///d:/Projects/brooklyntv/src/lib/upstash.db.ts): 将 `multi()` 流水线创建移入 `withRetry` 重试回调内防重试失效，更新 V2 密码时同步清理残留的 V1 明文 `pwd` 字段；`upstash.db.ts` 实现分批 `pipeline().hgetall()` 提取批量用户信息；
+  * [`db.ts`](file:///d:/Projects/brooklyntv/src/lib/db.ts): 为 `storage` 增加全量防御性空值检查；
+  * [`video-cache.ts`](file:///d:/Projects/brooklyntv/src/lib/video-cache.ts): 异步初始化并等待 Kvrocks 连接，过滤缓存文件路径中的非法字符；
+  * [`admin/config`](file:///d:/Projects/brooklyntv/src/app/api/admin/config/route.ts): 对非站长管理员脱敏屏蔽 `botToken`、`clientSecret`、`apiKey` 等关键凭据；
+  * [`data_migration/import`](file:///d:/Projects/brooklyntv/src/app/api/admin/data_migration/import/route.ts) & [`export`](file:///d:/Projects/brooklyntv/src/app/api/admin/data_migration/export/route.ts): 严格要求 `owner` 超管权限，设置解压最大 100MB 缓冲区防止 ZipBomb，校验有效性后再执行清库；
+  * [`admin/site`](file:///d:/Projects/brooklyntv/src/app/api/admin/site/route.ts) & [`skipconfigs`](file:///d:/Projects/brooklyntv/src/app/api/skipconfigs/route.ts): 强制执行 `ensureAdmin` 与 `getAdminRoleFromRequest`；
+  * [`parse/route.ts`](file:///d:/Projects/brooklyntv/src/app/api/parse/route.ts): 对解析器健康度上报增加 60 秒冷却机制；
+  * [`oidc/login`](file:///d:/Projects/brooklyntv/src/app/api/auth/oidc/login/route.ts)、[`callback`](file:///d:/Projects/brooklyntv/src/app/api/auth/oidc/callback/route.ts)、[`session-info`](file:///d:/Projects/brooklyntv/src/app/api/auth/oidc/session-info/route.ts): 严格校验 Host 与协议，校验 `oidcSession.sig` 防篡改；
+  * [`playrecords/route.ts`](file:///d:/Projects/brooklyntv/src/app/api/playrecords/route.ts): 对游客请求跳过 `db.savePlayRecord`，仅保留轻量级匿名播放统计。
+- **网络流、反爬防死锁与时间解析容错 (Tier 2 P1)**:
+  * [`downstream.ts`](file:///d:/Projects/brooklyntv/src/lib/downstream.ts): 修复 `vod_year` 为数字时 `.match` 崩溃，过滤非法字符并在生成详情链接时使用 `encodeURIComponent`；
+  * [`ai-recommend.client.ts`](file:///d:/Projects/brooklyntv/src/lib/ai-recommend.client.ts): 增加跨 TCP Chunk 分包缓冲，解决大模型流式推荐丢帧丢链接缺陷；
+  * [`douban-anti-crawler.ts`](file:///d:/Projects/brooklyntv/src/lib/douban-anti-crawler.ts): PoW 碰撞循环增加 50 万次硬上限与 15 秒超时防死锁，严格校验重定向域名必须为 `sec.douban.com`；
+  * [`time.ts`](file:///d:/Projects/brooklyntv/src/lib/time.ts): 优先匹配 XMLTV/EPG 紧凑格式，彻底解决带负时区字符串（如 `-0400`）被判定为减号导致解析成 `Invalid Date` 的严重缺陷；`formatTime` 增加对 `NaN` 与负数秒的防御。
+- **前端交互组件内存泄漏、状态错位与水合异常修复 (Tier 3 P2)**:
+  * [`ModernNav.tsx`](file:///d:/Projects/brooklyntv/src/components/ModernNav.tsx) 移除多余的底部占位 div 修复双重上边距；[`VirtualDoubanGrid.tsx`](file:///d:/Projects/brooklyntv/src/components/VirtualDoubanGrid.tsx) 移除无限滚动追加时的误触发回顶；[`Sidebar.tsx`](file:///d:/Projects/brooklyntv/src/components/Sidebar.tsx) 与 [`MobileBottomNav.tsx`](file:///d:/Projects/brooklyntv/src/components/MobileBottomNav.tsx) 修复路由与标签高亮匹配；
+  * [`source-browser/page.tsx`](file:///d:/Projects/brooklyntv/src/app/source-browser/page.tsx): 消除双重触发请求，合并可选年份，增加异步防竞态序列号；
+  * [`release-calendar/page.tsx`](file:///d:/Projects/brooklyntv/src/app/release-calendar/page.tsx): 全局去重并在多视图间复用 `filteredItems`，修复时区本地日期比对；
+  * [`douban/page.tsx`](file:///d:/Projects/brooklyntv/src/app/douban/page.tsx): 切换分类与星期时重置页码，将 `localStorage` 访问移入 `useEffect`；
+  * [`AcgSearch.tsx`](file:///d:/Projects/brooklyntv/src/components/AcgSearch.tsx): 增加请求序号防旧请求覆盖，外部链接严格校验 `https?://`；
+  * [`admin/page.tsx`](file:///d:/Projects/brooklyntv/src/app/admin/page.tsx): 修复 `FluidSearch` 的 `|| true` 短路 Bug，为 `AlertModal` 添加 `clearTimeout` 清理；
+  * [`login/page.tsx`](file:///d:/Projects/brooklyntv/src/app/login/page.tsx)、[`register/page.tsx`](file:///d:/Projects/brooklyntv/src/app/register/page.tsx)、[`oidc-register/page.tsx`](file:///d:/Projects/brooklyntv/src/app/oidc-register/page.tsx): 将 `VersionDisplay` 中的身份提取移入 `useEffect` 彻底解决 SSR 水合不一致，移除污染全局子元素背景的 `<style jsx>`；
+  * [`DownloadEpisodeSelector.tsx`](file:///d:/Projects/brooklyntv/src/components/download/DownloadEpisodeSelector.tsx): 在打开弹窗或切换视频时同步重置已选集数与分页状态；
+  * [`DirectYouTubePlayer.tsx`](file:///d:/Projects/brooklyntv/src/components/DirectYouTubePlayer.tsx) & [`NetDiskSearchResults.tsx`](file:///d:/Projects/brooklyntv/src/components/NetDiskSearchResults.tsx): 对外部超链接实施 `https?://` 白名单过滤；
+  * [`DanmuSettingsPanel.tsx`](file:///d:/Projects/brooklyntv/src/components/play/DanmuSettingsPanel.tsx)、[`GlobalErrorIndicator.tsx`](file:///d:/Projects/brooklyntv/src/components/GlobalErrorIndicator.tsx)、[`SessionTracker.tsx`](file:///d:/Projects/brooklyntv/src/components/SessionTracker.tsx): 为动画 `rAF` 与定时器补充卸载与重置清理函数。
+- **单元测试扩充与全量代码验证**:
+  * 单元测试用例扩充至 34 项（覆盖 302 深度 SSRF 阻断与跳转安全、负时区 XMLTV 时间解析与异常秒数格式化），通过率 100%；
+  * 全站 TypeScript 严格检查与 ESLint 静态代码检查达到 0 错误（0 errors）。
+
 ---
 
 ## 二、 项目文档资产索引

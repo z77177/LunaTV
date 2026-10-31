@@ -77,21 +77,15 @@ export class DatabaseCacheManager {
       
       console.log(`🔍 当前存储类型: ${storageType}`);
       
-      if (storageType === 'upstash') {
-        // Upstash Redis - 尝试不同的调用方式
-        console.log('🔍 使用Upstash Redis方式获取键...');
-        
+      if (typeof storage.scanKeys === 'function') {
+        allCacheKeys = await storage.scanKeys('cache:*');
+      } else if (storageType === 'upstash') {
         try {
           if (typeof storage.withRetry === 'function' && storage.client?.keys) {
-            // 方式1：使用 withRetry
             allCacheKeys = await storage.withRetry(() => storage.client.keys('cache:*'));
           } else if (storage.client?.keys) {
-            // 方式2：直接调用 client.keys
-            console.log('🔍 withRetry不可用，直接调用client.keys');
             allCacheKeys = await storage.client.keys('cache:*');
           } else {
-            console.warn('❌ Upstash存储没有可用的keys方法');
-            console.log('🔍 可用方法:', Object.getOwnPropertyNames(storage));
             return null;
           }
         } catch (error) {
@@ -99,18 +93,12 @@ export class DatabaseCacheManager {
           return null;
         }
       } else if (storageType === 'kvrocks' || storageType === 'redis') {
-        // KVRocks/标准Redis (带重试机制) - 保持不变
-        console.log('🔍 使用KVRocks/标准Redis方式获取键...');
         if (typeof storage.withRetry === 'function' && storage.client?.keys) {
           allCacheKeys = await storage.withRetry(() => storage.client.keys('cache:*'));
         } else {
-          console.warn('❌ KVRocks/Redis存储没有withRetry或client.keys方法');
           return null;
         }
       } else {
-        console.warn('❌ 不支持的存储类型或无法找到合适的keys方法');
-        console.log('🔍 存储类型:', storageType);
-        console.log('🔍 可用方法:', Object.getOwnPropertyNames(storage));
         return null;
       }
       
@@ -128,11 +116,11 @@ export class DatabaseCacheManager {
         try {
           if (typeof storage.withRetry === 'function' && storage.client?.mget) {
             // 方式1：使用 withRetry
-            values = await storage.withRetry(() => storage.client.mget(allCacheKeys)) as any[];
+            values = await storage.withRetry(() => storage.client.mget(...allCacheKeys)) as any[];
           } else if (storage.client?.mget) {
             // 方式2：直接调用 client.mget
             console.log('🔍 withRetry不可用，直接调用client.mget');
-            values = await storage.client.mget(allCacheKeys) as any[];
+            values = await storage.client.mget(...allCacheKeys) as any[];
           } else {
             console.warn('Upstash没有client.mget方法，使用逐个获取');
             // 回退：逐个获取

@@ -3,6 +3,7 @@
 
 import { getConfig } from "@/lib/config";
 import { db } from "@/lib/db";
+import { safeFetch } from "@/lib/ssrf";
 
 const defaultUA = 'AptvPlayer/1.4.10';
 const TVBOX_UA = 'okhttp/4.1.0';
@@ -10,16 +11,17 @@ const TVBOX_UA = 'okhttp/4.1.0';
 // 🚀 优化：超时控制
 const FETCH_TIMEOUT = 10000; // 10秒超时
 const EPG_CACHE_TTL = 24 * 60 * 60 * 1000; // EPG缓存24小时
+const MAX_EPG_BYTES = 50 * 1024 * 1024; // EPG XML 最大 50MB
 
 /**
- * 带超时的 fetch 请求
+ * 带超时与 SSRF 逐跳重定向校验的 fetch 请求
  */
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = FETCH_TIMEOUT): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(url, {
+    const response = await safeFetch(url, {
       ...options,
       signal: controller.signal,
     });
@@ -299,11 +301,11 @@ async function processTvBoxContent(content: string, sourceKey: string): Promise<
       const liveUa = firstLive.ua || TVBOX_UA;
 
       try {
-        const response = await fetch(firstLive.url, {
+        const response = await fetchWithTimeout(firstLive.url, {
           headers: {
             'User-Agent': liveUa
           }
-        });
+        }, FETCH_TIMEOUT);
         if (!response.ok) return { type: 'error', error: 'Fetch failed' };
 
         const liveContent = await response.text();
@@ -514,90 +516,106 @@ async function parseEpg(
     let currentEpgChannelId = '';
 
     // Streaming parser logic - Support both single-line and multi-line XML formats
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    let totalBytesRead = 0;
+    const streamTimeoutId = setTimeout(() => {
+      reader.cancel().catch(() => {});
+    }, FETCH_TIMEOUT * 3);
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-
-        // Handle <channel> tag - support multi-line format
-        if (trimmed.startsWith('<channel')) {
-           const idMatch = trimmed.match(/id="([^"]*)"/);
-           if (idMatch) {
-               currentChannelId = idMatch[1];
-               inChannelTag = true;
-           }
-
-           // Check if display-name is on the same line (single-line format)
-           const nameMatch = trimmed.match(/<display-name[^>]*>(.*?)<\/display-name>/);
-           if (currentChannelId && nameMatch) {
-               epgNameToChannelId.set(normalizeChannelName(nameMatch[1]), currentChannelId);
-           }
-           const iconMatch = trimmed.match(/<icon\s+src="([^"]*)"/);
-           if (currentChannelId && iconMatch) {
-               epgChannelIdToLogo.set(currentChannelId, iconMatch[1]);
-           }
-
-           // Check if it's a self-closing or closing on same line
-           if (trimmed.includes('</channel>')) {
-               inChannelTag = false;
-               currentChannelId = '';
-           }
+        totalBytesRead += value.byteLength;
+        if (totalBytesRead > MAX_EPG_BYTES) {
+          console.warn(`[Live] EPG stream exceeded ${MAX_EPG_BYTES} bytes limit, truncating: ${epgUrl}`);
+          await reader.cancel().catch(() => {});
+          break;
         }
-        // Handle display-name in multi-line format (when inside channel tag)
-        else if (inChannelTag && trimmed.startsWith('<display-name')) {
-           const nameMatch = trimmed.match(/<display-name[^>]*>(.*?)<\/display-name>/);
-           if (currentChannelId && nameMatch) {
-               epgNameToChannelId.set(normalizeChannelName(nameMatch[1]), currentChannelId);
-           }
-        }
-        // Handle icon in multi-line format (when inside channel tag)
-        else if (inChannelTag && trimmed.startsWith('<icon')) {
-           const iconMatch = trimmed.match(/<icon\s+src="([^"]*)"/);
-           if (currentChannelId && iconMatch) {
-               epgChannelIdToLogo.set(currentChannelId, iconMatch[1]);
-           }
-        }
-        // Handle closing </channel> tag
-        else if (trimmed.startsWith('</channel>')) {
-           inChannelTag = false;
-           currentChannelId = '';
-        }
-        // Handle <programme> tag
-        else if (trimmed.startsWith('<programme')) {
-             const channelIdMatch = trimmed.match(/channel="([^"]*)"/);
-             const epgChannelId = channelIdMatch ? channelIdMatch[1] : '';
-             const startMatch = trimmed.match(/start="([^"]*)"/);
-             const endMatch = trimmed.match(/stop="([^"]*)"/);
-             if (epgChannelId && startMatch && endMatch) {
-                 currentProgram = { start: startMatch[1], end: endMatch[1], title: '' };
-                 currentEpgChannelId = epgChannelId;
-                 // Check if title is on the same line (single-line format)
-                 const titleMatch = trimmed.match(/<title(?:\s+[^>]*)?>(.*?)<\/title>/);
-                 if (titleMatch) {
-                     currentProgram.title = titleMatch[1];
-                     if (!epgDataByChannelId[epgChannelId]) epgDataByChannelId[epgChannelId] = [];
-                     epgDataByChannelId[epgChannelId].push({ ...currentProgram });
-                     currentProgram = null;
-                 }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+
+          // Handle <channel> tag - support multi-line format
+          if (trimmed.startsWith('<channel')) {
+             const idMatch = trimmed.match(/id="([^"]*)"/);
+             if (idMatch) {
+                 currentChannelId = idMatch[1];
+                 inChannelTag = true;
              }
-        }
-        // Handle <title> tag in multi-line format (when inside programme tag)
-        else if (trimmed.startsWith('<title') && currentProgram) {
-             const titleMatch = trimmed.match(/<title(?:\s+[^>]*)?>(.*?)<\/title>/);
-             if (titleMatch) {
-                 currentProgram.title = titleMatch[1];
-                 if (!epgDataByChannelId[currentEpgChannelId]) epgDataByChannelId[currentEpgChannelId] = [];
-                 epgDataByChannelId[currentEpgChannelId].push({ ...currentProgram });
-                 currentProgram = null;
+
+             // Check if display-name is on the same line (single-line format)
+             const nameMatch = trimmed.match(/<display-name[^>]*>(.*?)<\/display-name>/);
+             if (currentChannelId && nameMatch) {
+                 epgNameToChannelId.set(normalizeChannelName(nameMatch[1]), currentChannelId);
              }
+             const iconMatch = trimmed.match(/<icon\s+src="([^"]*)"/);
+             if (currentChannelId && iconMatch) {
+                 epgChannelIdToLogo.set(currentChannelId, iconMatch[1]);
+             }
+
+             // Check if it's a self-closing or closing on same line
+             if (trimmed.includes('</channel>')) {
+                 inChannelTag = false;
+                 currentChannelId = '';
+             }
+          }
+          // Handle display-name in multi-line format (when inside channel tag)
+          else if (inChannelTag && trimmed.startsWith('<display-name')) {
+             const nameMatch = trimmed.match(/<display-name[^>]*>(.*?)<\/display-name>/);
+             if (currentChannelId && nameMatch) {
+                 epgNameToChannelId.set(normalizeChannelName(nameMatch[1]), currentChannelId);
+             }
+          }
+          // Handle icon in multi-line format (when inside channel tag)
+          else if (inChannelTag && trimmed.startsWith('<icon')) {
+             const iconMatch = trimmed.match(/<icon\s+src="([^"]*)"/);
+             if (currentChannelId && iconMatch) {
+                 epgChannelIdToLogo.set(currentChannelId, iconMatch[1]);
+             }
+          }
+          // Handle closing </channel> tag
+          else if (trimmed.startsWith('</channel>')) {
+             inChannelTag = false;
+             currentChannelId = '';
+          }
+          // Handle <programme> tag
+          else if (trimmed.startsWith('<programme')) {
+               const channelIdMatch = trimmed.match(/channel="([^"]*)"/);
+               const epgChannelId = channelIdMatch ? channelIdMatch[1] : '';
+               const startMatch = trimmed.match(/start="([^"]*)"/);
+               const endMatch = trimmed.match(/stop="([^"]*)"/);
+               if (epgChannelId && startMatch && endMatch) {
+                   currentProgram = { start: startMatch[1], end: endMatch[1], title: '' };
+                   currentEpgChannelId = epgChannelId;
+                   // Check if title is on the same line (single-line format)
+                   const titleMatch = trimmed.match(/<title(?:\s+[^>]*)?>(.*?)<\/title>/);
+                   if (titleMatch) {
+                       currentProgram.title = titleMatch[1];
+                       if (!epgDataByChannelId[epgChannelId]) epgDataByChannelId[epgChannelId] = [];
+                       epgDataByChannelId[epgChannelId].push({ ...currentProgram });
+                       currentProgram = null;
+                   }
+               }
+          }
+          // Handle <title> tag in multi-line format (when inside programme tag)
+          else if (trimmed.startsWith('<title') && currentProgram) {
+               const titleMatch = trimmed.match(/<title(?:\s+[^>]*)?>(.*?)<\/title>/);
+               if (titleMatch) {
+                   currentProgram.title = titleMatch[1];
+                   if (!epgDataByChannelId[currentEpgChannelId]) epgDataByChannelId[currentEpgChannelId] = [];
+                   epgDataByChannelId[currentEpgChannelId].push({ ...currentProgram });
+                   currentProgram = null;
+               }
+          }
         }
       }
+    } finally {
+      clearTimeout(streamTimeoutId);
+      reader.releaseLock();
     }
   } catch (e) {
       // 🚀 优化：超时或错误时优雅降级
@@ -632,7 +650,11 @@ async function parseEpg(
     }
   }
 
-  // 🚀 优化：保存到缓存
+  // 🚀 优化：保存到缓存（最多保留 20 个 EPG 源缓存，防止内存无界增长）
+  if (epgCache.size >= 20 && !epgCache.has(epgUrl)) {
+    const oldestKey = epgCache.keys().next().value;
+    if (oldestKey) epgCache.delete(oldestKey);
+  }
   epgCache.set(epgUrl, {
     epgs: result,
     logos,

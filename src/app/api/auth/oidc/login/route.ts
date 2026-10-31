@@ -62,10 +62,11 @@ export async function GET(request: NextRequest) {
       // 1. 优先使用环境变量
       origin = process.env.SITE_BASE;
     } else if (request.headers.get('x-forwarded-host')) {
-      // 2. 使用反向代理的域名（生产环境）
-      const proto = request.headers.get('x-forwarded-proto') || 'https';
-      const host = request.headers.get('x-forwarded-host');
-      origin = `${proto}://${host}`;
+      // 2. 使用反向代理的域名（校验 host 防止 HTTP 标头注入）
+      const proto = request.headers.get('x-forwarded-proto') === 'http' ? 'http' : 'https';
+      const host = request.headers.get('x-forwarded-host') || 'localhost';
+      const safeHost = /^[a-zA-Z0-9.-]+(:\d+)?$/.test(host) ? host : 'localhost';
+      origin = `${proto}://${safeHost}`;
     } else {
       // 3. 使用请求的 origin（本地开发）
       origin = request.nextUrl.origin;

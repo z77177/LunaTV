@@ -7,20 +7,34 @@ import { recordExternalTraffic } from './external-traffic-monitor';
 
 // 保存原始的 fetch 函数
 const originalFetch = global.fetch;
+let isInterceptorInitialized = false;
+
+const SENSITIVE_PARAM_REGEX = /([?&](?:api_key|apikey|key|token|secret|password|auth)=)[^&#]*/gi;
+
+function sanitizeUrl(rawUrl: string): string {
+  return rawUrl.replace(SENSITIVE_PARAM_REGEX, '$1***');
+}
 
 /**
  * 初始化全局 fetch 拦截器
  */
 export function initFetchInterceptor() {
-  // 只在服务端拦截
-  if (typeof window !== 'undefined') {
+  // 只在服务端拦截，且防止重复嵌套包装
+  if (typeof window !== 'undefined' || isInterceptorInitialized) {
     return;
   }
+  isInterceptorInitialized = true;
 
   // 替换全局 fetch
   global.fetch = async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
     const startTime = Date.now();
-    const urlString = url.toString();
+    const rawUrlString =
+      typeof url === 'string'
+        ? url
+        : url instanceof URL
+          ? url.toString()
+          : url.url;
+    const safeUrlString = sanitizeUrl(rawUrlString);
 
     // 计算请求大小
     let requestSize = 0;
@@ -36,15 +50,15 @@ export function initFetchInterceptor() {
       // 执行原始 fetch
       const response = await originalFetch(url, options);
 
-      // 克隆响应以读取内容
-      const clonedResponse = response.clone();
-      const responseText = await clonedResponse.text();
-      const responseSize = Buffer.byteLength(responseText, 'utf8');
+      // 仅通过 Content-Length 标头统计大小，严禁调用 response.clone().text() 全量缓冲流式/二进制响应
+      const contentLengthHeader = response.headers.get('content-length');
+      const parsedLength = contentLengthHeader ? parseInt(contentLengthHeader, 10) : 0;
+      const responseSize = Number.isFinite(parsedLength) && parsedLength > 0 ? parsedLength : 0;
 
       // 记录外部流量
       recordExternalTraffic({
         timestamp: startTime,
-        url: urlString,
+        url: safeUrlString,
         method: options?.method || 'GET',
         requestSize,
         responseSize,
@@ -52,14 +66,12 @@ export function initFetchInterceptor() {
         statusCode: response.status,
       });
 
-      console.log(`🌐 [External] ${options?.method || 'GET'} ${urlString} - ${response.status} - ${(responseSize / 1024).toFixed(2)} KB`);
-
       return response;
     } catch (error) {
       // 即使失败也记录
       recordExternalTraffic({
         timestamp: startTime,
-        url: urlString,
+        url: safeUrlString,
         method: options?.method || 'GET',
         requestSize,
         responseSize: 0,

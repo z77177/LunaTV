@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { getTelegramToken, deleteTelegramToken } from '@/lib/telegram-tokens';
 import { db } from '@/lib/db';
+import { getTelegramToken, setTelegramToken } from '@/lib/telegram-tokens';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,14 +10,12 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const update = await request.json();
-    console.log('[Webhook] Received update:', JSON.stringify(update, null, 2));
 
     // 获取管理员配置
     const config = await db.getAdminConfig();
     const telegramConfig = config?.TelegramAuthConfig;
 
     if (!telegramConfig?.enabled || !telegramConfig.botToken) {
-      console.log('[Webhook] Telegram not configured');
       return NextResponse.json({ ok: true });
     }
 
@@ -36,17 +34,10 @@ export async function POST(request: Request) {
       const chatId = update.message.chat.id;
       const token = update.message.text.split(' ')[1]; // 获取 token
 
-      console.log('[Webhook] Received /start with token:', token);
-      console.log('[Webhook] Chat ID:', chatId);
-
       // 从数据库验证 token
-      console.log('[Webhook] Attempting to retrieve token from database...');
       const tokenData = await getTelegramToken(token);
-      console.log('[Webhook] Token data retrieved:', tokenData);
 
       if (!tokenData) {
-        console.log('[Webhook] Token not found or expired');
-        // 发送错误消息
         await sendTelegramMessage(
           telegramConfig.botToken,
           chatId,
@@ -55,8 +46,33 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true });
       }
 
+      // 🛡️ 核验发送 /start 命令的 Telegram 用户名是否与请求一致
+      const senderUsername = (update.message.from?.username || '')
+        .trim()
+        .replace(/^@/, '')
+        .toLowerCase();
+      const expectedUsername = tokenData.telegramUsername
+        .trim()
+        .replace(/^@/, '')
+        .toLowerCase();
+
+      if (!senderUsername || senderUsername !== expectedUsername) {
+        await sendTelegramMessage(
+          telegramConfig.botToken,
+          chatId,
+          '❌ 账号验证失败：当前 Telegram 用户名与网页端申请登录的用户名不一致。'
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // 标记 Token 已通过 Telegram 身份核验
+      await setTelegramToken(token, {
+        ...tokenData,
+        verified: true,
+      });
+
       // 生成登录链接 - 使用保存的域名（token 创建时保存的）
-      const loginUrl = `${tokenData.baseUrl}/api/telegram/verify?token=${token}`;
+      const loginUrl = `${tokenData.baseUrl}/api/telegram/verify?token=${encodeURIComponent(token)}`;
 
       // 发送登录链接
       const message = `🔐 *登录到 ${config?.SiteConfig?.SiteName || '布鲁克林影视'}*\n\n点击下方链接完成登录：\n\n${loginUrl}\n\n⏰ 此链接将在 5 分钟后过期`;
@@ -67,7 +83,6 @@ export async function POST(request: Request) {
         message
       );
 
-      console.log('[Webhook] Login link sent successfully');
       return NextResponse.json({ ok: true });
     }
 

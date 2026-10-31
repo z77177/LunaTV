@@ -81,6 +81,11 @@ export async function GET(request: Request) {
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
 
   try {
+    const safety = await isSafePublicUrl(videoUrl);
+    if (!safety.safe) {
+      return new NextResponse(null, { status: 403 });
+    }
+
     // 动态设置 Referer 和 Origin（根据视频源域名）
     const videoUrlObj = new URL(videoUrl);
     const sourceOrigin = `${videoUrlObj.protocol}//${videoUrlObj.host}`;
@@ -296,6 +301,11 @@ export async function HEAD(request: Request) {
   }
 
   try {
+    const safety = await isSafePublicUrl(videoUrl);
+    if (!safety.safe) {
+      return new NextResponse(null, { status: 403 });
+    }
+
     // 动态设置 Referer 和 Origin（根据视频源域名）
     const videoUrlObj = new URL(videoUrl);
     const sourceOrigin = `${videoUrlObj.protocol}//${videoUrlObj.host}`;

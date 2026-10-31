@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getCacheTime, getConfig } from '@/lib/config';
+import { safeFetch } from '@/lib/ssrf';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // 标记为动态路由
@@ -41,24 +42,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 使用备用API搜索短剧获取集数
+    // 使用备用API搜索短剧获取集数（通过 safeFetch 防御 SSRF 及 302 跳转）
     const searchUrl = `${alternativeApiUrl}/api/v1/drama/d?dramaName=${encodeURIComponent(name)}`;
 
-    const searchResponse = await fetch(searchUrl, {
+    const searchResponse = await safeFetch(searchUrl, {
       headers: {
         'User-Agent': DEFAULT_USER_AGENT,
         'Accept': 'application/json',
       },
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!searchResponse.ok) {
       // 精确搜索失败，尝试模糊搜索
       const fuzzySearchUrl = `${alternativeApiUrl}/api/v1/drama/dl?dramaName=${encodeURIComponent(name)}`;
-      const fuzzyResponse = await fetch(fuzzySearchUrl, {
+      const fuzzyResponse = await safeFetch(fuzzySearchUrl, {
         headers: {
           'User-Agent': DEFAULT_USER_AGENT,
           'Accept': 'application/json',
         },
+        signal: AbortSignal.timeout(15000),
       });
 
       if (!fuzzyResponse.ok) {

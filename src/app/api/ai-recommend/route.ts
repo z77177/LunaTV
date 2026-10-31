@@ -4,6 +4,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig, hasSpecialFeaturePermission } from '@/lib/config';
 import { db } from '@/lib/db';
 import { orchestrateDataSources } from '@/lib/ai-orchestrator';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -105,6 +106,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         error: 'Invalid messages format' 
       }, { status: 400 });
+    }
+
+    // 🚀 轻量级探活快速短路：前端检查 AI 推荐权限与可用性时发送 'ping' 或 '测试'，直接返回成功而不触发 Orchestrator 与上游大模型请求
+    if (
+      messages.length === 1 &&
+      messages[0].role === 'user' &&
+      (messages[0].content?.trim().toLowerCase() === 'ping' || messages[0].content?.trim() === '测试')
+    ) {
+      return NextResponse.json({
+        ok: true,
+        choices: [{ message: { role: 'assistant', content: 'pong' } }],
+      });
     }
 
     // 优化缓存策略 - 只对简单的单轮问答进行短时缓存
@@ -530,10 +543,19 @@ ${context?.title ? `**关于当前影片（${context.title}）：**
       console.log(`使用标准模型 ${requestModel}，max_tokens: ${tokenLimit}，stream: ${stream}`);
     }
 
-    // 调用AI API
-    const openaiResponse = await fetch(aiConfig.apiUrl.endsWith('/chat/completions') 
-      ? aiConfig.apiUrl 
-      : `${aiConfig.apiUrl.replace(/\/$/, '')}/chat/completions`, {
+    // 调用AI API（校验目标 URL 防止 SSRF）
+    const targetAiUrl = aiConfig.apiUrl.endsWith('/chat/completions')
+      ? aiConfig.apiUrl
+      : `${aiConfig.apiUrl.replace(/\/$/, '')}/chat/completions`;
+    const urlSafety = await isSafePublicUrl(targetAiUrl);
+    if (!urlSafety.safe) {
+      return NextResponse.json(
+        { error: `不安全的 AI API 地址: ${urlSafety.reason}` },
+        { status: 400 }
+      );
+    }
+
+    const openaiResponse = await fetch(targetAiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -55,7 +55,7 @@ const DraggableWidget: React.FC<DraggableWidgetProps> = ({ id, defaultPosition =
     >
       <div 
         ref={nodeRef}
-        className="absolute z-[999] shadow-2xl rounded-2xl overflow-hidden transition-opacity duration-300 pointer-events-auto"
+        className="absolute z-[999] shadow-2xl rounded-2xl overflow-hidden transition-opacity duration-300"
         style={{ 
           backgroundColor: `rgba(20, 20, 25, ${opacity})`,
           backdropFilter: 'blur(16px)',
@@ -159,7 +159,7 @@ export const ImmersivePlayerOverlay: React.FC<ImmersivePlayerOverlayProps> = ({
       {/* 我们可以通过 React.Children.map 将子组件包装到 DraggableWidget 中，或者要求调用方自己包装。 */}
       {/* 这里为了方便，我们假设子组件已经自己是一个可拖动的卡片，或者我们在这里包装它 */}
       <DraggableWidget id="episode_selector" defaultPosition={{ x: targetNode.clientWidth - 380, y: 60 }} opacity={opacity} containerRef={containerRef}>
-        <div className="w-[340px] pointer-events-auto">
+        <div className={`w-[340px] ${isVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}>
           {children}
         </div>
       </DraggableWidget>

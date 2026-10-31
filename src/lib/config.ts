@@ -265,16 +265,19 @@ async function getInitConfig(configFile: string, subConfig: {
   } catch (e) {
     console.error('获取用户列表失败:', e);
   }
-  const allUsers = userNames.filter((u) => u !== process.env.USERNAME).map((u) => ({
+  const ownerUsername = process.env.USERNAME;
+  const allUsers = userNames.filter((u) => !ownerUsername || u !== ownerUsername).map((u) => ({
     username: u,
     role: 'user',
     banned: false,
   }));
-  allUsers.unshift({
-    username: process.env.USERNAME!,
-    role: 'owner',
-    banned: false,
-  });
+  if (ownerUsername) {
+    allUsers.unshift({
+      username: ownerUsername,
+      role: 'owner',
+      banned: false,
+    });
+  }
   adminConfig.UserConfig.Users = allUsers as any;
 
   // 从配置文件中补充源信息
@@ -381,13 +384,16 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
       const userInfoV2 = userInfoMap.get(username);
       const existingUserConfig = adminConfig.UserConfig.Users.find(u => u.username === username);
 
-      // 基础属性
-      let createdAt = userInfoV2?.createdAt || existingUserConfig?.createdAt || Date.now();
-      let role = userInfoV2?.role || (username === ownerUser ? 'owner' : 'user');
-      let banned = userInfoV2?.banned || false;
-      let oidcSub = userInfoV2?.oidcSub || existingUserConfig?.oidcSub;
-      let tags = userInfoV2?.tags || existingUserConfig?.tags;
-      let enabledApis = userInfoV2?.enabledApis || existingUserConfig?.enabledApis;
+      // 基础属性（V1 用户回退保留 existingUserConfig 中的角色、封禁状态与成人内容权限）
+      const createdAt = userInfoV2?.createdAt || existingUserConfig?.createdAt || Date.now();
+      const role =
+        userInfoV2?.role ||
+        existingUserConfig?.role ||
+        (ownerUser && username === ownerUser ? 'owner' : 'user');
+      const banned = userInfoV2?.banned ?? existingUserConfig?.banned ?? false;
+      const oidcSub = userInfoV2?.oidcSub || existingUserConfig?.oidcSub;
+      const tags = userInfoV2?.tags || existingUserConfig?.tags;
+      const enabledApis = userInfoV2?.enabledApis || existingUserConfig?.enabledApis;
 
       const newUserConfig: any = {
         username,
@@ -396,6 +402,9 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
         createdAt,
       };
 
+      if (existingUserConfig?.showAdultContent !== undefined) {
+        newUserConfig.showAdultContent = existingUserConfig.showAdultContent;
+      }
       if (oidcSub) newUserConfig.oidcSub = oidcSub;
       if (tags && tags.length > 0) newUserConfig.tags = tags;
       if (enabledApis && enabledApis.length > 0) newUserConfig.enabledApis = enabledApis;
@@ -545,8 +554,12 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     return true;
   });
   // 过滤站长
-  const originOwnerCfg = adminConfig.UserConfig.Users.find((u) => u.username === ownerUser);
-  adminConfig.UserConfig.Users = adminConfig.UserConfig.Users.filter((user) => user.username !== ownerUser);
+  const originOwnerCfg = ownerUser
+    ? adminConfig.UserConfig.Users.find((u) => u.username === ownerUser)
+    : undefined;
+  if (ownerUser) {
+    adminConfig.UserConfig.Users = adminConfig.UserConfig.Users.filter((user) => user.username !== ownerUser);
+  }
   // 其他用户不得拥有 owner 权限
   adminConfig.UserConfig.Users.forEach((user) => {
     if (user.role === 'owner') {
@@ -554,13 +567,16 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     }
   });
   // 重新添加回站长
-  adminConfig.UserConfig.Users.unshift({
-    username: ownerUser!,
-    role: 'owner',
-    banned: false,
-    enabledApis: originOwnerCfg?.enabledApis || undefined,
-    tags: originOwnerCfg?.tags || undefined,
-  });
+  if (ownerUser) {
+    adminConfig.UserConfig.Users.unshift({
+      ...originOwnerCfg,
+      username: ownerUser,
+      role: 'owner',
+      banned: false,
+      enabledApis: originOwnerCfg?.enabledApis || undefined,
+      tags: originOwnerCfg?.tags || undefined,
+    });
+  }
 
   // 采集源去重
   const seenSourceKeys = new Set<string>();
@@ -774,7 +790,7 @@ export async function hasSpecialFeaturePermission(
 ): Promise<boolean> {
   try {
     // 站长默认拥有所有权限
-    if (username === process.env.USERNAME) {
+    if (process.env.USERNAME && username === process.env.USERNAME) {
       return true;
     }
 
@@ -815,6 +831,6 @@ export async function hasSpecialFeaturePermission(
   } catch (error) {
     console.error('权限检查失败:', error);
     // 出错时，如果是站长则返回true，否则返回false
-    return username === process.env.USERNAME;
+    return Boolean(process.env.USERNAME && username === process.env.USERNAME);
   }
 }

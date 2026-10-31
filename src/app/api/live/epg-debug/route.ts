@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config';
 import { parseEpgWithDebug, parseM3U } from '@/lib/live';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -32,10 +33,11 @@ export async function GET(request: NextRequest) {
 
     // 获取 M3U 数据
     const ua = liveInfo.ua || defaultUA;
-    const m3uResponse = await fetch(liveInfo.url, {
+    const m3uResponse = await safeFetch(liveInfo.url, {
       headers: {
         'User-Agent': ua,
       },
+      signal: AbortSignal.timeout(10000),
     });
     const m3uData = await m3uResponse.text();
     const m3uResult = parseM3U(sourceKey, m3uData);
@@ -47,6 +49,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         error: 'EPG URL 未配置',
         solution: '在后台管理页面的直播源配置中填写 EPG URL，或确保 M3U 文件中包含 x-tvg-url 或 url-tvg 参数'
+      }, { status: 400 });
+    }
+
+    const epgSafety = await isSafePublicUrl(epgUrl);
+    if (!epgSafety.safe) {
+      return NextResponse.json({
+        error: `不安全的 EPG URL: ${epgSafety.reason}`,
       }, { status: 400 });
     }
 

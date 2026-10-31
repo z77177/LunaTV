@@ -2,19 +2,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { getAdminRoleFromRequest } from '@/lib/admin-auth';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
     // 权限检查：仅站长可以拉取配置订阅
-    const authInfo = getAuthInfoFromCookie(request);
-    if (!authInfo || !authInfo.username) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (authInfo.username !== process.env.USERNAME) {
+    const role = await getAdminRoleFromRequest(request);
+    if (role !== 'owner') {
       return NextResponse.json(
         { error: '权限不足，只有站长可以拉取配置订阅' },
         { status: 401 }
@@ -23,8 +20,16 @@ export async function POST(request: NextRequest) {
 
     const { url } = await request.json();
 
-    if (!url) {
+    if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: '缺少URL参数' }, { status: 400 });
+    }
+
+    const safety = await isSafePublicUrl(url);
+    if (!safety.safe) {
+      return NextResponse.json(
+        { error: `不安全的订阅地址: ${safety.reason}` },
+        { status: 400 }
+      );
     }
 
     // 直接 fetch URL 获取配置内容

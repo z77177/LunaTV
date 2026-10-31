@@ -70,17 +70,21 @@ export function SessionTracker() {
     // 页面加载时检查
     checkSessionResume();
 
+    let timeoutId: NodeJS.Timeout | undefined;
+
     // 页面可见性变化时也检查（用户切换回来时）
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         // 页面变为可见时，延迟一点再检查
-        setTimeout(checkSessionResume, 1000);
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(checkSessionResume, 1000);
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [pathname]); // 路径变化时重新检测

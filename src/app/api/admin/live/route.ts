@@ -2,28 +2,23 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { ensureAdmin } from '@/lib/admin-auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 import { deleteCachedLiveChannels, refreshLiveChannels } from '@/lib/live';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
-    // 权限检查
-    const authInfo = getAuthInfoFromCookie(request);
-    const username = authInfo?.username;
-    const config = await getConfig();
-    if (username !== process.env.USERNAME) {
-      // 管理员
-      const user = config.UserConfig.Users.find(
-        (u) => u.username === username
-      );
-      if (!user || user.role !== 'admin' || user.banned) {
-        return NextResponse.json({ error: '权限不足' }, { status: 401 });
-      }
+    // 权限检查（带 HMAC 签名校验）
+    try {
+      await ensureAdmin(request);
+    } catch {
+      return NextResponse.json({ error: '权限不足' }, { status: 401 });
     }
+    const config = await getConfig();
 
     const body = await request.json();
     const { action, key, name, url, ua, epg, isTvBox } = body;
@@ -31,6 +26,22 @@ export async function POST(request: NextRequest) {
 
     if (!config) {
       return NextResponse.json({ error: '配置不存在' }, { status: 404 });
+    }
+
+    if (action === 'add' || action === 'edit') {
+      if (!url || typeof url !== 'string') {
+        return NextResponse.json({ error: '直播源 URL 不能为空' }, { status: 400 });
+      }
+      const urlSafety = await isSafePublicUrl(url);
+      if (!urlSafety.safe) {
+        return NextResponse.json({ error: `不安全的直播源 URL: ${urlSafety.reason}` }, { status: 400 });
+      }
+      if (epg && typeof epg === 'string') {
+        const epgSafety = await isSafePublicUrl(epg);
+        if (!epgSafety.safe) {
+          return NextResponse.json({ error: `不安全的 EPG URL: ${epgSafety.reason}` }, { status: 400 });
+        }
+      }
     }
 
     // 确保 LiveConfig 存在

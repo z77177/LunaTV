@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+import { ensureAdmin } from '@/lib/admin-auth';
+import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
+
+const FORBIDDEN_CACHE_PREFIXES = ['telegram_token:', 'oidc_'];
+
+function isForbiddenCacheKey(keyOrPrefix: string): boolean {
+  const normalized = keyOrPrefix.trim().toLowerCase();
+  return FORBIDDEN_CACHE_PREFIXES.some((p) => normalized.startsWith(p));
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,58 +20,99 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Key is required' }, { status: 400 });
     }
 
-    console.log(`🔍 API缓存请求: ${key}`);
+    if (isForbiddenCacheKey(key)) {
+      return NextResponse.json({ error: 'Forbidden cache key' }, { status: 403 });
+    }
 
-    // 现在可以安全地调用 db.getCache，Upstash 的 getCache 已经修复
+    // 私有会话历史缓存归属检查
+    if (key.startsWith('ai-recommend-history-')) {
+      const authInfo = getAuthInfoFromCookie(request);
+      if (!authInfo || !authInfo.username) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      const targetUser = key.replace('ai-recommend-history-', '');
+      if (
+        authInfo.username !== targetUser &&
+        authInfo.role !== 'owner' &&
+        authInfo.role !== 'admin'
+      ) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
     const data = await db.getCache(key);
-    console.log(`✅ API缓存结果: ${data ? '命中' : '未命中'}`);
     return NextResponse.json({ data });
   } catch (error) {
     console.error(`❌ API缓存错误 (key: ${request.nextUrl.searchParams.get('key')}):`, error);
-    console.error('错误详情:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined
-    });
-    return NextResponse.json({ data: null }, { status: 200 }); // 确保返回 200 而不是 500
+    return NextResponse.json({ data: null }, { status: 200 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const authInfo = getAuthInfoFromCookie(request);
+    if (!authInfo || !authInfo.username) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 禁止访客写入共享缓存
+    if (authInfo.isGuest) {
+      return NextResponse.json({ error: 'Guest cannot write cache' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { key, data, expireSeconds } = body;
 
-    if (!key) {
+    if (!key || typeof key !== 'string') {
       return NextResponse.json({ error: 'Key is required' }, { status: 400 });
     }
 
-    console.log(`📝 API缓存写入: ${key}, 过期时间: ${expireSeconds}秒`);
+    if (isForbiddenCacheKey(key)) {
+      return NextResponse.json({ error: 'Forbidden cache key' }, { status: 403 });
+    }
 
-    await db.setCache(key, data, expireSeconds);
+    // 私有历史缓存写入归属校验
+    if (key.startsWith('ai-recommend-history-')) {
+      const targetUser = key.replace('ai-recommend-history-', '');
+      if (
+        authInfo.username !== targetUser &&
+        authInfo.role !== 'owner' &&
+        authInfo.role !== 'admin'
+      ) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
 
-    console.log(`✅ API缓存写入成功: ${key}`);
+    const ttl = Math.min(Math.max(Number(expireSeconds) || 3600, 1), 86400 * 30);
+    await db.setCache(key, data, ttl);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('❌ API缓存写入失败:', error);
-    console.error('错误详情:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined
-    });
     return NextResponse.json({ error: 'Failed to set cache' }, { status: 500 });
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
+    try {
+      await ensureAdmin(request);
+    } catch {
+      return NextResponse.json({ error: 'Forbidden: Admin role required' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const key = searchParams.get('key');
     const prefix = searchParams.get('prefix');
 
     if (prefix) {
+      if (isForbiddenCacheKey(prefix)) {
+        return NextResponse.json({ error: 'Forbidden cache prefix' }, { status: 403 });
+      }
       await db.clearExpiredCache(prefix);
     } else if (key) {
+      if (isForbiddenCacheKey(key)) {
+        return NextResponse.json({ error: 'Forbidden cache key' }, { status: 403 });
+      }
       await db.deleteCache(key);
     } else {
       return NextResponse.json({ error: 'Key or prefix is required' }, { status: 400 });

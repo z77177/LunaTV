@@ -133,9 +133,10 @@ export default function SkipController({
           console.error('解析保存的位置失败:', e);
         }
       }
+      return { x: 16, y: window.innerHeight - 200 };
     }
-    // 默认左下角
-    return { x: 16, y: window.innerHeight - 200 };
+    // 默认左下角（SSR 安全兜底）
+    return { x: 16, y: 500 };
   });
   const dragStartPos = useRef({ x: 0, y: 0 });
   const panelRef = useRef<HTMLDivElement>(null);
@@ -550,7 +551,14 @@ export default function SkipController({
 
   // 保存新的跳过片段（单个片段模式）
   const handleSaveSegment = useCallback(async () => {
-    if (!newSegment.start || !newSegment.end || !newSegment.type) {
+    if (
+      newSegment.start === undefined ||
+      newSegment.start === null ||
+      Number.isNaN(Number(newSegment.start)) ||
+      newSegment.start < 0 ||
+      !newSegment.end ||
+      !newSegment.type
+    ) {
       alert('请填写完整的跳过片段信息');
       return;
     }

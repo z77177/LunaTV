@@ -31,6 +31,7 @@ export default function ShortDramaPage() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const observer = useRef<IntersectionObserver | undefined>(undefined);
+  const searchSeqRef = useRef(0);
   const lastDramaElementRef = useCallback(
     (node: HTMLDivElement) => {
       if (loading) return;
@@ -44,6 +45,14 @@ export default function ShortDramaPage() {
     },
     [loading, hasMore]
   );
+
+  useEffect(() => {
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, []);
 
   // 获取分类列表
   useEffect(() => {
@@ -61,39 +70,22 @@ export default function ShortDramaPage() {
     fetchCategories();
   }, []);
 
-  // 监听滚动位置，控制返回顶部按钮显示
+  // 监听滚动位置，控制返回顶部按钮显示（移除常驻 60fps requestAnimationFrame 死循环，统一使用被动滚动事件）
   useEffect(() => {
-    // 获取滚动位置的函数 - 专门针对 body 滚动
     const getScrollTop = () => {
-      return document.body.scrollTop || 0;
+      return document.body.scrollTop || document.documentElement.scrollTop || window.scrollY || 0;
     };
 
-    // 使用 requestAnimationFrame 持续检测滚动位置
-    let isRunning = false;
-    const checkScrollPosition = () => {
-      if (!isRunning) return;
-
-      const scrollTop = getScrollTop();
-      const shouldShow = scrollTop > 300;
-      setShowBackToTop(shouldShow);
-
-      requestAnimationFrame(checkScrollPosition);
-    };
-
-    // 启动持续检测
-    isRunning = true;
-    checkScrollPosition();
-
-    // 监听 body 元素的滚动事件
     const handleScroll = () => {
-      const scrollTop = getScrollTop();
-      setShowBackToTop(scrollTop > 300);
+      setShowBackToTop(getScrollTop() > 300);
     };
 
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     document.body.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      isRunning = false;
+      window.removeEventListener('scroll', handleScroll);
       document.body.removeEventListener('scroll', handleScroll);
     };
   }, []);
@@ -144,18 +136,28 @@ export default function ShortDramaPage() {
     }
   }, [page, loadDramas]);
 
-  // 处理搜索
+  // 处理搜索（增加请求序号守卫，防止快速输入或清空时旧请求乱序覆盖新结果）
   const handleSearch = useCallback(
     async (query: string) => {
+      const seq = ++searchSeqRef.current;
       setSearchQuery(query);
       setIsSearchMode(!!query);
       setPage(1);
       setHasMore(true);
 
       if (query) {
-        const result = await searchShortDramas(query, 1, 20);
-        setDramas(result.list);
-        setHasMore(result.hasMore);
+        setLoading(true);
+        try {
+          const result = await searchShortDramas(query, 1, 20);
+          if (seq === searchSeqRef.current) {
+            setDramas(result.list);
+            setHasMore(result.hasMore);
+          }
+        } finally {
+          if (seq === searchSeqRef.current) {
+            setLoading(false);
+          }
+        }
       }
       // 如果清空搜索，不需要手动调用 loadDramas
       // useEffect 会自动监听 isSearchMode 的变化并重新加载

@@ -22,10 +22,11 @@ export async function GET(request: NextRequest) {
       origin = process.env.SITE_BASE;
       console.log('[OIDC Callback] Using SITE_BASE:', origin);
     } else if (request.headers.get('x-forwarded-host')) {
-      const proto = request.headers.get('x-forwarded-proto') || 'https';
-      const host = request.headers.get('x-forwarded-host');
-      origin = `${proto}://${host}`;
-      console.log('[OIDC Callback] Using x-forwarded-host:', origin);
+      const proto = request.headers.get('x-forwarded-proto') === 'http' ? 'http' : 'https';
+      const host = request.headers.get('x-forwarded-host') || 'localhost';
+      const safeHost = /^[a-zA-Z0-9.-]+(:\d+)?$/.test(host) ? host : 'localhost';
+      origin = `${proto}://${safeHost}`;
+      console.log('[OIDC Callback] Using safe x-forwarded-host:', origin);
     } else {
       origin = request.nextUrl.origin;
       origin = origin.replace('://0.0.0.0:', '://localhost:');

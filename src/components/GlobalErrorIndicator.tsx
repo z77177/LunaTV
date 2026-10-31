@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface ErrorInfo {
   id: string;
@@ -12,6 +12,8 @@ export function GlobalErrorIndicator() {
   const [currentError, setCurrentError] = useState<ErrorInfo | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
+
+  const replaceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // 监听自定义错误事件
@@ -28,8 +30,10 @@ export function GlobalErrorIndicator() {
         setCurrentError(newError);
         setIsReplacing(true);
 
-        // 动画完成后恢复正常
-        setTimeout(() => {
+        if (replaceTimerRef.current) {
+          clearTimeout(replaceTimerRef.current);
+        }
+        replaceTimerRef.current = setTimeout(() => {
           setIsReplacing(false);
         }, 200);
       } else {
@@ -45,10 +49,16 @@ export function GlobalErrorIndicator() {
 
     return () => {
       window.removeEventListener('globalError', handleError as EventListener);
+      if (replaceTimerRef.current) {
+        clearTimeout(replaceTimerRef.current);
+      }
     };
   }, [currentError]);
 
   const handleClose = () => {
+    if (replaceTimerRef.current) {
+      clearTimeout(replaceTimerRef.current);
+    }
     setIsVisible(false);
     setCurrentError(null);
     setIsReplacing(false);

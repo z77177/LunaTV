@@ -2,20 +2,25 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+import { ensureAdmin } from '@/lib/admin-auth';
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getConfig, getAvailableApiSites } from '@/lib/config';
+import { getAvailableApiSites } from '@/lib/config';
 import { API_CONFIG } from '@/lib/config';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   console.log('[Source Validate] ========== API Route Called ==========');
 
-  const authInfo = getAuthInfoFromCookie(request);
-  if (!authInfo || !authInfo.username) {
-    console.log('[Source Validate] Unauthorized - no auth info');
+  try {
+    await ensureAdmin(request);
+  } catch {
+    console.log('[Source Validate] Unauthorized');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  const authInfo = getAuthInfoFromCookie(request);
+  const adminUsername = authInfo?.username;
 
   const { searchParams } = new URL(request.url);
   const searchKeyword = searchParams.get('q');
@@ -34,11 +39,11 @@ export async function GET(request: NextRequest) {
   }
 
   // 🔑 使用 getAvailableApiSites() 来获取源列表，自动应用代理配置
-  const apiSites = await getAvailableApiSites(authInfo.username);
+  const apiSites = await getAvailableApiSites(adminUsername);
 
   // 🔍 调试：记录前3个源的API地址，检查是否应用了代理
   console.log('[Source Validate] ========== Validation Start ==========');
-  console.log(`[Source Validate] Username: ${authInfo.username}`);
+  console.log(`[Source Validate] Username: ${adminUsername}`);
   console.log(`[Source Validate] Total sources: ${apiSites.length}`);
   console.log('[Source Validate] Sample API URLs:', apiSites.slice(0, 3).map(s => ({
     name: s.name,
@@ -96,6 +101,10 @@ export async function GET(request: NextRequest) {
           const timeoutId = setTimeout(() => controller.abort(), 10000);
 
           try {
+            const safety = await isSafePublicUrl(searchUrl);
+            if (!safety.safe) {
+              throw new Error(`Forbidden URL: ${safety.reason}`);
+            }
             const response = await fetch(searchUrl, {
               headers: API_CONFIG.search.headers,
               signal: controller.signal,

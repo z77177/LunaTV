@@ -3,8 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getAdminRoleFromRequest } from '@/lib/admin-auth';
 import { AdminConfig, AdminConfigResult } from '@/lib/admin.types';
-import { getAuthInfoFromCookie } from '@/lib/auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
@@ -21,31 +21,39 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const authInfo = getAuthInfoFromCookie(request);
-  if (!authInfo || !authInfo.username) {
+  const role = await getAdminRoleFromRequest(request);
+  if (!role) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const username = authInfo.username;
 
   try {
     const config = await getConfig();
-    const result: AdminConfigResult = {
-      Role: 'owner',
-      Config: config,
-    };
-    if (username === process.env.USERNAME) {
-      result.Role = 'owner';
-    } else {
-      const user = config.UserConfig.Users.find((u) => u.username === username);
-      if (user && user.role === 'admin' && !user.banned) {
-        result.Role = 'admin';
-      } else {
-        return NextResponse.json(
-          { error: '你是管理员吗你就访问？' },
-          { status: 401 }
-        );
+    let safeConfig = config;
+
+    // 非站长管理员脱敏站长专属敏感凭证
+    if (role !== 'owner') {
+      safeConfig = JSON.parse(JSON.stringify(config));
+      if (safeConfig.TelegramAuthConfig?.botToken) {
+        safeConfig.TelegramAuthConfig.botToken = '******';
+      }
+      if (safeConfig.OIDCAuthConfig?.clientSecret) {
+        safeConfig.OIDCAuthConfig.clientSecret = '******';
+      }
+      if (Array.isArray(safeConfig.OIDCProviders)) {
+        safeConfig.OIDCProviders = safeConfig.OIDCProviders.map((p: any) => ({
+          ...p,
+          clientSecret: p.clientSecret ? '******' : '',
+        }));
+      }
+      if (safeConfig.AIRecommendConfig?.apiKey) {
+        safeConfig.AIRecommendConfig.apiKey = '******';
       }
     }
+
+    const result: AdminConfigResult = {
+      Role: role,
+      Config: safeConfig,
+    };
 
     return NextResponse.json(result, {
       headers: {
@@ -75,14 +83,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const authInfo = getAuthInfoFromCookie(request);
-  if (!authInfo || !authInfo.username) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const username = authInfo.username;
-
-  // 只有站长可以修改配置
-  if (username !== process.env.USERNAME) {
+  const role = await getAdminRoleFromRequest(request);
+  if (role !== 'owner') {
     return NextResponse.json(
       { error: '只有站长可以修改配置' },
       { status: 403 }

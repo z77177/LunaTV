@@ -11,15 +11,19 @@ declare global {
   }
 }
 
-// 检查是否为安全上下文（HTTPS）
-const isSecureContext = window.isSecureContext || location.protocol === 'https:'
-const isFirefox = 'MozAppearance' in document.documentElement.style
+// 检查是否为浏览器与安全上下文（HTTPS），防止 SSR 导入时访问 window 崩溃
+const isBrowser = typeof window !== 'undefined'
+const isSecureContext = isBrowser && (window.isSecureContext || location.protocol === 'https:')
+const isFirefox = isBrowser && 'MozAppearance' in document.documentElement.style
 
 // 下载策略：iframe 或 navigate
 const downloadStrategy = isSecureContext || isFirefox ? 'iframe' : 'navigate'
 
 // 是否使用 Blob 降级方案
-let useBlobFallback = /constructor/i.test(window.HTMLElement.toString()) || !!window.safari
+let useBlobFallback =
+  !isBrowser ||
+  /constructor/i.test(window.HTMLElement.toString()) ||
+  !!window.safari
 
 try {
   new Response(new ReadableStream())
@@ -136,6 +140,7 @@ function makePopup(src: string): Transporter {
  * 创建写入流
  */
 export function createWriteStream(filename: string) {
+  const rawFilename = filename
   let bytesWritten = 0
   let downloadUrl: string | null = null
   let mc: MessageChannel | null = null
@@ -265,10 +270,15 @@ export function createWriteStream(filename: string) {
     close() {
       if (useBlobFallback) {
         const blob = new Blob(chunks as BlobPart[], { type: 'application/octet-stream; charset=utf-8' })
+        chunks = []
         const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = filename
+        const objectUrl = URL.createObjectURL(blob)
+        link.href = objectUrl
+        link.download = rawFilename
         link.click()
+        setTimeout(() => {
+          URL.revokeObjectURL(objectUrl)
+        }, 10000)
       } else {
         mc?.port1.postMessage('end')
       }

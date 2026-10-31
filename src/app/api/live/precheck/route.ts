@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -132,6 +133,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const decodedUrl = decodeURIComponent(url);
+    const safety = await isSafePublicUrl(decodedUrl);
+    if (!safety.safe) {
+      return NextResponse.json(
+        { success: false, error: safety.reason || 'Forbidden URL' },
+        { status: 403 }
+      );
+    }
     let detectedType = detectTypeFromUrl(decodedUrl);
 
     const startTime = Date.now();

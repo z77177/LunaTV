@@ -88,12 +88,98 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
     pauseController: PauseResumeController;
     abortController: AbortController;
   }>>(new Map());
+  const tasksRef = useRef<M3U8DownloadTask[]>([]);
+  tasksRef.current = tasks;
+
+  // 组件卸载时中止所有正在进行的下载任务
+  useEffect(() => {
+    const controllersMap = taskControllers.current;
+    return () => {
+      controllersMap.forEach(({ abortController }) => {
+        abortController.abort();
+      });
+      controllersMap.clear();
+    };
+  }, []);
 
   const updateTask = useCallback((taskId: string, updates: Partial<M3U8DownloadTask>) => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId ? { ...task, ...updates } : task
-    ));
+    setTasks(prev => {
+      const next = prev.map(task =>
+        task.id === taskId ? { ...task, ...updates } : task
+      );
+      tasksRef.current = next;
+      return next;
+    });
   }, []);
+
+  const startTask = useCallback(
+    async (taskId: string, taskOverride?: M3U8DownloadTask) => {
+      const task = taskOverride ?? tasksRef.current.find(t => t.id === taskId);
+      if (!task) return;
+
+      // 创建新的控制器
+      const pauseController = new PauseResumeController();
+      const abortController = new AbortController();
+      taskControllers.current.set(taskId, { pauseController, abortController });
+
+      // 更新状态为下载中
+      updateTask(taskId, { status: 'downloading' });
+
+      try {
+        // 开始下载（使用用户设置）
+        await downloadM3U8Video(
+          task,
+          (progress: DownloadProgress) => {
+            // 更新进度并同步底层可变字段
+            updateTask(taskId, {
+              finishNum: progress.current,
+              downloadIndex: progress.current,
+              errorNum: task.errorNum,
+              finishList: [...task.finishList],
+              downloadedSegments: task.downloadedSegments,
+            });
+          },
+          abortController.signal,
+          pauseController,
+          settings.concurrency, // 使用设置的并发数
+          settings.streamMode, // 使用设置的下载模式
+          settings.maxRetries // 使用设置的重试次数
+        );
+
+        // 若存在失败分片，保持暂停状态等待用户重试，避免误标为已完成
+        if (task.errorNum > 0) {
+          updateTask(taskId, {
+            status: 'pause',
+            errorNum: task.errorNum,
+            finishList: [...task.finishList],
+            downloadedSegments: task.downloadedSegments,
+          });
+          console.warn('下载存在失败分片，等待重试:', task.title);
+        } else {
+          // 下载完成
+          updateTask(taskId, {
+            status: 'done',
+            finishList: [...task.finishList],
+            downloadedSegments: task.downloadedSegments,
+          });
+          console.log('下载完成:', task.title);
+        }
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // 用户取消
+          console.log('下载已取消:', task.title);
+        } else {
+          // 下载错误
+          console.error('下载错误:', task.title, error);
+          updateTask(taskId, { status: 'error' });
+        }
+      } finally {
+        // 清理控制器
+        taskControllers.current.delete(taskId);
+      }
+    },
+    [updateTask, settings]
+  );
 
   const createTask = useCallback(
     async (url: string, title: string, type: 'TS' | 'MP4' = 'TS') => {
@@ -111,70 +197,23 @@ export function DownloadProvider({ children }: { children: React.ReactNode }) {
           status: 'ready',
         };
 
-        setTasks(prev => [...prev, newTask]);
-
-        // 自动开始下载
-        await startTask(taskId);
+        setTasks(prev => {
+          const next = [...prev, newTask];
+          tasksRef.current = next;
+          return next;
+        });
 
         // 显示下载面板
         setShowDownloadPanel(true);
+
+        // 自动开始下载（直接传入 newTask 避免闭包未更新导致找不到任务）
+        await startTask(taskId, newTask);
       } catch (error) {
         console.error('创建下载任务失败:', error);
         throw error;
       }
     },
-    []
-  );
-
-  const startTask = useCallback(
-    async (taskId: string) => {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) return;
-
-      // 创建新的控制器
-      const pauseController = new PauseResumeController();
-      const abortController = new AbortController();
-      taskControllers.current.set(taskId, { pauseController, abortController });
-
-      // 更新状态为下载中
-      updateTask(taskId, { status: 'downloading' });
-
-      try {
-        // 开始下载（使用用户设置）
-        await downloadM3U8Video(
-          task,
-          (progress: DownloadProgress) => {
-            // 更新进度
-            updateTask(taskId, {
-              finishNum: progress.current,
-              downloadIndex: progress.current,
-            });
-          },
-          abortController.signal,
-          pauseController,
-          settings.concurrency, // 使用设置的并发数
-          settings.streamMode, // 使用设置的下载模式
-          settings.maxRetries // 使用设置的重试次数
-        );
-
-        // 下载完成
-        updateTask(taskId, { status: 'done' });
-        console.log('下载完成:', task.title);
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          // 用户取消
-          console.log('下载已取消:', task.title);
-        } else {
-          // 下载错误
-          console.error('下载错误:', task.title, error);
-          updateTask(taskId, { status: 'error' });
-        }
-      } finally {
-        // 清理控制器
-        taskControllers.current.delete(taskId);
-      }
-    },
-    [tasks, updateTask, settings]
+    [startTask]
   );
 
   const pauseTask = useCallback(

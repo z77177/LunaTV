@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getAdminRoleFromRequest } from '@/lib/admin-auth';
 import { getConfig } from '@/lib/config';
+import { safeFetch } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -13,11 +15,13 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   try {
     const config = await getConfig();
+    const adminRole = await getAdminRoleFromRequest(request);
+    const isAdmin = Boolean(adminRole);
 
     const tvboxProxyConfig = config.TVBoxProxyConfig;
     const videoProxyConfig = config.VideoProxyConfig;
 
-    // 测试 Worker 连通性
+    // 测试 Worker 连通性（带 SSRF 防御）
     const testWorkerHealth = async (proxyUrl: string): Promise<{
       healthy: boolean;
       responseTime?: number;
@@ -25,7 +29,7 @@ export async function GET(request: NextRequest) {
     }> => {
       try {
         const startTime = Date.now();
-        const response = await fetch(`${proxyUrl}/health`, {
+        const response = await safeFetch(`${proxyUrl.replace(/\/$/, '')}/health`, {
           method: 'GET',
           signal: AbortSignal.timeout(5000), // 5秒超时
         });
@@ -58,12 +62,12 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
       tvboxProxy: {
         enabled: tvboxProxyConfig?.enabled ?? false,
-        proxyUrl: tvboxProxyConfig?.proxyUrl || null,
+        proxyUrl: isAdmin ? (tvboxProxyConfig?.proxyUrl || null) : null,
         health: tvboxHealth,
       },
       videoProxy: {
         enabled: videoProxyConfig?.enabled ?? false,
-        proxyUrl: videoProxyConfig?.proxyUrl || null,
+        proxyUrl: isAdmin ? (videoProxyConfig?.proxyUrl || null) : null,
         health: videoHealth,
       },
     }, {

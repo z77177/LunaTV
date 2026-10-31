@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
+import { getAuthInfoFromCookie, verifyAuthSignature } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
@@ -20,11 +21,10 @@ export async function GET() {
       });
     }
 
-    // 返回配置（不包含 authKey，authKey 由客户端从环境变量获取或管理员配置）
+    // 返回配置（不包含 authKey，authKey 由客户端单独经过鉴权请求）
     return NextResponse.json({
       enabled: true,
       serverUrl: watchRoomConfig.serverUrl,
-      // authKey 敏感信息，需要时由客户端单独请求
     });
   } catch (error) {
     console.error('获取观影室配置失败:', error);
@@ -36,14 +36,37 @@ export async function GET() {
 }
 
 /**
- * 获取观影室完整配置（包含 authKey，需要管理员权限）
- * GET /api/watch-room/config?full=true
- *
- * 这个端点需要在实际使用时添加权限验证
+ * 获取观影室完整配置（包含 authKey，需通过会话或访客校验）
+ * POST /api/watch-room/config
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const authInfo = getAuthInfoFromCookie(request);
+    if (!authInfo) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
     const config = await getConfig();
+
+    if (storageType === 'localstorage') {
+      const allowGuest = config.UserConfig?.AllowGuestMode !== false;
+      const isGuestValid = allowGuest && authInfo.isGuest === true && authInfo.username === '访客';
+      if (!isGuestValid && (!authInfo.password || authInfo.password !== process.env.PASSWORD)) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    } else if (authInfo.isGuest === true && authInfo.username === '访客') {
+      const allowGuest = config.UserConfig?.AllowGuestMode !== false;
+      if (!allowGuest) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    } else {
+      const isValid = await verifyAuthSignature(authInfo, process.env.PASSWORD || '');
+      if (!isValid) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
     const watchRoomConfig = config.WatchRoomConfig;
 
     if (!watchRoomConfig) {

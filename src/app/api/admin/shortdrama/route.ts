@@ -3,8 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/lib/db';
+import { ensureAdmin } from '@/lib/admin-auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
-import { getAuthInfoFromCookie } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -19,10 +19,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const authInfo = getAuthInfoFromCookie(request);
-
-  // 检查用户权限
-  if (!authInfo || !authInfo.username) {
+  try {
+    await ensureAdmin(request);
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -85,10 +84,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const authInfo = getAuthInfoFromCookie(request);
-
-  // 检查用户权限
-  if (!authInfo || !authInfo.username) {
+  try {
+    await ensureAdmin(request);
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

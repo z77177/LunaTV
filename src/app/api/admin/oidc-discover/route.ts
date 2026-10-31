@@ -1,7 +1,8 @@
 /* eslint-disable no-console */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { ensureAdmin } from '@/lib/admin-auth';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -17,8 +18,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const authInfo = getAuthInfoFromCookie(request);
-    if (!authInfo || !authInfo.username) {
+    try {
+      await ensureAdmin(request);
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -31,13 +33,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 构建well-known URL
-    const wellKnownUrl = `${issuerUrl}/.well-known/openid-configuration`;
+    // 构建well-known URL（防止 ?query 或 #hash 路径拼接注入）
+    let parsedIssuer: URL;
+    try {
+      parsedIssuer = new URL(issuerUrl);
+    } catch {
+      return NextResponse.json(
+        { error: '无效的 Issuer URL 格式' },
+        { status: 400 }
+      );
+    }
+    if (parsedIssuer.search || parsedIssuer.hash) {
+      return NextResponse.json(
+        { error: 'Issuer URL 不允许包含查询参数或锚点' },
+        { status: 400 }
+      );
+    }
+    parsedIssuer.pathname = `${parsedIssuer.pathname.replace(/\/$/, '')}/.well-known/openid-configuration`;
+    const wellKnownUrl = parsedIssuer.toString();
+
+    const safety = await isSafePublicUrl(wellKnownUrl);
+    if (!safety.safe) {
+      return NextResponse.json(
+        { error: `不安全的 Issuer URL: ${safety.reason}` },
+        { status: 400 }
+      );
+    }
 
     console.log('正在获取OIDC配置:', wellKnownUrl);
 
-    // 通过后端获取配置，避免CORS问题
-    const response = await fetch(wellKnownUrl, {
+    // 通过后端获取配置，避免CORS问题（带重定向 SSRF 防护）
+    const response = await safeFetch(wellKnownUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',

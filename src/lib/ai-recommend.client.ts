@@ -102,44 +102,54 @@ export async function sendAIRecommendMessage(
     let videoLinks: any[] = [];
 
     try {
+      let buffer = '';
+      const processSseLine = (line: string) => {
+        if (!line.startsWith('data: ')) return;
+        const data = line.slice(6);
+        if (data === '[DONE]') return;
+
+        try {
+          const json = JSON.parse(data);
+
+          // 处理文本流
+          if (json.text) {
+            fullContent += json.text;
+            onStream(json.text); // 回调每个chunk
+          }
+
+          // 🎥 处理YouTube视频数据
+          if (json.type === 'youtube_data' && json.youtubeVideos) {
+            youtubeVideos = json.youtubeVideos;
+            console.log('✅ 收到YouTube视频数据:', youtubeVideos.length, '个视频');
+          }
+
+          // 🔗 处理视频链接数据
+          if (json.type === 'video_links' && json.videoLinks) {
+            videoLinks = json.videoLinks;
+            console.log('✅ 收到视频链接数据:', videoLinks.length, '个链接');
+          }
+        } catch (e) {
+          console.error('解析SSE数据失败:', e);
+        }
+      };
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          if (buffer.trim()) {
+            processSseLine(buffer.trim());
+          }
+          break;
+        }
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-
-            if (data === '[DONE]') {
-              break;
-            }
-
-            try {
-              const json = JSON.parse(data);
-
-              // 处理文本流
-              if (json.text) {
-                fullContent += json.text;
-                onStream(json.text); // 回调每个chunk
-              }
-
-              // 🎥 处理YouTube视频数据
-              if (json.type === 'youtube_data' && json.youtubeVideos) {
-                youtubeVideos = json.youtubeVideos;
-                console.log('✅ 收到YouTube视频数据:', youtubeVideos.length, '个视频');
-              }
-
-              // 🔗 处理视频链接数据
-              if (json.type === 'video_links' && json.videoLinks) {
-                videoLinks = json.videoLinks;
-                console.log('✅ 收到视频链接数据:', videoLinks.length, '个链接');
-              }
-            } catch (e) {
-              console.error('解析SSE数据失败:', e);
-            }
+          const trimmed = line.trim();
+          if (trimmed) {
+            processSseLine(trimmed);
           }
         }
       }

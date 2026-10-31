@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'add': {
-        if (targetEntry) {
+        if (targetEntry || targetUsername === process.env.USERNAME) {
           return NextResponse.json({ error: '用户已存在' }, { status: 400 });
         }
         if (!targetPassword) {
@@ -316,7 +316,7 @@ export async function POST(request: NextRequest) {
 
         // 权限检查：站长可配置所有人的采集源，管理员可配置普通用户和自己的采集源
         if (
-          isTargetAdmin &&
+          (isTargetAdmin || targetEntry?.role === 'owner' || targetUsername === process.env.USERNAME) &&
           operatorRole !== 'owner' &&
           username !== targetUsername
         ) {
@@ -420,7 +420,7 @@ export async function POST(request: NextRequest) {
 
         // 权限检查：站长可配置所有人的用户组，管理员可配置普通用户和自己的用户组
         if (
-          isTargetAdmin &&
+          (isTargetAdmin || targetEntry?.role === 'owner' || targetUsername === process.env.USERNAME) &&
           operatorRole !== 'owner' &&
           username !== targetUsername
         ) {
@@ -448,8 +448,11 @@ export async function POST(request: NextRequest) {
         if (operatorRole !== 'owner') {
           for (const targetUsername of usernames) {
             const targetUser = adminConfig.UserConfig.Users.find(u => u.username === targetUsername);
-            if (targetUser && targetUser.role === 'admin' && targetUsername !== username) {
-              return NextResponse.json({ error: `管理员无法操作其他管理员 ${targetUsername}` }, { status: 400 });
+            if (
+              targetUsername === process.env.USERNAME ||
+              (targetUser && (targetUser.role === 'admin' || targetUser.role === 'owner') && targetUsername !== username)
+            ) {
+              return NextResponse.json({ error: `管理员无法操作站长或其他管理员 ${targetUsername}` }, { status: 400 });
             }
           }
         }

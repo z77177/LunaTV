@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSafePublicUrl } from '@/lib/ssrf';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
@@ -20,6 +21,14 @@ export async function GET(req: NextRequest) {
 
     // 清理URL（移除MD5部分）
     const cleanUrl = jarUrl.split(';')[0];
+
+    const safety = await isSafePublicUrl(cleanUrl);
+    if (!safety.safe) {
+      return NextResponse.json(
+        { error: safety.reason || 'Forbidden URL', accessible: false },
+        { status: 403 }
+      );
+    }
 
     // 检查jar文件可用性
     const controller = new AbortController();

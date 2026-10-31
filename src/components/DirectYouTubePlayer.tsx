@@ -152,8 +152,9 @@ const DirectYouTubePlayer = ({ className = '' }: DirectYouTubePlayerProps) => {
 
   // 在新窗口打开原始YouTube链接
   const handleOpenOriginal = () => {
-    if (url.trim()) {
-      window.open(url.trim(), '_blank');
+    const trimmed = url.trim();
+    if (trimmed && /^https?:\/\//i.test(trimmed)) {
+      window.open(trimmed, '_blank', 'noopener,noreferrer');
     }
   };
 

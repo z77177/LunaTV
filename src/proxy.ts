@@ -3,7 +3,12 @@
 import ipaddr from 'ipaddr.js';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { AUTH_COOKIE_MAX_AGE_SECONDS, getAuthInfoFromCookie, verifyAuthSignature } from '@/lib/auth';
+import {
+  AUTH_COOKIE_MAX_AGE_SECONDS,
+  generateSignature,
+  getAuthInfoFromCookie,
+  verifyAuthSignature,
+} from '@/lib/auth';
 
 // 游客模式配置缓存（从 API 获取）
 let guestModeCache: boolean | null = null;
@@ -181,9 +186,9 @@ function isIPTrusted(clientIP: string, trustedIPs: string[]): boolean {
   return trustedIPs.some(trustedIP => isIPInCIDR(clientIP, trustedIP.trim()));
 }
 
-// 生成信任网络的自动登录 cookie
-function generateTrustedAuthCookie(): NextResponse {
-  const response = NextResponse.next();
+// 生成信任网络的自动登录 cookie（附带完整 HMAC 签名，防止绕过中间件的路由被伪造）
+async function generateTrustedAuthCookie(baseResponse?: NextResponse): Promise<NextResponse> {
+  const response = baseResponse || NextResponse.next();
 
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
   const username = process.env.USERNAME || 'admin';
@@ -201,14 +206,19 @@ function generateTrustedAuthCookie(): NextResponse {
       maxAge: AUTH_COOKIE_MAX_AGE_SECONDS, // 长期保持
     });
   } else {
-    // 数据库模式：生成签名 cookie（需要异步，这里简化处理）
-    // 在信任网络模式下，我们设置一个特殊的信任标记
+    const timestamp = Date.now();
+    const role = 'owner' as const;
+    const signature = process.env.PASSWORD
+      ? await generateSignature(`${username}:${role}:${timestamp}`, process.env.PASSWORD)
+      : '';
+    // 在信任网络模式下，我们设置一个带 HMAC 签名的信任标记
     const authInfo = {
       username,
       trustedNetwork: true,
-      timestamp: Date.now(),
-      loginTime: Date.now(),
-      role: 'owner',
+      timestamp,
+      loginTime: timestamp,
+      role,
+      signature,
     };
     response.cookies.set('user_auth', JSON.stringify(authInfo), {
       httpOnly: false,
@@ -222,8 +232,8 @@ function generateTrustedAuthCookie(): NextResponse {
 }
 
 // 生成访客自动登录 cookie
-function generateGuestAuthCookie(): NextResponse {
-  const response = NextResponse.next();
+function generateGuestAuthCookie(baseResponse?: NextResponse): NextResponse {
+  const response = baseResponse || NextResponse.next();
   const guestAuth = {
     username: '访客',
     role: 'user',
@@ -242,14 +252,15 @@ function generateGuestAuthCookie(): NextResponse {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 处理 /adult/ 路径前缀，重写为实际 API 路径
+  // 处理 /adult/ 路径前缀，重写为实际路径
   if (pathname.startsWith('/adult/')) {
-    // 移除 /adult 前缀
-    const newPathname = pathname.replace(/^\/adult/, '');
+    // 移除 /adult 前缀并规范化多余前导斜杠（防止 /adult//api/admin 绕过）
+    const stripped = pathname.replace(/^\/adult/, '');
+    const newPathname = stripped.replace(/^\/+/, '/') || '/';
 
     // 创建新的 URL
     const url = request.nextUrl.clone();
-    url.pathname = newPathname || '/';
+    url.pathname = newPathname;
 
     // 添加 adult=1 参数（如果还没有）
     if (!url.searchParams.has('adult')) {
@@ -262,14 +273,13 @@ export async function proxy(request: NextRequest) {
     // 设置响应头标识成人内容模式
     response.headers.set('X-Content-Mode', 'adult');
 
-    // 继续执行认证检查（对于 API 路径）
-    if (newPathname.startsWith('/api')) {
-      // 将重写后的请求传递给认证逻辑
-      const modifiedRequest = new NextRequest(url, request);
-      return handleAuthentication(modifiedRequest, newPathname, response);
+    // 🛡️ 对所有非公开白名单路径统一执行认证与 RBAC 检查（包含 /adult/admin 及 /adult/api/*）
+    if (shouldSkipAuth(newPathname)) {
+      return response;
     }
 
-    return response;
+    const modifiedRequest = new NextRequest(url, request);
+    return handleAuthentication(modifiedRequest, newPathname, response);
   }
 
   // 跳过不需要认证的路径
@@ -298,12 +308,20 @@ async function handleAuthentication(
 
       // 检查是否已经有有效的认证 cookie
       const existingAuth = getAuthInfoFromCookie(request);
-      if (existingAuth && (existingAuth.password || existingAuth.signature)) {
-        return response || NextResponse.next();
+      if (existingAuth) {
+        if (existingAuth.password && existingAuth.password === process.env.PASSWORD) {
+          return response || NextResponse.next();
+        }
+        if (existingAuth.signature && process.env.PASSWORD) {
+          const isValid = await verifyAuthSignature(existingAuth, process.env.PASSWORD);
+          if (isValid) {
+            return response || NextResponse.next();
+          }
+        }
       }
 
-      // 没有认证 cookie，自动生成并设置
-      return generateTrustedAuthCookie();
+      // 没有有效认证 cookie，自动生成并设置
+      return await generateTrustedAuthCookie(response);
     }
   }
 
@@ -325,14 +343,19 @@ async function handleAuthentication(
     // 🔥 如果允许游客模式，自动生成一个访客会话（排除管理后台路径）
     if (allowGuest && !pathname.startsWith('/admin') && !pathname.startsWith('/api/admin')) {
       console.log(`[Middleware] Auto-generating guest session for path: ${pathname}`);
-      return generateGuestAuthCookie();
+      return generateGuestAuthCookie(response);
     }
     return handleAuthFailure(request, pathname);
   }
 
-  // 🚀 访客模式 (如果已禁用游客模式，则拒绝访问并要求登录)
+  // 🚀 访客模式 (如果已禁用游客模式或企图篡改角色，则拒绝访问并要求登录)
   if (authInfo.isGuest === true && authInfo.username === '访客') {
-    if (!allowGuest || pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    if (
+      !allowGuest ||
+      (authInfo.role && authInfo.role !== 'user') ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/api/admin')
+    ) {
       return handleAuthFailure(request, pathname);
     }
     return response || NextResponse.next();
@@ -424,9 +447,17 @@ function shouldSkipAuth(pathname: string): boolean {
     '/icons/',
     '/logo.png',
     '/screenshot.png',
+    '/login',
+    '/register',
+    '/oidc-register',
+    '/warning',
+    '/api/login',
+    '/api/register',
+    '/api/logout',
     '/api/telegram/webhook',
     '/api/telegram/send-magic-link',
     '/api/telegram/verify',
+    '/api/auth/oidc/',
   ];
 
   return skipPaths.some((path) => pathname.startsWith(path));
@@ -435,6 +466,6 @@ function shouldSkipAuth(pathname: string): boolean {
 // 配置 proxy 匹配规则
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|login|register|oidc-register|warning|api/login|api/register|api/logout|api/cron|api/server-config|api/tvbox/|api/tvbox$|api/tvbox\\?|api/live/merged|api/parse|api/bing-wallpaper|api/proxy/|api/telegram/webhook|api/telegram/send-magic-link|api/telegram/verify|api/auth/oidc/|api/watch-room/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login|register|oidc-register|warning|api/login|api/register|api/logout|api/cron$|api/cron\\?|api/server-config|api/tvbox/|api/tvbox$|api/tvbox\\?|api/live/merged|api/parse|api/bing-wallpaper|api/proxy/|api/telegram/webhook|api/telegram/send-magic-link|api/telegram/verify|api/auth/oidc/).*)',
   ],
 };

@@ -1,14 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { ensureAdmin } from '@/lib/admin-auth';
 import { cleanupExpiredCache, getCacheStats } from '@/lib/video-cache';
 
 export const runtime = 'nodejs';
 
 /**
- * 清理过期的视频缓存
- * 可以通过 cron job 定期调用
+ * 清理过期的视频缓存（仅管理员或 Cron 可调用）
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    try {
+      await ensureAdmin(request);
+    } catch {
+      return NextResponse.json(
+        { code: 403, message: 'Forbidden: Admin role required' },
+        { status: 403 }
+      );
+    }
+
     const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE;
 
     if (storageType !== 'kvrocks') {

@@ -280,7 +280,10 @@ export async function POST(request: NextRequest) {
       original_episodes: originalEpisodes,
     } as PlayRecord;
 
-    await db.savePlayRecord(username, source, id, finalRecord);
+    // 仅已登录用户保存播放历史到数据库（访客播放记录仅保存在浏览器 localStorage，防止匿名刷屏堆积无主数据）
+    if (!isGuest) {
+      await db.savePlayRecord(username, source, id, finalRecord);
+    }
 
     // 更新播放统计（如果存储类型支持）
     if (db.isStatsSupported()) {

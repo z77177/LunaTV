@@ -142,8 +142,9 @@ export async function GET(request: NextRequest) {
         // 开头匹配
         if (title.startsWith(queryLower)) return true;
 
-        // 包含匹配（但必须是完整词）
-        const regex = new RegExp(`\\b${queryLower}\\b`, 'i');
+        // 包含匹配（但必须是完整词，对用户输入做正则转义防止 ReDoS 或语法错误）
+        const escapedQuery = queryLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\b${escapedQuery}\\b`, 'i');
         if (regex.test(title)) return true;
 
         // 编辑距离小于3（非常相似）

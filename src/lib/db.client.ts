@@ -414,11 +414,15 @@ class HybridCacheManager {
    */
   clearUserCache(username?: string): void {
     const targetUsername = username || this.getCurrentUsername();
-    if (!targetUsername) return;
+    if (!targetUsername) {
+      memoryCache.clear();
+      return;
+    }
 
     try {
       const cacheKey = this.getUserCacheKey(targetUsername);
       localStorage.removeItem(cacheKey);
+      memoryCache.delete(cacheKey);
     } catch (error) {
       console.warn('清除用户缓存失败:', error);
     }

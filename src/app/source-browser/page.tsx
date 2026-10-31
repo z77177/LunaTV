@@ -170,8 +170,11 @@ export default function SourceBrowserPage() {
         const years = Array.from(
           new Set(list.map((i) => (i.year || '').trim()).filter(Boolean))
         );
-        years.sort((a, b) => (parseInt(b) || 0) - (parseInt(a) || 0));
-        setAvailableYears(years);
+        setAvailableYears((prev) => {
+          const combined = append ? [...prev, ...years] : years;
+          const unique = Array.from(new Set(combined.map((y) => (y || '').trim()).filter(Boolean)));
+          return unique.sort((a, b) => (parseInt(b) || 0) - (parseInt(a) || 0));
+        });
       } catch (e: unknown) {
         setItemsError(e instanceof Error ? e.message : '获取列表失败');
         if (!append) setItems([]);
@@ -226,8 +229,11 @@ export default function SourceBrowserPage() {
         const years = Array.from(
           new Set(list.map((i) => (i.year || '').trim()).filter(Boolean))
         );
-        years.sort((a, b) => (parseInt(b) || 0) - (parseInt(a) || 0));
-        setAvailableYears(years);
+        setAvailableYears((prev) => {
+          const combined = append ? [...prev, ...years] : years;
+          const unique = Array.from(new Set(combined.map((y) => (y || '').trim()).filter(Boolean)));
+          return unique.sort((a, b) => (parseInt(b) || 0) - (parseInt(a) || 0));
+        });
       } catch (e: unknown) {
         setItemsError(e instanceof Error ? e.message : '搜索失败');
         if (!append) setItems([]);
@@ -243,14 +249,14 @@ export default function SourceBrowserPage() {
   );
 
   useEffect(() => {
+    // 仅在切换数据源或切换到搜索模式时触发初次搜索，避免每次输入字符时与 input 500ms 防抖定时器重复发包
     if (activeSourceKey && mode === 'search' && query.trim()) {
-      // 重置列表并加载第一页
       setItems([]);
       setPage(1);
       setPageCount(1);
       fetchSearch(activeSourceKey, query.trim(), 1, false);
     }
-  }, [activeSourceKey, mode, query, fetchSearch]);
+  }, [activeSourceKey, mode, fetchSearch]);
 
   // IntersectionObserver 处理自动翻页（含简单节流）
   useEffect(() => {
@@ -451,7 +457,10 @@ export default function SourceBrowserPage() {
     }
   };
 
+  const previewSeqRef = useRef(0);
+
   const openPreview = async (item: Item) => {
+    const seq = ++previewSeqRef.current;
     setPreviewItem(item);
     setPreviewOpen(true);
     setPreviewLoading(true);
@@ -468,6 +477,7 @@ export default function SourceBrowserPage() {
         )}&id=${encodeURIComponent(item.id)}`
       );
       if (!res.ok) throw new Error('获取详情失败');
+      if (previewSeqRef.current !== seq) return;
       const data = (await res.json()) as GlobalSearchResult;
       setPreviewData(data);
       // 处理 douban_id：优先 /api/detail，其次通过 /api/search/one 指定站点精确匹配推断

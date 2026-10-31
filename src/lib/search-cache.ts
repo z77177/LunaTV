@@ -63,9 +63,9 @@ export function setCachedSearchPage(
   // 惰性启动自动清理
   ensureAutoCleanupStarted();
 
-  // 惰性清理：每次写入时检查是否需要清理
+  // 惰性清理：每次写入时检查是否超期或容量超限
   const now = Date.now();
-  if (now - lastCleanupTime > CACHE_CLEANUP_INTERVAL_MS) {
+  if (now - lastCleanupTime > CACHE_CLEANUP_INTERVAL_MS || SEARCH_CACHE.size >= MAX_CACHE_SIZE) {
     performCacheCleanup();
   }
 

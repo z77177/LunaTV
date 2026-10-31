@@ -462,40 +462,23 @@ function SearchPageClient() {
       }
     );
 
-    // 获取滚动位置的函数 - 专门针对 body 滚动
+    // 获取滚动位置的函数（移除常驻 60fps requestAnimationFrame 死循环，仅使用被动滚动事件）
     const getScrollTop = () => {
-      return document.body.scrollTop || 0;
+      return document.body.scrollTop || document.documentElement.scrollTop || window.scrollY || 0;
     };
 
-    // 使用 requestAnimationFrame 持续检测滚动位置
-    let isRunning = false;
-    const checkScrollPosition = () => {
-      if (!isRunning) return;
-
-      const scrollTop = getScrollTop();
-      const shouldShow = scrollTop > 300;
-      setShowBackToTop(shouldShow);
-
-      requestAnimationFrame(checkScrollPosition);
-    };
-
-    // 启动持续检测
-    isRunning = true;
-    checkScrollPosition();
-
-    // 监听 body 元素的滚动事件
     const handleScroll = () => {
       const scrollTop = getScrollTop();
       setShowBackToTop(scrollTop > 300);
     };
 
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     document.body.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       unsubscribe();
-      isRunning = false; // 停止 requestAnimationFrame 循环
-
-      // 移除 body 滚动事件监听器
+      window.removeEventListener('scroll', handleScroll);
       document.body.removeEventListener('scroll', handleScroll);
     };
   }, []);

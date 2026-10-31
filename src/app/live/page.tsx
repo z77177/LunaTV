@@ -436,11 +436,9 @@ function LivePageClient() {
       if (sourceKey && sourceKey !== currentSourceRef.current?.key) {
         const targetSource = liveSources.find(s => s.key === sourceKey);
         if (targetSource) {
-          // 这里需要先加载直播源的频道列表，然后再切换频道
-          // 由于 loadChannels 是异步的，我们需要等待加载完成后再切换频道
           setCurrentSource(targetSource);
-          // 保存需要切换的频道ID，在频道列表加载完成后自动切换
           setPendingSyncChannelId(channelId);
+          fetchChannels(targetSource);
           return;
         }
       }
@@ -763,6 +761,18 @@ function LivePageClient() {
     }
   };
 
+  // 生成安全的 CORS 缓存键（兼容非 ASCII 字符并基于完整 URL 哈希避免同源前缀碰撞）
+  const getCorsCacheKey = (rawUrl: string): string => {
+    let hash1 = 5381;
+    let hash2 = 52711;
+    for (let i = 0; i < rawUrl.length; i++) {
+      const char = rawUrl.charCodeAt(i);
+      hash1 = (hash1 * 33) ^ char;
+      hash2 = (hash2 * 33) ^ char;
+    }
+    return `cors-cache-${(hash1 >>> 0).toString(36)}-${(hash2 >>> 0).toString(36)}`;
+  };
+
   // 🚀 CORS 智能检测函数（带持久化和统计）
   const testCORSSupport = async (url: string): Promise<boolean> => {
     // 0. 🔐 Mixed Content 检测：HTTPS页面不能加载HTTP资源
@@ -782,7 +792,7 @@ function LivePageClient() {
     // 2. 检查 localStorage 持久化缓存（7天有效期）
     if (typeof window !== 'undefined') {
       try {
-        const cacheKey = `cors-cache-${btoa(url).substring(0, 50)}`;
+        const cacheKey = getCorsCacheKey(url);
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
           const { supports, timestamp } = JSON.parse(cached);
@@ -824,7 +834,7 @@ function LivePageClient() {
       // 5. 保存到 localStorage（7天有效）
       if (typeof window !== 'undefined') {
         try {
-          const cacheKey = `cors-cache-${btoa(url).substring(0, 50)}`;
+          const cacheKey = getCorsCacheKey(url);
           localStorage.setItem(cacheKey, JSON.stringify({
             supports,
             timestamp: Date.now(),
@@ -862,7 +872,7 @@ function LivePageClient() {
       // 保存到 localStorage
       if (typeof window !== 'undefined') {
         try {
-          const cacheKey = `cors-cache-${btoa(url).substring(0, 50)}`;
+          const cacheKey = getCorsCacheKey(url);
           localStorage.setItem(cacheKey, JSON.stringify({
             supports,
             timestamp: Date.now(),
@@ -2057,9 +2067,12 @@ function LivePageClient() {
 
   // 播放器初始化
   useEffect(() => {
+    let cancelled = false;
+
     // 异步初始化播放器，避免SSR问题
     const initPlayer = async () => {
       if (
+        cancelled ||
         !Hls ||
         !videoUrl ||
         !artRef.current ||
@@ -2097,6 +2110,9 @@ function LivePageClient() {
         console.log(`🎬 播放模式: ⚡ FLV直连 | URL: ${targetUrl.substring(0, 100)}...`);
       } else {
         const useDirect = await shouldUseDirectPlayback(videoUrl);
+        if (cancelled || !artRef.current) {
+          return;
+        }
         targetUrl = useDirect
           ? videoUrl  // 直连模式：直接使用原始 URL
           : `/api/proxy/m3u8?url=${encodeURIComponent(videoUrl)}&moontv-source=${currentSourceRef.current?.key || ''}`;  // 代理模式
@@ -2254,6 +2270,8 @@ function LivePageClient() {
         // 动态导入 flv.js（避免 SSR 问题）
         const flvjs = await import('flv.js');
 
+        if (cancelled) return;
+
         // 将导入的模块设置为全局变量供 initPlayer 使用
         (window as any).DynamicArtplayer = Artplayer;
         (window as any).DynamicFlvjs = flvjs.default;
@@ -2266,6 +2284,10 @@ function LivePageClient() {
     };
 
     loadAndInit();
+
+    return () => {
+      cancelled = true;
+    };
   }, [Hls, videoUrl, currentChannel, loading, directPlaybackEnabled]);
 
   // 清理播放器资源
@@ -2956,11 +2978,26 @@ function LivePageClient() {
                                         <div className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${expandedChannels.has(channel.id) ? '' : 'line-clamp-1 md:line-clamp-2'}`}>
                                           <span
                                             dangerouslySetInnerHTML={{
-                                              __html: searchQuery ?
-                                                channel.name.replace(
-                                                  new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+                                              __html: (() => {
+                                                const escapedName = channel.name
+                                                  .replace(/&/g, '&amp;')
+                                                  .replace(/</g, '&lt;')
+                                                  .replace(/>/g, '&gt;')
+                                                  .replace(/"/g, '&quot;')
+                                                  .replace(/'/g, '&#39;');
+                                                if (!searchQuery) return escapedName;
+                                                const escapedQuery = searchQuery
+                                                  .replace(/&/g, '&amp;')
+                                                  .replace(/</g, '&lt;')
+                                                  .replace(/>/g, '&gt;')
+                                                  .replace(/"/g, '&quot;')
+                                                  .replace(/'/g, '&#39;')
+                                                  .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                                return escapedName.replace(
+                                                  new RegExp(`(${escapedQuery})`, 'gi'),
                                                   '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
-                                                ) : channel.name
+                                                );
+                                              })()
                                             }}
                                           />
                                         </div>
@@ -3134,10 +3171,25 @@ function LivePageClient() {
                                   {sourceSearchQuery ? (
                                     <span
                                       dangerouslySetInnerHTML={{
-                                        __html: source.name.replace(
-                                          new RegExp(`(${sourceSearchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
-                                          '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
-                                        )
+                                        __html: (() => {
+                                          const escapedName = source.name
+                                            .replace(/&/g, '&amp;')
+                                            .replace(/</g, '&lt;')
+                                            .replace(/>/g, '&gt;')
+                                            .replace(/"/g, '&quot;')
+                                            .replace(/'/g, '&#39;');
+                                          const escapedQuery = sourceSearchQuery
+                                            .replace(/&/g, '&amp;')
+                                            .replace(/</g, '&lt;')
+                                            .replace(/>/g, '&gt;')
+                                            .replace(/"/g, '&quot;')
+                                            .replace(/'/g, '&#39;')
+                                            .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                          return escapedName.replace(
+                                            new RegExp(`(${escapedQuery})`, 'gi'),
+                                            '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
+                                          );
+                                        })()
                                       }}
                                     />
                                   ) : (

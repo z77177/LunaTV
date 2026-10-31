@@ -5,6 +5,7 @@
  * - Provides minimal fallback jar when all fail (still 200 to avoid TVBox unreachable)
  */
 import crypto from 'crypto';
+import { isSafePublicUrl, safeFetch } from './ssrf';
 import { DEFAULT_USER_AGENT } from './user-agent';
 
 // 高可用 JAR 候选源配置 - 针对不同网络环境优化
@@ -98,6 +99,12 @@ async function fetchRemote(
   timeoutMs = 12000,
   retryCount = 2
 ): Promise<Buffer | null> {
+  const safety = await isSafePublicUrl(url);
+  if (!safety.safe) {
+    console.warn(`[SpiderJar] 拦截不安全的 JAR URL (${url}): ${safety.reason}`);
+    return null;
+  }
+
   let _lastError: string | null = null;
 
   for (let attempt = 0; attempt <= retryCount; attempt++) {
@@ -125,26 +132,36 @@ async function fetchRemote(
         headers['User-Agent'] = DEFAULT_USER_AGENT;
       }
 
-      // 直接获取文件内容，跳过 HEAD 检查（减少请求次数）
-      const resp = await fetch(url, {
-        method: 'GET',
-        signal: controller.signal,
-        headers,
-        redirect: 'follow', // 允许重定向
-      });
-      clearTimeout(id);
+      // 直接获取文件内容，使用 safeFetch 逐跳校验重定向并保持超时控制覆盖整个响应体读取过程
+      let ab: ArrayBuffer;
+      try {
+        const resp = await safeFetch(url, {
+          method: 'GET',
+          signal: controller.signal,
+          headers,
+        });
 
-      if (!resp.ok) {
-        _lastError = `HTTP ${resp.status}: ${resp.statusText}`;
-        if (resp.status === 404 || resp.status === 403) {
-          break; // 这些错误不需要重试
+        if (!resp.ok) {
+          _lastError = `HTTP ${resp.status}: ${resp.statusText}`;
+          if (resp.status === 404 || resp.status === 403) {
+            break; // 这些错误不需要重试
+          }
+          continue; // 其他错误尝试重试
         }
-        continue; // 其他错误尝试重试
+
+        const contentLength = Number(resp.headers.get('content-length') || 0);
+        if (contentLength > 50 * 1024 * 1024) {
+          _lastError = `File too large: ${contentLength} bytes`;
+          break;
+        }
+
+        ab = await resp.arrayBuffer();
+      } finally {
+        clearTimeout(id);
       }
 
-      const ab = await resp.arrayBuffer();
-      if (ab.byteLength < 1000) {
-        _lastError = `File too small: ${ab.byteLength} bytes`;
+      if (ab.byteLength < 1000 || ab.byteLength > 50 * 1024 * 1024) {
+        _lastError = `Invalid file size: ${ab.byteLength} bytes`;
         continue;
       }
 
@@ -184,7 +201,7 @@ export async function getSpiderJar(
 ): Promise<SpiderJarInfo> {
   const now = Date.now();
 
-  // 🔑 如果指定了自定义 URL，优先尝试获取
+  // 🔑 如果指定了自定义 URL，仅单次获取返回，严禁覆盖全局默认 cache（防止恶意 URL 投毒污染全局客户端）
   if (customUrl) {
     console.log(`[SpiderJar] 尝试获取自定义 jar: ${customUrl}`);
     const buf = await fetchRemote(customUrl);
@@ -199,7 +216,6 @@ export async function getSpiderJar(
         size: buf.length,
         tried: 1,
       };
-      cache = info;
       return info;
     }
     console.warn(`[SpiderJar] 自定义 jar 获取失败，回退到默认源`);

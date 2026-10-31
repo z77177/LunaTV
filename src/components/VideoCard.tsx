@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import React, {
   forwardRef,
   memo,
+  startTransition,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -28,6 +29,10 @@ import { processImageUrl, isSeriesCompleted } from '@/lib/utils';
 
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import MobileActionSheet from '@/components/MobileActionSheet';
+
+// 模块级共享 AI 可用性检测缓存，防止同页数十个 VideoCard 同时发起并发请求风暴
+let sharedAiAvailabilityResult: boolean | null = null;
+let sharedAiAvailabilityPromise: Promise<boolean> | null = null;
 import AIRecommendModal from '@/components/AIRecommendModal';
 
 export interface VideoCardProps {
@@ -223,28 +228,39 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       return;
     }
 
+    if (sharedAiAvailabilityResult !== null) {
+      setAiEnabledLocal(sharedAiAvailabilityResult);
+      setAiCheckCompleteLocal(true);
+      return;
+    }
+
     let cancelled = false;
 
-    (async () => {
-      try {
-        const response = await fetch('/api/ai-recommend', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [{ role: 'user', content: 'ping' }],
-          }),
+    if (!sharedAiAvailabilityPromise) {
+      sharedAiAvailabilityPromise = fetch('/api/ai-recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'ping' }],
+        }),
+      })
+        .then((response) => {
+          const enabled = response.status !== 403 && response.ok;
+          sharedAiAvailabilityResult = enabled;
+          return enabled;
+        })
+        .catch(() => {
+          sharedAiAvailabilityResult = false;
+          return false;
         });
-        if (!cancelled) {
-          setAiEnabledLocal(response.status !== 403);
-          setAiCheckCompleteLocal(true);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setAiEnabledLocal(false);
-          setAiCheckCompleteLocal(true);
-        }
+    }
+
+    sharedAiAvailabilityPromise.then((enabled) => {
+      if (!cancelled) {
+        setAiEnabledLocal(enabled);
+        setAiCheckCompleteLocal(true);
       }
-    })();
+    });
 
     return () => {
       cancelled = true;
@@ -265,12 +281,14 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
         const currentFavorited = from === 'search' ? searchFavorited : favorited;
         const newFavoritedState = !currentFavorited;
 
-        // 🎯 立即更新 UI（乐观更新）- 用户感知零延迟
-        if (from === 'search') {
-          setOptimisticSearchFavorited(newFavoritedState);
-        } else {
-          setOptimisticFavorited(newFavoritedState);
-        }
+        // 🎯 立即更新 UI（乐观更新）- 使用 startTransition 满足 React 19 规范
+        startTransition(() => {
+          if (from === 'search') {
+            setOptimisticSearchFavorited(newFavoritedState);
+          } else {
+            setOptimisticFavorited(newFavoritedState);
+          }
+        });
 
         // 🔄 后台异步执行数据库操作
         if (currentFavorited) {

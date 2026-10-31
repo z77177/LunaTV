@@ -21,10 +21,15 @@ let kvrocksStorage: KvrocksStorage | null = null;
 /**
  * 获取 Kvrocks Redis 客户端实例
  */
-function getKvrocksClient() {
+async function getKvrocksClient() {
+  if (!process.env.KVROCKS_URL) {
+    throw new Error('KVROCKS_URL not configured');
+  }
   if (!kvrocksStorage) {
     kvrocksStorage = new KvrocksStorage();
   }
+  // @ts-ignore - 访问 protected ensureConnected 方法
+  await kvrocksStorage.ensureConnected();
   // @ts-ignore - 访问 protected client 属性
   return kvrocksStorage.client;
 }
@@ -83,8 +88,9 @@ function getCacheKey(videoUrl: string): string {
  * 获取视频缓存文件路径
  */
 function getVideoCacheFilePath(fileName: string): string {
+  const safeFileName = fileName.replace(/[^a-zA-Z0-9_.-]/g, '_');
   const cacheDir = CACHE_CONFIG.VIDEO_CACHE_DIR.replace(/[\\/]+$/, '');
-  return `${cacheDir}/${fileName}`;
+  return `${cacheDir}/${safeFileName}`;
 }
 
 function getVideoCachePath(cacheKey: string): string {

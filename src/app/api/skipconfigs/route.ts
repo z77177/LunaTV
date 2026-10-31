@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getAdminRoleFromRequest } from '@/lib/admin-auth';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
@@ -40,9 +41,13 @@ export async function POST(request: NextRequest) {
 
     // 获取认证信息
     const authInfo = getAuthInfoFromCookie(request);
+    const adminRole = await getAdminRoleFromRequest(request);
 
-    // 如果是直接传入的认证信息（客户端模式），使用传入的信息
-    const finalUsername = username || authInfo?.username;
+    // 🛡️ 防御 IDOR 越权：已登录用户强制使用自身 Cookie 中的 username，仅当管理员或本地模式下才允许指定 username
+    const isAdminOrOwner = Boolean(adminRole);
+    const finalUsername = isAdminOrOwner
+      ? username || authInfo?.username
+      : authInfo?.username;
 
     if (!finalUsername) {
       const errorResponse = { error: '用户未登录' };

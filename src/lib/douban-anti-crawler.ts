@@ -51,14 +51,17 @@ function sha512(data: string): string {
 function proofOfWork(data: string, difficulty = 4): number {
   let nonce = 0;
   const targetSubStr = '0'.repeat(difficulty);
+  const MAX_POW_ITERATIONS = 500000;
 
-  while (true) {
+  while (nonce < MAX_POW_ITERATIONS) {
     nonce += 1;
     const hash = sha512(data + nonce);
     if (hash.startsWith(targetSubStr)) {
       return nonce;
     }
   }
+
+  throw new Error(`PoW exceeded max iterations (${MAX_POW_ITERATIONS})`);
 }
 
 /**
@@ -108,6 +111,7 @@ export async function getDoubanCookie(url: string, forceRefresh = false): Promis
     const firstResponse = await fetch(url, {
       headers,
       redirect: 'manual', // 手动处理重定向
+      signal: AbortSignal.timeout(15000),
     });
 
     // 如果没有重定向，直接返回 cookie
@@ -119,15 +123,20 @@ export async function getDoubanCookie(url: string, forceRefresh = false): Promis
     // 如果是 302 重定向到验证页面
     if (firstResponse.status === 302) {
       const location = firstResponse.headers.get('location');
-      if (!location || !location.includes('sec.douban.com')) {
-        throw new Error('Unexpected redirect location');
+      if (!location) {
+        throw new Error('Unexpected redirect location: empty');
+      }
+      const parsedLocation = new URL(location, url);
+      if (parsedLocation.hostname !== 'sec.douban.com') {
+        throw new Error(`Unexpected redirect location host: ${parsedLocation.hostname}`);
       }
 
       console.log('[Douban Anti-Crawler] Detected anti-crawler verification, processing...');
 
       // 第二步：访问验证页面
-      const verifyResponse = await fetch(location, {
+      const verifyResponse = await fetch(parsedLocation.toString(), {
         headers,
+        signal: AbortSignal.timeout(15000),
       });
 
       if (!verifyResponse.ok) {
@@ -166,7 +175,8 @@ export async function getDoubanCookie(url: string, forceRefresh = false): Promis
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: formBody.toString(),
-        redirect: 'manual', // 手动处理重定向
+        redirect: 'manual',
+        signal: AbortSignal.timeout(15000),
       });
 
       // 第六步：从响应中提取 cookie

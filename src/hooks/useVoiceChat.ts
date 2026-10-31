@@ -65,6 +65,11 @@ export function useVoiceChat({
   // 创建 RTCPeerConnection
   const createPeerConnection = useCallback(
     (peerId: string) => {
+      const existingPc = peerConnectionsRef.current.get(peerId);
+      if (existingPc) {
+        existingPc.close();
+      }
+
       const pc = new RTCPeerConnection({ iceServers });
 
       // ICE候选收集
@@ -77,21 +82,19 @@ export function useVoiceChat({
         }
       };
 
-      // 接收远程音频流
+      // 接收远程音频流（始终创建 Audio 元素并按 isSpeakerEnabled 控制静音，确保后续开启扬声器可立即发声）
       pc.ontrack = (event) => {
         console.log('[VoiceChat] Received remote track from', peerId);
         const remoteStream = event.streams[0];
 
-        // 创建或更新音频元素播放远程流
-        if (isSpeakerEnabled) {
-          let audioElement = remoteAudioElementsRef.current.get(peerId);
-          if (!audioElement) {
-            audioElement = new Audio();
-            audioElement.autoplay = true;
-            remoteAudioElementsRef.current.set(peerId, audioElement);
-          }
-          audioElement.srcObject = remoteStream;
+        let audioElement = remoteAudioElementsRef.current.get(peerId);
+        if (!audioElement) {
+          audioElement = new Audio();
+          audioElement.autoplay = true;
+          remoteAudioElementsRef.current.set(peerId, audioElement);
         }
+        audioElement.muted = !isSpeakerEnabled;
+        audioElement.srcObject = remoteStream;
       };
 
       // 连接状态变化
@@ -170,17 +173,17 @@ export function useVoiceChat({
   useEffect(() => {
     if (!socket || !roomId) return;
 
-    // 接收offer
+    // 接收offer（允许未开麦用户接收并收听他人语音）
     const handleOffer = async (data: { userId: string; offer: RTCSessionDescriptionInit }) => {
-      if (!localStreamRef.current) return;
-
       console.log('[VoiceChat] Received offer from', data.userId);
       const pc = createPeerConnection(data.userId);
 
-      // 添加本地流
-      localStreamRef.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStreamRef.current!);
-      });
+      // 如果本地已开启麦克风，则附带本地音轨
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => {
+          pc.addTrack(track, localStreamRef.current!);
+        });
+      }
 
       // 设置远程描述
       await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
@@ -228,11 +231,16 @@ export function useVoiceChat({
   // 麦克风开关控制
   useEffect(() => {
     if (!roomId) return;
+    let cancelled = false;
 
     if (isMicEnabled) {
       // 打开麦克风
       getLocalStream()
         .then((stream) => {
+          if (cancelled) {
+            stream.getTracks().forEach((track) => track.stop());
+            return;
+          }
           // 向所有房间成员发起呼叫
           members.forEach((member) => {
             if (member.id !== socket?.id) {
@@ -251,6 +259,7 @@ export function useVoiceChat({
     }
 
     return () => {
+      cancelled = true;
       if (!isMicEnabled) {
         stopLocalStream();
         closeAllConnections();

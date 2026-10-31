@@ -1,4 +1,4 @@
-import { isSafeIp, isSafePublicUrl } from '@/lib/ssrf';
+import { isSafeIp, isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 describe('SSRF Protection Tests', () => {
   describe('isSafeIp', () => {
@@ -18,6 +18,8 @@ describe('SSRF Protection Tests', () => {
       expect(isSafeIp('172.31.255.255')).toBe(false);
       expect(isSafeIp('169.254.169.254')).toBe(false);
       expect(isSafeIp('::1')).toBe(false);
+      expect(isSafeIp('[::1]')).toBe(false);
+      expect(isSafeIp('[::ffff:127.0.0.1]')).toBe(false);
       expect(isSafeIp('fe80::1')).toBe(false);
     });
 
@@ -51,6 +53,18 @@ describe('SSRF Protection Tests', () => {
 
       const res4 = await isSafePublicUrl('http://0.0.0.0/test.m3u8');
       expect(res4.safe).toBe(false);
+
+      const res5 = await isSafePublicUrl('http://[::1]:3000/api/server-config');
+      expect(res5.safe).toBe(false);
+
+      const res6 = await isSafePublicUrl('http://[::ffff:127.0.0.1]/test');
+      expect(res6.safe).toBe(false);
+
+      const res7 = await isSafePublicUrl('http://[::ffff:169.254.169.254]/latest/meta-data');
+      expect(res7.safe).toBe(false);
+
+      const res8 = await isSafePublicUrl('http://localhost./api/admin');
+      expect(res8.safe).toBe(false);
     });
 
     it('should block private RFC 1918 addresses', async () => {
@@ -79,6 +93,71 @@ describe('SSRF Protection Tests', () => {
       expect((await isSafePublicUrl('')).safe).toBe(false);
       expect((await isSafePublicUrl('not-a-valid-url')).safe).toBe(false);
       expect((await isSafePublicUrl('http://')).safe).toBe(false);
+    });
+  });
+
+  describe('safeFetch', () => {
+    const originalFetch = global.fetch;
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('should reject unsafe initial URL immediately without fetching', async () => {
+      await expect(safeFetch('http://127.0.0.1:8080/secret')).rejects.toThrow(
+        /SSRF Blocked/
+      );
+      await expect(safeFetch('http://localhost:3000')).rejects.toThrow(
+        /SSRF Blocked/
+      );
+    });
+
+    it('should intercept 302 redirect leading to private or internal IP', async () => {
+      global.fetch = jest.fn().mockImplementation(async (url: string) => {
+        if (url.includes('example.com')) {
+          return new Response(null, {
+            status: 302,
+            headers: { location: 'http://192.168.1.1/admin' },
+          });
+        }
+        return new Response('ok', { status: 200 });
+      });
+
+      await expect(safeFetch('https://example.com/redirect')).rejects.toThrow(
+        /SSRF Blocked.*192\.168\.1\.1/
+      );
+    });
+
+    it('should follow safe redirect chain and return successful response', async () => {
+      global.fetch = jest.fn().mockImplementation(async (url: string) => {
+        if (url === 'https://example.com/step1') {
+          return new Response(null, {
+            status: 301,
+            headers: { location: 'https://example.com/final' },
+          });
+        }
+        if (url === 'https://example.com/final') {
+          return new Response('final content', { status: 200 });
+        }
+        return new Response('not found', { status: 404 });
+      });
+
+      const res = await safeFetch('https://example.com/step1');
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe('final content');
+    });
+
+    it('should throw when maximum redirects limit is exceeded', async () => {
+      global.fetch = jest.fn().mockImplementation(async (url: string) => {
+        return new Response(null, {
+          status: 302,
+          headers: { location: url },
+        });
+      });
+
+      await expect(safeFetch('https://example.com/loop', {}, 3)).rejects.toThrow(
+        /Too many redirects/
+      );
     });
   });
 });

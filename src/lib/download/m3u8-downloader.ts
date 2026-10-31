@@ -290,7 +290,9 @@ export function aesDecrypt(data: ArrayBuffer, key: any, iv: string): ArrayBuffer
   if (!key) return data;
 
   const wordArray = arrayBufferToWordArray(data);
-  const ivWordArray = iv ? CryptoJS.enc.Hex.parse(iv.replace('0x', '')) : CryptoJS.lib.WordArray.create();
+  const ivWordArray = iv
+    ? CryptoJS.enc.Hex.parse(iv.replace(/^0x/i, ''))
+    : CryptoJS.lib.WordArray.create([0, 0, 0, 0], 16);
 
   const decrypted = CryptoJS.AES.decrypt(
     { ciphertext: wordArray } as any,
@@ -303,9 +305,10 @@ export function aesDecrypt(data: ArrayBuffer, key: any, iv: string): ArrayBuffer
   );
 
   // 将 WordArray 转回 ArrayBuffer
-  const typedArray = new Uint8Array(decrypted.sigBytes);
+  const safeSigBytes = Math.max(0, decrypted.sigBytes);
+  const typedArray = new Uint8Array(safeSigBytes);
   const words = decrypted.words;
-  for (let i = 0; i < decrypted.sigBytes; i++) {
+  for (let i = 0; i < safeSigBytes; i++) {
     typedArray[i] = (words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
   }
   return typedArray.buffer;
@@ -379,7 +382,7 @@ export async function downloadM3U8Video(
   const totalSegments = endSegment - startSegment + 1;
   
   // 计算范围下载的实际时长
-  const segmentDuration = task.durationSecond / task.tsUrlList.length;
+  const segmentDuration = task.tsUrlList.length > 0 ? task.durationSecond / task.tsUrlList.length : 0;
   const rangeDuration = totalSegments * segmentDuration;
   
   // 流式写入器（边下边存模式）
@@ -442,7 +445,17 @@ export async function downloadM3U8Video(
     }
   }
   
+  // 统计已完成的分片数（支持断点重试仅下载失败分片）
   let completedCount = 0;
+  if (!writer && task.downloadedSegments) {
+    for (let i = startSegment - 1; i < endSegment; i++) {
+      if (task.finishList[i]?.status === 'success' && task.downloadedSegments.has(i)) {
+        completedCount++;
+      }
+    }
+    task.finishNum = completedCount;
+    task.errorNum = 0;
+  }
 
   // 串行化写入函数：确保写入操作按顺序执行，避免多线程并发写入
   const flushPendingWrites = async (): Promise<void> => {
@@ -539,9 +552,12 @@ export async function downloadM3U8Video(
     };
   }
 
-  // 创建下载队列
+  // 创建下载队列（重试时跳过已成功缓存在内存中的分片）
   const downloadQueue: number[] = [];
   for (let i = startSegment - 1; i < endSegment; i++) {
+    if (!writer && task.finishList[i]?.status === 'success' && task.downloadedSegments?.has(i)) {
+      continue;
+    }
     downloadQueue.push(i);
   }
 
@@ -846,7 +862,7 @@ export function getSegmentList(task: M3U8Task): SegmentInfo[] {
   return task.tsUrlList.map((url, index) => ({
     index: index + 1,
     url,
-    duration: 0,
+    duration: task.segmentDurations?.[index] || 0,
     status: task.finishList[index]?.status || '',
   }));
 }

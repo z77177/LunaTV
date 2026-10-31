@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promisify } from 'util';
 import { gunzip } from 'zlib';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { getAdminRoleFromRequest } from '@/lib/admin-auth';
 import { configSelfCheck, setCachedConfig } from '@/lib/config';
 import { SimpleCrypto } from '@/lib/crypto';
 import { db } from '@/lib/db';
@@ -24,15 +24,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 验证身份和权限
-    const authInfo = getAuthInfoFromCookie(req);
-    if (!authInfo || !authInfo.username) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 });
-    }
-
-    // 检查用户权限（只有站长可以导入数据）
-    if (authInfo.username !== process.env.USERNAME) {
-      return NextResponse.json({ error: '权限不足，只有站长可以导入数据' }, { status: 401 });
+    // 验证身份和权限（强制 HMAC 签名校验，仅限站长）
+    const role = await getAdminRoleFromRequest(req);
+    if (role !== 'owner') {
+      return NextResponse.json({ error: '权限不足，只有站长可以导入数据' }, { status: 403 });
     }
 
     // 解析表单数据
@@ -59,9 +54,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '解密失败，请检查密码是否正确' }, { status: 400 });
     }
 
-    // 解压缩数据
+    // 解压缩数据（设置 100MB 最大解压体积上限，防御 Gzip 解压炸弹）
     const compressedBuffer = Buffer.from(decryptedData, 'base64');
-    const decompressedBuffer = await gunzipAsync(compressedBuffer);
+    let decompressedBuffer: Buffer;
+    try {
+      decompressedBuffer = await gunzipAsync(compressedBuffer, { maxOutputLength: 100 * 1024 * 1024 });
+    } catch (gzErr: any) {
+      return NextResponse.json({ error: `解压缩失败: ${gzErr.message}` }, { status: 400 });
+    }
     const decompressedData = decompressedBuffer.toString();
 
     // 解析JSON数据
@@ -73,7 +73,12 @@ export async function POST(req: NextRequest) {
     }
 
     // 验证数据格式
-    if (!importData.data || !importData.data.adminConfig || !importData.data.userData) {
+    if (
+      !importData?.data ||
+      !importData.data.adminConfig ||
+      typeof importData.data.userData !== 'object' ||
+      importData.data.userData === null
+    ) {
       return NextResponse.json({ error: '备份文件格式无效' }, { status: 400 });
     }
 

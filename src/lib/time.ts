@@ -3,21 +3,23 @@
  * 处理形如 "20250824000000 +0800" 的时间格式
  */
 export function parseCustomTimeFormat(timeStr: string): Date {
-  // 如果已经是标准格式，直接返回
-  if (timeStr.includes('T') || timeStr.includes('-')) {
-    return new Date(timeStr);
+  if (!timeStr || typeof timeStr !== 'string') {
+    return new Date(NaN);
   }
 
-  // 处理 "20250824000000 +0800" 格式
-  // 格式说明：YYYYMMDDHHMMSS +ZZZZ
-  const match = timeStr.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\s*([+-]\d{4})$/);
+  // 优先匹配 XMLTV/EPG 紧凑格式（含正负时区，如 "20250824000000 -0400"）
+  // 必须在 includes('-') 之前匹配，否则负时区中的负号会导致直接进入 new Date() 产生 Invalid Date
+  const match = timeStr.trim().match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\s*([+-]\d{4})$/);
 
   if (match) {
     const [, year, month, day, hour, minute, second, timezone] = match;
-
-    // 创建ISO格式的时间字符串
     const isoString = `${year}-${month}-${day}T${hour}:${minute}:${second}${timezone}`;
     return new Date(isoString);
+  }
+
+  // 如果已经是标准格式，直接返回
+  if (timeStr.includes('T') || timeStr.includes('-')) {
+    return new Date(timeStr);
   }
 
   // 如果格式不匹配，尝试其他常见格式
@@ -61,7 +63,7 @@ export function isValidTime(timeString: string): boolean {
  * @returns 格式化的时间字符串 (HH:MM:SS 或 MM:SS)
  */
 export function formatTime(seconds: number): string {
-  if (seconds === 0) return '00:00';
+  if (!Number.isFinite(seconds) || seconds <= 0) return '00:00';
 
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);

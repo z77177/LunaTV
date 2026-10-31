@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
+import { safeFetch } from '@/lib/ssrf';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
@@ -31,11 +32,12 @@ export async function GET(request: NextRequest) {
     
     for (const live of enabledLives) {
       try {
-        // 获取M3U内容
-        const response = await fetch(live.url, {
+        // 获取M3U内容（逐跳校验 SSRF 并设置 10s 超时）
+        const response = await safeFetch(live.url, {
           headers: {
             'User-Agent': live.ua || DEFAULT_USER_AGENT
-          }
+          },
+          signal: AbortSignal.timeout(10000),
         });
         
         if (response.ok) {

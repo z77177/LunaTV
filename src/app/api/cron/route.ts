@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getSpiderJarFromBlob, uploadSpiderJarToBlob } from '@/lib/blobStorage';
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { getAdminRoleFromRequest } from '@/lib/admin-auth';
 import { getConfig, refineConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 import { fetchVideoDetail } from '@/lib/fetchVideoDetail';
@@ -184,9 +184,8 @@ export async function GET(request: NextRequest) {
     Boolean(cronSecret && searchToken === cronSecret) ||
     Boolean(adminPassword && searchToken === adminPassword);
 
-  const authInfo = getAuthInfoFromCookie(request);
-  const isSessionAuthorized =
-    Boolean(authInfo && (authInfo.username === process.env.USERNAME || authInfo.role === 'admin' || authInfo.role === 'owner'));
+  const adminRole = await getAdminRoleFromRequest(request);
+  const isSessionAuthorized = Boolean(adminRole);
 
   if (!isBearerAuthorized && !isTokenAuthorized && !isSessionAuthorized && (cronSecret || adminPassword)) {
     return NextResponse.json(

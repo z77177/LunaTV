@@ -86,9 +86,15 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
 
   useImagePreload(imagesToPreload, totalItemCount > 0);
 
-  // 当类型或筛选条件改变时，滚动到顶部
+  // 当类型或筛选条件改变时，才滚动到顶部（切勿依赖 totalItemCount，否则分页追加数据时会强制跳顶）
+  const prevFilterRef = useRef({ type, primarySelection });
   useEffect(() => {
-    if (gridRef.current?.scrollToCell && totalItemCount > 0 && !loading) {
+    const isFilterChanged =
+      prevFilterRef.current.type !== type ||
+      prevFilterRef.current.primarySelection !== primarySelection;
+    prevFilterRef.current = { type, primarySelection };
+
+    if (isFilterChanged && gridRef.current?.scrollToCell) {
       try {
         gridRef.current.scrollToCell({
           columnIndex: 0,
@@ -101,7 +107,7 @@ export const VirtualDoubanGrid = React.forwardRef<VirtualDoubanGridRef, VirtualD
         console.debug('Grid scroll error (safe to ignore):', error);
       }
     }
-  }, [type, primarySelection, totalItemCount, loading]);
+  }, [type, primarySelection]);
 
   // 强制重新计算容器尺寸的useEffect
   useEffect(() => {

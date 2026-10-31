@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { ensureAdmin } from '@/lib/admin-auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
@@ -21,13 +21,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-
-    const authInfo = getAuthInfoFromCookie(request);
-    if (!authInfo || !authInfo.username) {
+    try {
+      await ensureAdmin(request);
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const username = authInfo.username;
+
+    const body = await request.json();
 
     const {
       SiteName,
@@ -91,17 +91,6 @@ export async function POST(request: NextRequest) {
     }
 
     const adminConfig = await getConfig();
-
-    // 权限校验
-    if (username !== process.env.USERNAME) {
-      // 管理员
-      const user = adminConfig.UserConfig.Users.find(
-        (u) => u.username === username
-      );
-      if (!user || user.role !== 'admin' || user.banned) {
-        return NextResponse.json({ error: '权限不足' }, { status: 401 });
-      }
-    }
 
     // 更新缓存中的站点设置，保留现有的自定义去广告配置
     adminConfig.SiteConfig = {

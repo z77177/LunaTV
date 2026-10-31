@@ -25,23 +25,6 @@ const MAX_CACHE_AGE = 48 * 60 * 60 * 1000; // 48小时（与性能监控保持�
 let dataLoaded = false;
 
 /**
- * 从 Kvrocks 加载历史数据（已禁用持久化）
- */
-async function loadFromKvrocks(): Promise<void> {
-  if (dataLoaded) return;
-  // 持久化已禁用，直接标记为已加载
-  dataLoaded = true;
-}
-
-/**
- * 保存数据到 Kvrocks（已禁用持久化）
- */
-async function saveToKvrocks(): Promise<void> {
-  // 持久化已禁用，不再保存到 Kvrocks
-  return;
-}
-
-/**
  * 记录外部请求流量
  */
 export function recordExternalTraffic(metrics: ExternalTrafficMetrics): void {
@@ -64,8 +47,6 @@ export function recordExternalTraffic(metrics: ExternalTrafficMetrics): void {
   while (externalTrafficCache.length > MAX_CACHE_SIZE) {
     externalTrafficCache.shift();
   }
-
-  // 持久化已禁用，不再保存到 Kvrocks
 }
 
 /**
@@ -114,7 +95,7 @@ export async function getExternalTrafficStats(hours: number = 1) {
       }
       byDomain[domain].requests++;
       byDomain[domain].traffic += item.requestSize + item.responseSize;
-    } catch (e) {
+    } catch {
       // 忽略无效 URL
     }
   });
@@ -152,10 +133,10 @@ export async function monitoredFetch(
     // 执行实际的 fetch 请求
     const response = await fetch(url, options);
 
-    // 克隆响应以读取内容
-    const clonedResponse = response.clone();
-    const responseText = await clonedResponse.text();
-    const responseSize = Buffer.byteLength(responseText, 'utf8');
+    // 仅通过 Content-Length 标头估算大小，避免克隆并缓冲流式响应导致内存泄漏
+    const contentLengthHeader = response.headers.get('content-length');
+    const parsedLength = contentLengthHeader ? parseInt(contentLengthHeader, 10) : 0;
+    const responseSize = Number.isFinite(parsedLength) && parsedLength > 0 ? parsedLength : 0;
 
     // 记录流量
     recordExternalTraffic({

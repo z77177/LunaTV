@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Calendar, Filter, Search, Clock, Film, Tv, MapPin, Tag, ChevronUp } from 'lucide-react';
 
 import { ReleaseCalendarItem, ReleaseCalendarResult } from '@/lib/types';
@@ -227,22 +227,30 @@ export default function ReleaseCalendarPage() {
   };
 
   // 前端分页逻辑
-  const totalItems = data?.items.length || 0;
+  // 客户端搜索过滤与去重
+  const filteredItems = useMemo(() => {
+    if (!data?.items) return [];
+    const searchLower = filters.search.trim().toLowerCase();
+    const list = data.items.filter((item) => {
+      if (!searchLower) return true;
+      return (
+        item.title.toLowerCase().includes(searchLower) ||
+        item.director.toLowerCase().includes(searchLower) ||
+        item.actors.toLowerCase().includes(searchLower)
+      );
+    });
+    // 全局去重（按 title + director）
+    return list.filter(
+      (item, index, self) =>
+        index === self.findIndex((t) => t.title === item.title && t.director === item.director)
+    );
+  }, [data?.items, filters.search]);
+
+  const totalItems = filteredItems.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentItems = data?.items.slice(startIndex, endIndex) || [];
-
-  // 客户端搜索过滤
-  const filteredItems = data?.items.filter(item => {
-    if (!filters.search) return true;
-    const searchLower = filters.search.toLowerCase();
-    return (
-      item.title.toLowerCase().includes(searchLower) ||
-      item.director.toLowerCase().includes(searchLower) ||
-      item.actors.toLowerCase().includes(searchLower)
-    );
-  }) || [];
+  const currentItems = filteredItems.slice(startIndex, endIndex);
 
   useEffect(() => {
     fetchData();
@@ -519,16 +527,12 @@ export default function ReleaseCalendarPage() {
             {/* 网格视图 */}
             {viewMode === 'grid' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                {(() => {
-                  // 去重：按title和director去重
-                  const uniqueCurrentItems = currentItems.filter((item, index, self) =>
-                    index === self.findIndex(t => t.title === item.title && t.director === item.director)
-                  );
-                  return uniqueCurrentItems;
-                })().map((item) => {
-                  const isToday = item.releaseDate === new Date().toISOString().split('T')[0];
-                  const isUpcoming = new Date(item.releaseDate) > new Date();
-                  const isPast = new Date(item.releaseDate) < new Date();
+                {currentItems.map((item) => {
+                  const now = new Date();
+                  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                  const isToday = item.releaseDate === todayStr;
+                  const isUpcoming = item.releaseDate > todayStr;
+                  const isPast = item.releaseDate < todayStr;
 
                   return (
                     <div key={item.id} className="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer">
@@ -674,8 +678,8 @@ export default function ReleaseCalendarPage() {
                       const days = [];
                       const current = new Date(startDate);
 
-                      // 使用全部数据而不是分页数据
-                      const allItems = data?.items || [];
+                      // 使用过滤后的数据
+                      const allItems = filteredItems;
 
                       // 生成6周的日期
                       for (let week = 0; week < 6; week++) {
@@ -762,8 +766,8 @@ export default function ReleaseCalendarPage() {
                       const firstDay = new Date(currentYear, currentMonth, 1);
                       const lastDay = new Date(currentYear, currentMonth + 1, 0);
 
-                      // 使用全部数据而不是分页数据
-                      const allItems = data?.items || [];
+                      // 使用过滤后的数据
+                      const allItems = filteredItems;
 
                       // 获取当前月份的所有日期及其影片
                       const daysWithMovies = [];
@@ -855,7 +859,7 @@ export default function ReleaseCalendarPage() {
                 {(() => {
                   const today = new Date();
                   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                  const allItems = data?.items || [];
+                  const allItems = filteredItems;
                   const todayItems = allItems.filter(item => item.releaseDate === todayStr);
 
                   // 去重：按title和director去重
@@ -902,7 +906,7 @@ export default function ReleaseCalendarPage() {
 
                 <div className="space-y-8">
                   {Object.entries(
-                    (data?.items || []).reduce((acc, item) => {
+                    filteredItems.reduce((acc, item) => {
                       const date = item.releaseDate;
                       if (!acc[date]) acc[date] = [];
                       acc[date].push(item);
@@ -917,7 +921,7 @@ export default function ReleaseCalendarPage() {
                     const isUpcoming = currentDate > today;
 
                     // 去重：按title和director去重
-                    const uniqueItems = items.filter((item, index, self) =>
+                    const uniqueItems = (items as ReleaseCalendarItem[]).filter((item, index, self) =>
                       index === self.findIndex(t => t.title === item.title && t.director === item.director)
                     );
 

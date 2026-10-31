@@ -122,7 +122,14 @@ function getAvailableParsers(platform: string): Parser[] {
 }
 
 // 批量检查所有解析器健康状态（后台任务）
+let lastHealthCheckTime = 0;
+const HEALTH_CHECK_COOLDOWN_MS = 60_000;
+
 async function updateParsersHealth() {
+  if (Date.now() - lastHealthCheckTime < HEALTH_CHECK_COOLDOWN_MS) {
+    return;
+  }
+  lastHealthCheckTime = Date.now();
   const healthChecks = PARSERS.map(async (parser) => {
     const isHealthy = await checkParserHealth(parser);
     parser.status = isHealthy ? 'active' : 'inactive';

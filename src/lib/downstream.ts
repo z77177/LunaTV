@@ -132,8 +132,8 @@ async function searchWithCache(
       }
 
       return {
-        id: item.vod_id.toString(),
-        title: item.vod_name.trim().replace(/\s+/g, ' '),
+        id: String(item.vod_id ?? ''),
+        title: (item.vod_name || '').trim().replace(/\s+/g, ' '),
         poster: item.vod_pic?.trim() || '', // 确保poster为有效字符串，过滤空白
         episodes,
         episodes_titles: titles,
@@ -141,7 +141,7 @@ async function searchWithCache(
         source_name: apiSite.name,
         class: item.vod_class,
         year: item.vod_year
-          ? item.vod_year.match(/\d{4}/)?.[0] || ''
+          ? String(item.vod_year).match(/\d{4}/)?.[0] || ''
           : 'unknown',
         desc: cleanHtmlTags(item.vod_content || ''),
         type_name: item.type_name,
@@ -505,7 +505,7 @@ export async function getDetailFromApi(
   }
 
   // 优先尝试 ?ac=videolist&ids=，若失败则尝试 ?ac=detail&ids=
-  let detailUrl = `${apiSite.api}${API_CONFIG.detail.path}${id}`;
+  let detailUrl = `${apiSite.api}${API_CONFIG.detail.path}${encodeURIComponent(id)}`;
   let data: any = null;
 
   try {
@@ -528,7 +528,7 @@ export async function getDetailFromApi(
   // 备用请求：部分采集站使用 ?ac=detail&ids=
   if (!data || !data.list || !Array.isArray(data.list) || data.list.length === 0) {
     try {
-      const backupUrl = `${apiSite.api}?ac=detail&ids=${id}`;
+      const backupUrl = `${apiSite.api}?ac=detail&ids=${encodeURIComponent(id)}`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -575,7 +575,7 @@ export async function getDetailFromApi(
     source_name: apiSite.name,
     class: videoDetail.vod_class,
     year: videoDetail.vod_year
-      ? videoDetail.vod_year.match(/\d{4}/)?.[0] || ''
+      ? String(videoDetail.vod_year).match(/\d{4}/)?.[0] || ''
       : 'unknown',
     desc: cleanHtmlTags(videoDetail.vod_content),
     type_name: videoDetail.type_name,
@@ -588,7 +588,7 @@ async function handleSpecialSourceDetail(
   id: string,
   apiSite: ApiSite
 ): Promise<SearchResult> {
-  const detailUrl = `${apiSite.detail}/index.php/vod/detail/id/${id}.html`;
+  const detailUrl = `${apiSite.detail}/index.php/vod/detail/id/${encodeURIComponent(id)}.html`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);

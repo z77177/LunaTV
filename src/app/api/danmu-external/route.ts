@@ -5,6 +5,7 @@ import { getRandomUserAgent, DEFAULT_USER_AGENT, getRandomUserAgentWithInfo, get
 import { recordRequest, getDbQueryCount, resetDbQueryCount } from '@/lib/performance-monitor';
 import { getConfig } from '@/lib/config';
 import { fetchDoubanWithVerification } from '@/lib/douban-anti-crawler';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 // 默认弹幕API配置
 const DEFAULT_DANMU_API_URL = 'https://smonedanmu.vercel.app';
@@ -87,6 +88,12 @@ async function fetchDanmuFromCustomAPI(
     return null;
   }
 
+  const apiUrlSafety = await isSafePublicUrl(config.apiUrl);
+  if (!apiUrlSafety.safe) {
+    console.warn(`❌ [弹幕API] 不安全的弹幕 API 地址已拦截: ${config.apiUrl}`);
+    return null;
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.timeout * 1000);
 
@@ -95,7 +102,7 @@ async function fetchDanmuFromCustomAPI(
     const searchUrl = `${config.apiUrl}/${config.token}/api/v2/search/anime?keyword=${encodeURIComponent(title)}`;
     console.log(`🔍 [弹幕API] 搜索: ${searchUrl}`);
 
-    const searchResponse = await fetch(searchUrl, {
+    const searchResponse = await safeFetch(searchUrl, {
       signal: controller.signal,
       headers: { 'User-Agent': DEFAULT_USER_AGENT },
     });

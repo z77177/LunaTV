@@ -70,16 +70,29 @@ describe('Auth Security & Signature Tests', () => {
       expect(isTamperedValid).toBe(false);
     });
 
-    it('should backward-compatibly verify legacy signatures that only signed username', async () => {
+    it('should backward-compatibly verify legacy signatures that only signed username (restricted to user role)', async () => {
       const username = 'legacyUser';
       const legacySignature = await generateSignature(username, secretKey);
 
-      // Legacy cookie without timestamp
+      // Legacy cookie without timestamp or with role 'user'
       const isValid = await verifyAuthSignature(
         { username, signature: legacySignature },
         secretKey
       );
       expect(isValid).toBe(true);
+
+      // Must reject role escalation when using legacy signature
+      const isOwnerEscalationValid = await verifyAuthSignature(
+        { username, role: 'owner', signature: legacySignature },
+        secretKey
+      );
+      expect(isOwnerEscalationValid).toBe(false);
+
+      const isAdminEscalationValid = await verifyAuthSignature(
+        { username, role: 'admin', signature: legacySignature },
+        secretKey
+      );
+      expect(isAdminEscalationValid).toBe(false);
     });
 
     it('should reject invalid or missing fields', async () => {

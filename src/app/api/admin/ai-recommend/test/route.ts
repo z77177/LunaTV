@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -46,6 +47,14 @@ export async function POST(request: NextRequest) {
     const testUrl = apiUrl.endsWith('/chat/completions') 
       ? apiUrl 
       : `${apiUrl.replace(/\/$/, '')}/chat/completions`;
+
+    const safety = await isSafePublicUrl(testUrl);
+    if (!safety.safe) {
+      return NextResponse.json(
+        { error: `不安全的 API 地址: ${safety.reason}` },
+        { status: 400 }
+      );
+    }
 
     console.log('Testing AI API:', testUrl);
     

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -59,11 +60,20 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const targetPansouUrl = `${netDiskConfig.pansouUrl.replace(/\/$/, '')}/api/search`;
+    const safety = await isSafePublicUrl(targetPansouUrl);
+    if (!safety.safe) {
+      return NextResponse.json(
+        { success: false, error: `不安全的 PanSou 服务地址: ${safety.reason}` },
+        { status: 400 }
+      );
+    }
+
     // 调用PanSou服务
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), (netDiskConfig.timeout || 30) * 1000);
 
-    const pansouResponse = await fetch(`${netDiskConfig.pansouUrl}/api/search`, {
+    const pansouResponse = await fetch(targetPansouUrl, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

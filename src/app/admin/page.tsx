@@ -134,16 +134,20 @@ const AlertModal = ({
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | undefined;
     if (isOpen) {
       setIsVisible(true);
       if (timer) {
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           onClose();
         }, timer);
       }
     } else {
       setIsVisible(false);
     }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [isOpen, timer, onClose]);
 
   if (!isOpen) return null;
@@ -5256,7 +5260,7 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
         DoubanCookies: config.DoubanConfig?.cookies || '',
         DisableYellowFilter: config.SiteConfig.DisableYellowFilter || false,
         ShowAdultContent: config.SiteConfig.ShowAdultContent || false,
-        FluidSearch: config.SiteConfig.FluidSearch || true,
+        FluidSearch: config.SiteConfig.FluidSearch ?? true,
         // TMDB配置
         TMDBApiKey: config.SiteConfig.TMDBApiKey || '',
         TMDBLanguage: config.SiteConfig.TMDBLanguage || 'zh-CN',

@@ -43,13 +43,22 @@ export default function AcgSearch({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
+  const searchSeqRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // 执行搜索
   const performSearch = async (page: number, isLoadMore = false) => {
-    if (isLoadingMoreRef.current) return;
+    if (isLoadMore && isLoadingMoreRef.current) return;
     // Mikan 和 DMHY 不支持分页，page > 1 时直接返回
     if (source === 'mikan' && page > 1) return;
     if (source === 'dmhy' && page > 1) return;
+
+    if (!isLoadMore && abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const currentSeq = ++searchSeqRef.current;
 
     isLoadingMoreRef.current = true;
     setLoading(true);
@@ -73,6 +82,7 @@ export default function AcgSearch({
           keyword: keyword.trim(),
           page,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -81,6 +91,7 @@ export default function AcgSearch({
       }
 
       const data: AcgSearchResult = await response.json();
+      if (searchSeqRef.current !== currentSeq) return;
 
       if (isLoadMore) {
         // 追加新数据
@@ -96,12 +107,16 @@ export default function AcgSearch({
 
       setCurrentPage(page);
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
+      if (searchSeqRef.current !== currentSeq) return;
       const errorMsg = err.message || '搜索失败，请稍后重试';
       setError(errorMsg);
       onError?.(errorMsg);
     } finally {
-      setLoading(false);
-      isLoadingMoreRef.current = false;
+      if (searchSeqRef.current === currentSeq) {
+        setLoading(false);
+        isLoadingMoreRef.current = false;
+      }
     }
   };
 
@@ -320,7 +335,7 @@ export default function AcgSearch({
                 )}
               </button>
               <a
-                href={item.link}
+                href={item.link && /^https?:\/\//i.test(item.link) ? item.link : '#'}
                 target='_blank'
                 rel='noopener noreferrer'
                 className='flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-200 text-gray-700 text-sm hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors'

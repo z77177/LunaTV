@@ -212,16 +212,19 @@ export class DbManager {
   // 检查用户是否已存在
   async checkUserExist(userName: string): Promise<boolean> {
     incrementDbQuery();
+    if (!this.storage) return false;
     return this.storage.checkUserExist(userName);
   }
 
   async changePassword(userName: string, newPassword: string): Promise<void> {
     incrementDbQuery();
+    if (!this.storage) return;
     await this.storage.changePassword(userName, newPassword);
   }
 
   async deleteUser(userName: string): Promise<void> {
     incrementDbQuery();
+    if (!this.storage) return;
     await this.storage.deleteUser(userName);
   }
 
@@ -284,16 +287,19 @@ export class DbManager {
   // ---------- 搜索历史 ----------
   async getSearchHistory(userName: string): Promise<string[]> {
     incrementDbQuery();
+    if (!this.storage) return [];
     return this.storage.getSearchHistory(userName);
   }
 
   async addSearchHistory(userName: string, keyword: string): Promise<void> {
     incrementDbQuery();
+    if (!this.storage) return;
     await this.storage.addSearchHistory(userName, keyword);
   }
 
   async deleteSearchHistory(userName: string, keyword?: string): Promise<void> {
     incrementDbQuery();
+    if (!this.storage) return;
     await this.storage.deleteSearchHistory(userName, keyword);
   }
 
@@ -427,7 +433,7 @@ export class DbManager {
   // ---------- 通用缓存方法 ----------
   async getCache(key: string): Promise<any | null> {
     incrementDbQuery();
-    if (typeof this.storage.getCache === 'function') {
+    if (this.storage && typeof this.storage.getCache === 'function') {
       return await this.storage.getCache(key);
     }
     return null;
@@ -435,21 +441,21 @@ export class DbManager {
 
   async setCache(key: string, data: any, expireSeconds?: number): Promise<void> {
     incrementDbQuery();
-    if (typeof this.storage.setCache === 'function') {
+    if (this.storage && typeof this.storage.setCache === 'function') {
       await this.storage.setCache(key, data, expireSeconds);
     }
   }
 
   async deleteCache(key: string): Promise<void> {
     incrementDbQuery();
-    if (typeof this.storage.deleteCache === 'function') {
+    if (this.storage && typeof this.storage.deleteCache === 'function') {
       await this.storage.deleteCache(key);
     }
   }
 
   async clearExpiredCache(prefix?: string): Promise<void> {
     incrementDbQuery();
-    if (typeof this.storage.clearExpiredCache === 'function') {
+    if (this.storage && typeof this.storage.clearExpiredCache === 'function') {
       await this.storage.clearExpiredCache(prefix);
     }
   }

@@ -93,14 +93,6 @@ export default function OIDCRegisterPage() {
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
         }}
       >
-        {/* Fallback for browsers without backdrop-filter support */}
-        <style jsx>{`
-          @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
-            div {
-              background-color: transparent !important;
-            }
-          }
-        `}</style>
         <h1 className='text-green-600 tracking-tight text-center text-2xl sm:text-3xl font-extrabold mb-2 bg-clip-text drop-shadow-sm'>
           {siteName}
         </h1>

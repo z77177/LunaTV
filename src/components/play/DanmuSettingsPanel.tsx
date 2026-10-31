@@ -82,6 +82,7 @@ const AnimatedNumber = memo(function AnimatedNumber({ value }: { value: number }
   useEffect(() => {
     if (prevValueRef.current === value) return;
 
+    let rafId: number;
     const start = prevValueRef.current;
     const end = value;
     const duration = 300;
@@ -98,13 +99,19 @@ const AnimatedNumber = memo(function AnimatedNumber({ value }: { value: number }
       setDisplayValue(Math.round(current));
 
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        rafId = requestAnimationFrame(animate);
       } else {
         prevValueRef.current = end;
       }
     };
 
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
+
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, [value]);
 
   return <>{displayValue}</>;

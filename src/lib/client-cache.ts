@@ -75,18 +75,53 @@ function clearExpiredLocalCache(prefix?: string): void {
 
 export class ClientCache {
   static async get(key: string): Promise<any | null> {
+    if (typeof window === 'undefined') {
+      try {
+        const { db } = await import('@/lib/db');
+        return await db.getCache(key);
+      } catch {
+        return null;
+      }
+    }
     return readLocalCache(key);
   }
 
   static async set(key: string, data: any, expireSeconds?: number): Promise<void> {
+    if (typeof window === 'undefined') {
+      try {
+        const { db } = await import('@/lib/db');
+        await db.setCache(key, data, expireSeconds);
+        return;
+      } catch {
+        return;
+      }
+    }
     writeLocalCache(key, data, expireSeconds);
   }
 
   static async delete(key: string): Promise<void> {
+    if (typeof window === 'undefined') {
+      try {
+        const { db } = await import('@/lib/db');
+        await db.deleteCache(key);
+        return;
+      } catch {
+        return;
+      }
+    }
     deleteLocalCache(key);
   }
 
   static async clearExpired(prefix?: string): Promise<void> {
+    if (typeof window === 'undefined') {
+      try {
+        const { db } = await import('@/lib/db');
+        await db.clearExpiredCache(prefix);
+        return;
+      } catch {
+        return;
+      }
+    }
     clearExpiredLocalCache(prefix);
   }
 }

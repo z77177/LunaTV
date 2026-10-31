@@ -337,10 +337,6 @@ export default function ModernNav({ showAIButton = false, onAIButtonClick }: Mod
           </button>
         </div>
       </nav>
-
-      {/* Spacer for fixed navigation */}
-      <div className='hidden md:block h-16' />
-      <div className='md:hidden h-20' />
     </>
   );
 }

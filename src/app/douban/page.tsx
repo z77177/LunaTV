@@ -47,14 +47,19 @@ function DoubanPageClient() {
   // VirtualDoubanGrid ref for scroll control
   const virtualGridRef = useRef<VirtualDoubanGridRef>(null);
 
-  // 虚拟化开关状态
-  const [useVirtualization, setUseVirtualization] = useState(() => {
-    if (typeof window !== 'undefined') {
+  // 虚拟化开关状态（默认启用，客户端加载后同步本地存储配置以避免 SSR 水合不一致）
+  const [useVirtualization, setUseVirtualization] = useState(true);
+
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem('useDoubanVirtualization');
-      return saved !== null ? JSON.parse(saved) : true; // 默认启用
+      if (saved !== null) {
+        setUseVirtualization(JSON.parse(saved));
+      }
+    } catch {
+      // ignore
     }
-    return true;
-  });
+  }, []);
 
   // 用于存储最新参数值的 refs
   const currentParamsRef = useRef({
@@ -201,39 +206,23 @@ function DoubanPageClient() {
     return () => clearTimeout(timer);
   }, []); // 只在组件挂载时执行一次
 
-  // 监听滚动位置，控制返回顶部按钮显示
+  // 监听滚动位置，控制返回顶部按钮显示（移除常驻 60fps requestAnimationFrame 死循环，统一使用被动滚动事件）
   useEffect(() => {
-    // 获取滚动位置的函数 - 专门针对 body 滚动
     const getScrollTop = () => {
-      return document.body.scrollTop || 0;
+      return document.body.scrollTop || document.documentElement.scrollTop || window.scrollY || 0;
     };
 
-    // 使用 requestAnimationFrame 持续检测滚动位置
-    let isRunning = false;
-    const checkScrollPosition = () => {
-      if (!isRunning) return;
-
-      const scrollTop = getScrollTop();
-      const shouldShow = scrollTop > 300;
-      setShowBackToTop(shouldShow);
-
-      requestAnimationFrame(checkScrollPosition);
-    };
-
-    // 启动持续检测
-    isRunning = true;
-    checkScrollPosition();
-
-    // 监听 body 元素的滚动事件
     const handleScroll = () => {
       const scrollTop = getScrollTop();
       setShowBackToTop(scrollTop > 300);
     };
 
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     document.body.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      isRunning = false;
+      window.removeEventListener('scroll', handleScroll);
       document.body.removeEventListener('scroll', handleScroll);
     };
   }, []);
@@ -246,6 +235,7 @@ function DoubanPageClient() {
 
   // 当type变化时重置选择器状态
   useEffect(() => {
+    setCurrentPage(0);
     if (type === 'custom' && customCategories.length > 0) {
       // 自定义分类模式：优先选择 movie，如果没有 movie 则选择 tv
       const types = Array.from(
@@ -880,6 +870,7 @@ function DoubanPageClient() {
   );
 
   const handleWeekdayChange = useCallback((weekday: string) => {
+    setCurrentPage(0);
     setSelectedWeekday(weekday);
   }, []);
 

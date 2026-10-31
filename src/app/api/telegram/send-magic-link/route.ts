@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { NextResponse } from 'next/server';
 
 import { db } from '@/lib/db';
 import { setTelegramToken } from '@/lib/telegram-tokens';
@@ -10,10 +10,16 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const { telegramUsername } = await request.json();
-    console.log('[Magic Link] Received request for username:', telegramUsername);
 
     if (!telegramUsername || typeof telegramUsername !== 'string') {
-      console.log('[Magic Link] Invalid username');
+      return NextResponse.json(
+        { error: '请提供有效的 Telegram 用户名' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedUsername = telegramUsername.trim().replace(/^@/, '').toLowerCase();
+    if (!normalizedUsername) {
       return NextResponse.json(
         { error: '请提供有效的 Telegram 用户名' },
         { status: 400 }
@@ -23,10 +29,8 @@ export async function POST(request: Request) {
     // 获取管理员配置
     const config = await db.getAdminConfig();
     const telegramConfig = config?.TelegramAuthConfig;
-    console.log('[Magic Link] Config loaded, enabled:', telegramConfig?.enabled);
 
     if (!telegramConfig?.enabled) {
-      console.log('[Magic Link] Telegram login not enabled');
       return NextResponse.json(
         { error: 'Telegram 登录未启用' },
         { status: 403 }
@@ -34,7 +38,6 @@ export async function POST(request: Request) {
     }
 
     if (!telegramConfig.botToken) {
-      console.log('[Magic Link] Bot token not configured');
       return NextResponse.json(
         { error: 'Bot Token 未配置' },
         { status: 500 }
@@ -45,27 +48,29 @@ export async function POST(request: Request) {
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 分钟过期
 
-    // 获取当前请求的域名
-    const protocol = request.headers.get('x-forwarded-proto') || 'https';
-    const host = request.headers.get('host') || request.headers.get('x-forwarded-host');
-    const baseUrl = `${protocol}://${host}`;
+    // 获取当前请求的域名（优先环境变量配置，严格校验 Host 头防止注入）
+    let baseUrl = process.env.SITE_BASE || process.env.NEXT_PUBLIC_SITE_URL;
+    if (!baseUrl) {
+      const rawProto = request.headers.get('x-forwarded-proto') || 'https';
+      const protocol = rawProto === 'http' ? 'http' : 'https';
+      const host = request.headers.get('host') || request.headers.get('x-forwarded-host') || 'localhost';
+      const safeHost = /^[a-zA-Z0-9.-]+(:\d+)?$/.test(host) ? host : 'localhost';
+      baseUrl = `${protocol}://${safeHost}`;
+    }
 
-    // 存储 token 到数据库
+    // 存储 token 到数据库（初始为未验证状态，必须由 Telegram Webhook 确认）
     const tokenData = {
-      telegramUsername: telegramUsername.toLowerCase(),
+      telegramUsername: normalizedUsername,
       expiresAt,
-      baseUrl, // 保存请求的域名
+      baseUrl,
+      verified: false,
     };
 
-    console.log('[Magic Link] Storing token:', token, 'Data:', tokenData);
     await setTelegramToken(token, tokenData);
-    console.log('[Magic Link] Token saved successfully');
 
     // 生成 Telegram 深度链接
     const botUsername = telegramConfig.botUsername;
     const deepLink = `https://t.me/${botUsername}?start=${token}`;
-
-    console.log('[Magic Link] Deep link generated:', deepLink);
 
     // 返回深度链接给前端
     return NextResponse.json({

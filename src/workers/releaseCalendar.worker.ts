@@ -29,8 +29,9 @@ interface WorkerOutput {
   };
 }
 
-// 缓存正则表达式
+// 缓存正则表达式（replace 使用全局标志，test 使用非全局标志避免 lastIndex 状态残留导致交替漏检）
 const seasonRegex = /第[一二三四五六七八九十\d]+季|Season\s*\d+|S\d+/gi;
+const seasonTestRegex = /第[一二三四五六七八九十\d]+季|Season\s*\d+|S\d+/i;
 
 function normalizeTitle(title: string): string {
   // 合并多个replace操作，减少字符串创建
@@ -101,8 +102,8 @@ function processReleaseCalendar(input: WorkerInput): WorkerOutput {
         foundSimilar = true;
 
         // 缓存季数检测结果
-        const itemHasSeason = seasonCache.get(item.title) ?? seasonRegex.test(item.title);
-        const existingHasSeason = seasonCache.get(key) ?? seasonRegex.test(key);
+        const itemHasSeason = seasonCache.get(item.title) ?? seasonTestRegex.test(item.title);
+        const existingHasSeason = seasonCache.get(key) ?? seasonTestRegex.test(key);
         seasonCache.set(item.title, itemHasSeason);
         seasonCache.set(key, existingHasSeason);
 

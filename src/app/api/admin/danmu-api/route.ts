@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { ensureAdmin } from '@/lib/admin-auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -18,10 +19,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const authInfo = getAuthInfoFromCookie(request);
-
-  // 检查用户权限（管理员或站长）
-  if (!authInfo || !authInfo.username) {
+  try {
+    await ensureAdmin(request);
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -61,25 +61,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const authInfo = getAuthInfoFromCookie(request);
-
-  // 检查用户权限（管理员或站长）
-  if (!authInfo || !authInfo.username) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // 验证是否为管理员或站长
-  const adminConfig = await getConfig();
-  const userConfig = adminConfig.UserConfig?.Users?.find(
-    (u) => u.username === authInfo.username
-  );
-
-  const isOwner = authInfo.username === process.env.USERNAME;
-  const isAdmin = userConfig?.role === 'admin' || userConfig?.role === 'owner';
-
-  if (!isOwner && !isAdmin) {
+  try {
+    await ensureAdmin(request);
+  } catch {
     return NextResponse.json({ error: '权限不足' }, { status: 403 });
   }
+
+  const adminConfig = await getConfig();
 
   try {
     const danmuApiConfig = await request.json();
@@ -93,12 +81,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid useCustomApi value' }, { status: 400 });
     }
 
-    // 如果使用自定义 API，验证 URL 格式
+    // 如果使用自定义 API，验证 URL 格式与 SSRF 安全性
     if (danmuApiConfig.useCustomApi && danmuApiConfig.customApiUrl) {
-      try {
-        new URL(danmuApiConfig.customApiUrl);
-      } catch {
-        return NextResponse.json({ error: '无效的API地址格式' }, { status: 400 });
+      const safety = await isSafePublicUrl(danmuApiConfig.customApiUrl);
+      if (!safety.safe) {
+        return NextResponse.json(
+          { error: `无效或不安全的API地址: ${safety.reason}` },
+          { status: 400 }
+        );
       }
     }
 

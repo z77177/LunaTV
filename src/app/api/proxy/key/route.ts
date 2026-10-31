@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 
 import { getConfig } from "@/lib/config";
+import { isSafePublicUrl } from "@/lib/ssrf";
 
 export const runtime = 'nodejs';
 
@@ -111,6 +112,11 @@ export async function GET(request: Request) {
         ...(cached.etag && { 'ETag': cached.etag })
       },
     });
+  }
+
+  const safety = await isSafePublicUrl(decodedUrl);
+  if (!safety.safe) {
+    return NextResponse.json({ error: safety.reason || 'Forbidden URL' }, { status: 403 });
   }
 
   const controller = new AbortController();
