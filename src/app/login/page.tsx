@@ -12,6 +12,7 @@ import { checkForUpdates, UpdateStatus } from '@/lib/version_check';
 import { useSite } from '@/components/SiteProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
+import { getSafeRedirectUrl } from '@/lib/utils';
 import { OIDCProviderLogo, detectProvider, getProviderButtonStyle, getProviderButtonText } from '@/components/OIDCProviderLogos';
 
 // 版本显示组件
@@ -214,7 +215,7 @@ function LoginPageClient() {
           // 登入时间记录失败不影响正常登录流程
         }
 
-        const redirect = searchParams.get('redirect') || '/';
+        const redirect = getSafeRedirectUrl(searchParams.get('redirect'));
         router.replace(redirect);
       } else if (res.status === 401) {
         setError('密码错误');
@@ -285,7 +286,7 @@ function LoginPageClient() {
     const expires = new Date();
     expires.setDate(expires.getDate() + 3);
     document.cookie = `user_auth=${encodeURIComponent(JSON.stringify(guestAuth))}; path=/; expires=${expires.toUTCString()}; sameSite=lax`;
-    const redirect = searchParams.get('redirect') || '/';
+    const redirect = getSafeRedirectUrl(searchParams.get('redirect'));
     window.location.href = redirect;
   };
 

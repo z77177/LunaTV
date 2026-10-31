@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getSpiderJarFromBlob, uploadSpiderJarToBlob } from '@/lib/blobStorage';
+import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig, refineConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 import { fetchVideoDetail } from '@/lib/fetchVideoDetail';
@@ -170,6 +171,30 @@ async function withRetry<T>(
 // ========== 工具函数结束 ==========
 
 export async function GET(request: NextRequest) {
+  // 🛡️ 鉴权保护：仅允许携带 CRON_SECRET、站长密码或管理员登录 Cookie 执行
+  const authHeader = request.headers.get('authorization') || '';
+  const searchToken = request.nextUrl.searchParams.get('token');
+  const cronSecret = process.env.CRON_SECRET;
+  const adminPassword = process.env.PASSWORD;
+
+  const isBearerAuthorized =
+    Boolean(cronSecret && authHeader === `Bearer ${cronSecret}`) ||
+    Boolean(adminPassword && authHeader === `Bearer ${adminPassword}`);
+  const isTokenAuthorized =
+    Boolean(cronSecret && searchToken === cronSecret) ||
+    Boolean(adminPassword && searchToken === adminPassword);
+
+  const authInfo = getAuthInfoFromCookie(request);
+  const isSessionAuthorized =
+    Boolean(authInfo && (authInfo.username === process.env.USERNAME || authInfo.role === 'admin' || authInfo.role === 'owner'));
+
+  if (!isBearerAuthorized && !isTokenAuthorized && !isSessionAuthorized && (cronSecret || adminPassword)) {
+    return NextResponse.json(
+      { error: 'Unauthorized: invalid cron authorization token or session' },
+      { status: 401 }
+    );
+  }
+
   const startTime = Date.now();
   const startMemory = process.memoryUsage().heapUsed;
 

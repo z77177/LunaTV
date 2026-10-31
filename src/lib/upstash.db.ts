@@ -68,6 +68,28 @@ export class UpstashRedisStorage implements IStorage {
     this.client = getUpstashRedisClient();
   }
 
+  // 🚀 使用 SCAN 分页获取所有匹配 key，防止阻塞 Redis 及超出 Upstash 速率限制
+  protected async scanKeys(pattern: string): Promise<string[]> {
+    const keys = new Set<string>();
+    let cursor: string | number = 0;
+
+    do {
+      const [nextCursor, matchedKeys] = await withRetry(() =>
+        this.client.scan(cursor, {
+          match: pattern,
+          count: 100,
+        })
+      );
+
+      cursor = nextCursor;
+      for (const key of matchedKeys) {
+        keys.add(key);
+      }
+    } while (cursor !== '0');
+
+    return Array.from(keys);
+  }
+
   // ---------- 播放记录 ----------
   private prKey(user: string, key: string) {
     return `u:${user}:pr:${key}`; // u:username:pr:source+id
@@ -95,7 +117,7 @@ export class UpstashRedisStorage implements IStorage {
     userName: string
   ): Promise<Record<string, PlayRecord>> {
     const pattern = `u:${userName}:pr:*`;
-    const keys: string[] = await withRetry(() => this.client.keys(pattern));
+    const keys: string[] = await this.scanKeys(pattern);
     if (keys.length === 0) return {};
 
     // 🚀 优化：使用 mget 批量获取，只算1条命令（而不是N条）
@@ -141,7 +163,7 @@ export class UpstashRedisStorage implements IStorage {
 
   async getAllFavorites(userName: string): Promise<Record<string, Favorite>> {
     const pattern = `u:${userName}:fav:*`;
-    const keys: string[] = await withRetry(() => this.client.keys(pattern));
+    const keys: string[] = await this.scanKeys(pattern);
     if (keys.length === 0) return {};
 
     // 🚀 优化：使用 mget 批量获取，只算1条命令（而不是N条）
@@ -211,9 +233,42 @@ export class UpstashRedisStorage implements IStorage {
     return `u:${user}:pwd`;
   }
 
+  // 加盐哈希密码: sha256:${salt}:${hash}
+  protected async hashPasswordWithSalt(password: string, salt?: string): Promise<string> {
+    const saltStr = salt || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).substring(2));
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${saltStr}:${password}`);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return `sha256:${saltStr}:${hash}`;
+  }
+
+  // 验证密码（支持加盐哈希或平滑兼容明文/老版本纯SHA256）
+  protected async verifyHashedPassword(password: string, stored: string): Promise<boolean> {
+    if (stored.startsWith('sha256:')) {
+      const parts = stored.split(':');
+      if (parts.length === 3) {
+        const salt = parts[1];
+        const expected = await this.hashPasswordWithSalt(password, salt);
+        return expected === stored;
+      }
+      return false;
+    }
+    // 兼容历史纯 SHA-256（无 salt，长度 64 的十六进制串）
+    if (stored.length === 64 && /^[0-9a-f]{64}$/i.test(stored)) {
+      const encoder = new TextEncoder();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(password));
+      const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      return hash.toLowerCase() === stored.toLowerCase();
+    }
+    // 兼容历史明文
+    return stored === password;
+  }
+
   async registerUser(userName: string, password: string): Promise<void> {
-    // 简单存储明文密码，生产环境应加密
-    await withRetry(() => this.client.set(this.userPwdKey(userName), password));
+    const hashedPassword = await this.hashPasswordWithSalt(password);
+    await withRetry(() => this.client.set(this.userPwdKey(userName), hashedPassword));
   }
 
   async verifyUser(userName: string, password: string): Promise<boolean> {
@@ -221,8 +276,15 @@ export class UpstashRedisStorage implements IStorage {
       this.client.get(this.userPwdKey(userName))
     );
     if (stored === null) return false;
-    // 确保比较时都是字符串类型
-    return ensureString(stored) === password;
+    const storedStr = ensureString(stored);
+    const isValid = await this.verifyHashedPassword(password, storedStr);
+    // 平滑升级：若之前存储的是明文或未加盐哈希，自动升级为加盐哈希保存
+    if (isValid && !storedStr.startsWith('sha256:')) {
+      this.changePassword(userName, password).catch(err => {
+        console.error(`自动升级用户 ${userName} 密码哈希失败:`, err);
+      });
+    }
+    return isValid;
   }
 
   // 检查用户是否存在
@@ -236,10 +298,21 @@ export class UpstashRedisStorage implements IStorage {
 
   // 修改用户密码
   async changePassword(userName: string, newPassword: string): Promise<void> {
-    // 简单存储明文密码，生产环境应加密
+    const hashedPassword = await this.hashPasswordWithSalt(newPassword);
     await withRetry(() =>
-      this.client.set(this.userPwdKey(userName), newPassword)
+      this.client.set(this.userPwdKey(userName), hashedPassword)
     );
+
+    // 同步更新 V2 用户信息中的密码哈希
+    try {
+      const userKey = this.userInfoKey(userName);
+      const exists = await withRetry(() => this.client.exists(userKey));
+      if (exists) {
+        await withRetry(() => this.client.hset(userKey, { password: hashedPassword }));
+      }
+    } catch (err) {
+      console.warn(`同步更新用户 ${userName} V2 密码哈希失败:`, err);
+    }
   }
 
   // 删除用户及其所有数据
@@ -268,36 +341,28 @@ export class UpstashRedisStorage implements IStorage {
 
     // 删除播放记录
     const playRecordPattern = `u:${userName}:pr:*`;
-    const playRecordKeys = await withRetry(() =>
-      this.client.keys(playRecordPattern)
-    );
+    const playRecordKeys = await this.scanKeys(playRecordPattern);
     if (playRecordKeys.length > 0) {
       await withRetry(() => this.client.del(...playRecordKeys));
     }
 
     // 删除收藏夹
     const favoritePattern = `u:${userName}:fav:*`;
-    const favoriteKeys = await withRetry(() =>
-      this.client.keys(favoritePattern)
-    );
+    const favoriteKeys = await this.scanKeys(favoritePattern);
     if (favoriteKeys.length > 0) {
       await withRetry(() => this.client.del(...favoriteKeys));
     }
 
     // 删除跳过片头片尾配置
     const skipConfigPattern = `u:${userName}:skip:*`;
-    const skipConfigKeys = await withRetry(() =>
-      this.client.keys(skipConfigPattern)
-    );
+    const skipConfigKeys = await this.scanKeys(skipConfigPattern);
     if (skipConfigKeys.length > 0) {
       await withRetry(() => this.client.del(...skipConfigKeys));
     }
 
     // 删除剧集跳过配置
     const episodeSkipPattern = `u:${userName}:episodeskip:*`;
-    const episodeSkipKeys = await withRetry(() =>
-      this.client.keys(episodeSkipPattern)
-    );
+    const episodeSkipKeys = await this.scanKeys(episodeSkipPattern);
     if (episodeSkipKeys.length > 0) {
       await withRetry(() => this.client.del(...episodeSkipKeys));
     }
@@ -338,7 +403,7 @@ export class UpstashRedisStorage implements IStorage {
     oidcSub?: string,
     enabledApis?: string[]
   ): Promise<void> {
-    const hashedPassword = await this.hashPassword(password);
+    const hashedPassword = await this.hashPasswordWithSalt(password);
     const createdAt = Date.now();
 
     // 存储用户信息到Hash
@@ -382,8 +447,14 @@ export class UpstashRedisStorage implements IStorage {
       return false;
     }
 
-    const hashedPassword = await this.hashPassword(password);
-    return userInfo.password === hashedPassword;
+    const storedPassword = ensureString(userInfo.password);
+    const isValid = await this.verifyHashedPassword(password, storedPassword);
+    if (isValid && !storedPassword.startsWith('sha256:')) {
+      this.changePassword(userName, password).catch(err => {
+        console.error(`自动升级用户 ${userName} 密码哈希失败:`, err);
+      });
+    }
+    return isValid;
   }
 
   // 获取用户信息（新版本）
@@ -514,7 +585,7 @@ export class UpstashRedisStorage implements IStorage {
   // ---------- 获取全部用户 ----------
   async getAllUsers(): Promise<string[]> {
     // 获取 V1 用户（u:*:pwd）
-    const v1Keys = await withRetry(() => this.client.keys('u:*:pwd'));
+    const v1Keys = await this.scanKeys('u:*:pwd');
     const v1Users = v1Keys
       .map((k) => {
         const match = k.match(/^u:(.+?):pwd$/);
@@ -523,7 +594,7 @@ export class UpstashRedisStorage implements IStorage {
       .filter((u): u is string => typeof u === 'string');
 
     // 获取 V2 用户（u:*:info）
-    const v2Keys = await withRetry(() => this.client.keys('u:*:info'));
+    const v2Keys = await this.scanKeys('u:*:info');
     const v2Users = v2Keys
       .map((k) => {
         const match = k.match(/^u:(.+?):info$/);
@@ -612,7 +683,7 @@ export class UpstashRedisStorage implements IStorage {
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     const pattern = `u:${userName}:skip:*`;
-    const keys = await withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
 
     if (keys.length === 0) {
       return {};
@@ -679,7 +750,7 @@ export class UpstashRedisStorage implements IStorage {
     userName: string
   ): Promise<{ [key: string]: EpisodeSkipConfig }> {
     const pattern = `u:${userName}:episodeskip:*`;
-    const keys = await withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
 
     if (keys.length === 0) {
       return {};
@@ -773,7 +844,7 @@ export class UpstashRedisStorage implements IStorage {
     // Upstash的TTL机制会自动清理过期数据，这里主要用于手动清理
     // 可以根据需要实现特定前缀的缓存清理
     const pattern = prefix ? `cache:${prefix}*` : 'cache:*';
-    const keys = await withRetry(() => this.client.keys(pattern));
+    const keys = await this.scanKeys(pattern);
 
     if (keys.length > 0) {
       await withRetry(() => this.client.del(...keys));

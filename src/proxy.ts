@@ -1,8 +1,9 @@
 /* eslint-disable no-console */
 
+import ipaddr from 'ipaddr.js';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { AUTH_COOKIE_MAX_AGE_SECONDS, getAuthInfoFromCookie } from '@/lib/auth';
+import { AUTH_COOKIE_MAX_AGE_SECONDS, getAuthInfoFromCookie, verifyAuthSignature } from '@/lib/auth';
 
 // 游客模式配置缓存（从 API 获取）
 let guestModeCache: boolean | null = null;
@@ -55,6 +56,7 @@ async function getTrustedNetworkFromAPI(request: NextRequest): Promise<{ enabled
     const response = await fetch(url.toString(), {
       headers: {
         'x-internal-request': 'true',
+        'x-internal-secret': process.env.PASSWORD || '',
       },
     });
 
@@ -121,6 +123,7 @@ async function getGuestModeConfig(request: NextRequest): Promise<boolean> {
     const response = await fetch(url.toString(), {
       headers: {
         'x-internal-request': 'true',
+        'x-internal-secret': process.env.PASSWORD || '',
       },
     });
 
@@ -153,51 +156,24 @@ function getClientIP(request: NextRequest): string {
   );
 }
 
-// 简化的 IP/CIDR 匹配（Edge Runtime 兼容）
+// 高可靠 IP/CIDR 匹配（支持 IPv4/IPv6 标准与压缩格式）
 function isIPInCIDR(clientIP: string, cidr: string): boolean {
-  // 处理通配符
   if (cidr === '*') return true;
+  if (!clientIP || clientIP === 'unknown') return false;
 
-  // 检测 IPv6
-  const isClientIPv6 = clientIP.includes(':');
-  const isCIDRIPv6 = cidr.includes(':');
+  try {
+    const clientAddr = ipaddr.process(clientIP.trim());
 
-  // IPv4 和 IPv6 不能互相匹配
-  if (isClientIPv6 !== isCIDRIPv6) return false;
-
-  if (isClientIPv6) {
-    // IPv6 简化匹配：只支持精确匹配和简单前缀匹配
     if (cidr.includes('/')) {
-      const [network] = cidr.split('/');
-      // 简化：检查是否以相同前缀开始
-      return clientIP.toLowerCase().startsWith(network.toLowerCase().replace(/:+$/, ''));
+      const parsedCIDR = ipaddr.parseCIDR(cidr.trim());
+      return clientAddr.match(parsedCIDR);
     }
-    return clientIP.toLowerCase() === cidr.toLowerCase();
+
+    const targetAddr = ipaddr.process(cidr.trim());
+    return clientAddr.toNormalizedString() === targetAddr.toNormalizedString();
+  } catch {
+    return false;
   }
-
-  // IPv4 CIDR 匹配
-  if (cidr.includes('/')) {
-    const [network, maskStr] = cidr.split('/');
-    const mask = parseInt(maskStr, 10);
-
-    const networkParts = network.split('.').map(Number);
-    const clientParts = clientIP.split('.').map(Number);
-
-    if (clientParts.length !== 4 || networkParts.length !== 4) return false;
-    if (clientParts.some(p => isNaN(p)) || networkParts.some(p => isNaN(p))) return false;
-
-    // 转换为 32 位整数
-    const networkInt = (networkParts[0] << 24) | (networkParts[1] << 16) | (networkParts[2] << 8) | networkParts[3];
-    const clientInt = (clientParts[0] << 24) | (clientParts[1] << 16) | (clientParts[2] << 8) | clientParts[3];
-
-    // 生成掩码
-    const maskInt = mask === 0 ? 0 : (~0 << (32 - mask)) >>> 0;
-
-    return (networkInt & maskInt) === (clientInt & maskInt);
-  }
-
-  // 精确 IP 匹配
-  return clientIP === cidr;
 }
 
 // 检查 IP 是否在信任网络中
@@ -312,15 +288,17 @@ async function handleAuthentication(
 ) {
   // 🔥 检查信任网络模式（环境变量优先，然后数据库）
   const trustedNetworkConfig = await getTrustedNetworkConfig(request);
+  let isCurrentRequestFromTrustedNetwork = false;
   if (trustedNetworkConfig?.enabled && trustedNetworkConfig.trustedIPs.length > 0) {
     const clientIP = getClientIP(request);
 
     if (isIPTrusted(clientIP, trustedNetworkConfig.trustedIPs)) {
+      isCurrentRequestFromTrustedNetwork = true;
       console.log(`[Middleware] Trusted network auto-login for IP: ${clientIP}`);
 
       // 检查是否已经有有效的认证 cookie
       const existingAuth = getAuthInfoFromCookie(request);
-      if (existingAuth && (existingAuth.password || existingAuth.trustedNetwork || existingAuth.signature)) {
+      if (existingAuth && (existingAuth.password || existingAuth.signature)) {
         return response || NextResponse.next();
       }
 
@@ -369,9 +347,14 @@ async function handleAuthentication(
   }
 
   // 其他模式：验证签名或信任网络标记
-  // 🔥 信任网络模式：检查 trustedNetwork 标记
+  // 🔥 信任网络模式：严格比对当前请求物理来源是否属于授信 IP
   if (authInfo.trustedNetwork) {
-    return response || NextResponse.next();
+    if (isCurrentRequestFromTrustedNetwork) {
+      return response || NextResponse.next();
+    }
+    // 伪造或失效的 trustedNetwork 标记：当前物理 IP 并不在授信白名单中，拒绝放行
+    console.warn(`[Middleware] 拦截未授权的 trustedNetwork 请求`);
+    return handleAuthFailure(request, pathname);
   }
 
   // 检查是否有用户名（非localStorage模式下密码不存储在cookie中）
@@ -379,60 +362,38 @@ async function handleAuthentication(
     return handleAuthFailure(request, pathname);
   }
 
-  // 验证签名（如果存在）
+  // 检查会话时效（防重放与超期）
+  if (authInfo.timestamp && (Date.now() - authInfo.timestamp) / 1000 > AUTH_COOKIE_MAX_AGE_SECONDS) {
+    console.warn(`[Middleware] 会话已过期: ${authInfo.username}`);
+    return handleAuthFailure(request, pathname);
+  }
+
+  // 验证防篡改签名
   if (authInfo.signature) {
-    const isValidSignature = await verifySignature(
-      authInfo.username,
-      authInfo.signature,
+    const isValidSignature = await verifyAuthSignature(
+      authInfo,
       process.env.PASSWORD || ''
     );
 
-    // 签名验证通过即可
+    // 签名验证通过
     if (isValidSignature) {
+      // 🛡️ 网关层 RBAC 权限控制：访问管理后台或管理 API 必须具备 admin 或 owner 角色
+      if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+        if (authInfo.role !== 'admin' && authInfo.role !== 'owner') {
+          console.warn(`[Middleware] 拦截非管理员访问管理路径: ${authInfo.username} (${authInfo.role}) -> ${pathname}`);
+          if (pathname.startsWith('/api')) {
+            return new NextResponse('Forbidden: Admin role required', { status: 403 });
+          }
+          return NextResponse.redirect(new URL('/', request.url));
+        }
+      }
+
       return response || NextResponse.next();
     }
   }
 
   // 签名验证失败或不存在签名
   return handleAuthFailure(request, pathname);
-}
-
-// 验证签名
-async function verifySignature(
-  data: string,
-  signature: string,
-  secret: string
-): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const messageData = encoder.encode(data);
-
-  try {
-    // 导入密钥
-    const key = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['verify']
-    );
-
-    // 将十六进制字符串转换为Uint8Array
-    const signatureBuffer = new Uint8Array(
-      signature.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []
-    );
-
-    // 验证签名
-    return await crypto.subtle.verify(
-      'HMAC',
-      key,
-      signatureBuffer,
-      messageData
-    );
-  } catch (error) {
-    console.error('签名验证失败:', error);
-    return false;
-  }
 }
 
 // 处理认证失败的情况
@@ -463,7 +424,9 @@ function shouldSkipAuth(pathname: string): boolean {
     '/icons/',
     '/logo.png',
     '/screenshot.png',
-    '/api/telegram/', // Telegram API 端点
+    '/api/telegram/webhook',
+    '/api/telegram/send-magic-link',
+    '/api/telegram/verify',
   ];
 
   return skipPaths.some((path) => pathname.startsWith(path));
@@ -472,6 +435,6 @@ function shouldSkipAuth(pathname: string): boolean {
 // 配置 proxy 匹配规则
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|login|register|oidc-register|warning|api/login|api/register|api/logout|api/cron|api/server-config|api/tvbox|api/live/merged|api/parse|api/bing-wallpaper|api/proxy/|api/telegram/|api/auth/oidc/|api/watch-room/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login|register|oidc-register|warning|api/login|api/register|api/logout|api/cron|api/server-config|api/tvbox/|api/tvbox$|api/tvbox\\?|api/live/merged|api/parse|api/bing-wallpaper|api/proxy/|api/telegram/webhook|api/telegram/send-magic-link|api/telegram/verify|api/auth/oidc/|api/watch-room/).*)',
   ],
 };

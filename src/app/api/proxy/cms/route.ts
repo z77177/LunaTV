@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config';
+import { isSafePublicUrl } from '@/lib/ssrf';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // 使用 Node.js Runtime 以获得更好的网络兼容性
@@ -120,6 +121,15 @@ export async function GET(request: NextRequest) {
       console.warn(`[CMS Proxy] Blocked non-whitelisted URL: ${targetUrl}`);
       return NextResponse.json(
         { error: 'URL not in whitelist' },
+        { status: 403, headers: getCorsHeaders() }
+      );
+    }
+
+    // SSRF 安全校验，阻断内网与保留地址
+    const safeCheck = await isSafePublicUrl(targetUrl);
+    if (!safeCheck.safe) {
+      return NextResponse.json(
+        { error: '禁止访问该地址 (SSRF Protection)' },
         { status: 403, headers: getCorsHeaders() }
       );
     }

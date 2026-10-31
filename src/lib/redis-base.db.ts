@@ -346,9 +346,42 @@ export abstract class BaseRedisStorage implements IStorage {
     return `u:${user}:pwd`;
   }
 
+  // 加盐哈希密码: sha256:${salt}:${hash}
+  protected async hashPasswordWithSalt(password: string, salt?: string): Promise<string> {
+    const saltStr = salt || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).substring(2));
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${saltStr}:${password}`);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return `sha256:${saltStr}:${hash}`;
+  }
+
+  // 验证密码（支持加盐哈希或平滑兼容明文/老版本纯SHA256）
+  protected async verifyHashedPassword(password: string, stored: string): Promise<boolean> {
+    if (stored.startsWith('sha256:')) {
+      const parts = stored.split(':');
+      if (parts.length === 3) {
+        const salt = parts[1];
+        const expected = await this.hashPasswordWithSalt(password, salt);
+        return expected === stored;
+      }
+      return false;
+    }
+    // 兼容历史纯 SHA-256（无 salt，长度 64 的十六进制串）
+    if (stored.length === 64 && /^[0-9a-f]{64}$/i.test(stored)) {
+      const encoder = new TextEncoder();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(password));
+      const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      return hash.toLowerCase() === stored.toLowerCase();
+    }
+    // 兼容历史明文
+    return stored === password;
+  }
+
   async registerUser(userName: string, password: string): Promise<void> {
-    // 简单存储明文密码，生产环境应加密
-    await this.withRetry(() => this.client.set(this.userPwdKey(userName), password));
+    const hashedPassword = await this.hashPasswordWithSalt(password);
+    await this.withRetry(() => this.client.set(this.userPwdKey(userName), hashedPassword));
   }
 
   async verifyUser(userName: string, password: string): Promise<boolean> {
@@ -356,8 +389,15 @@ export abstract class BaseRedisStorage implements IStorage {
       this.client.get(this.userPwdKey(userName))
     );
     if (stored === null) return false;
-    // 确保比较时都是字符串类型
-    return ensureString(stored) === password;
+    const storedStr = ensureString(stored);
+    const isValid = await this.verifyHashedPassword(password, storedStr);
+    // 平滑升级：若之前存储的是明文或未加盐哈希，自动升级为加盐哈希保存
+    if (isValid && !storedStr.startsWith('sha256:')) {
+      this.changePassword(userName, password).catch(err => {
+        console.error(`自动升级用户 ${userName} 密码哈希失败:`, err);
+      });
+    }
+    return isValid;
   }
 
   // 检查用户是否存在
@@ -371,10 +411,21 @@ export abstract class BaseRedisStorage implements IStorage {
 
   // 修改用户密码
   async changePassword(userName: string, newPassword: string): Promise<void> {
-    // 简单存储明文密码，生产环境应加密
+    const hashedPassword = await this.hashPasswordWithSalt(newPassword);
     await this.withRetry(() =>
-      this.client.set(this.userPwdKey(userName), newPassword)
+      this.client.set(this.userPwdKey(userName), hashedPassword)
     );
+
+    // 同步更新 V2 用户信息中的密码哈希
+    try {
+      const userKey = this.userInfoKey(userName);
+      const exists = await this.withRetry(() => this.client.exists(userKey));
+      if (exists) {
+        await this.withRetry(() => this.client.hSet(userKey, 'password', hashedPassword));
+      }
+    } catch (err) {
+      console.warn(`同步更新用户 ${userName} V2 密码哈希失败:`, err);
+    }
   }
 
   // 删除用户及其所有数据
@@ -465,7 +516,7 @@ export abstract class BaseRedisStorage implements IStorage {
     oidcSub?: string,
     enabledApis?: string[]
   ): Promise<void> {
-    const hashedPassword = await this.hashPassword(password);
+    const hashedPassword = await this.hashPasswordWithSalt(password);
     const createdAt = Date.now();
 
     // 存储用户信息到Hash
@@ -510,8 +561,13 @@ export abstract class BaseRedisStorage implements IStorage {
       return false;
     }
 
-    const hashedPassword = await this.hashPassword(password);
-    return userInfo.password === hashedPassword;
+    const isValid = await this.verifyHashedPassword(password, userInfo.password);
+    if (isValid && !userInfo.password.startsWith('sha256:')) {
+      this.changePassword(userName, password).catch(err => {
+        console.error(`自动升级用户 ${userName} 密码哈希失败:`, err);
+      });
+    }
+    return isValid;
   }
 
   // 获取用户信息（新版本）

@@ -15,10 +15,13 @@ export async function GET(request: NextRequest) {
 
   // 检查是否是内部请求（middleware 获取信任网络配置）
   const isInternalRequest = request.headers.get('x-internal-request') === 'true';
+  const internalSecret = request.headers.get('x-internal-secret');
+  const isInternalAuthorized =
+    isInternalRequest && (!process.env.PASSWORD || internalSecret === process.env.PASSWORD);
   const requestedKey = new URL(request.url).searchParams.get('key');
 
-  // 内部请求：只返回特定配置
-  if (isInternalRequest && requestedKey === 'TrustedNetworkConfig') {
+  // 内部请求：只向受内部密钥认证的请求返回信任网络敏感配置
+  if (isInternalAuthorized && requestedKey === 'TrustedNetworkConfig') {
     return NextResponse.json({
       TrustedNetworkConfig: config.TrustedNetworkConfig || null,
     });

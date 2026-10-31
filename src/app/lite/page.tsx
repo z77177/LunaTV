@@ -558,9 +558,9 @@ export default async function LitePage({ searchParams }: PageProps) {
             </Link>
           </div>
           <div>
-            <a href='/' className='lite-nav-link' title='返回完整版主站'>
+            <Link href='/' className='lite-nav-link' title='返回完整版主站'>
               🖥️ 完整版
-            </a>
+            </Link>
           </div>
         </div>
 

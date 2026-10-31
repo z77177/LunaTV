@@ -1,6 +1,7 @@
 /* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { GET as getTVBoxConfig } from '../route';
+import { isSafeIp } from '@/lib/ssrf';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
@@ -27,18 +28,10 @@ function isPrivateHost(urlStr: string): boolean {
   try {
     const u = new URL(urlStr);
     const h = u.hostname;
-    return (
-      h === 'localhost' ||
-      h === '0.0.0.0' ||
-      h === '127.0.0.1' ||
-      h.startsWith('10.') ||
-      h.startsWith('172.16.') ||
-      h.startsWith('172.17.') ||
-      h.startsWith('172.18.') ||
-      h.startsWith('172.19.') ||
-      h.startsWith('172.2') || // 172.20-172.31 简化判断
-      h.startsWith('192.168.')
-    );
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '::1') {
+      return true;
+    }
+    return !isSafeIp(h);
   } catch {
     return false;
   }

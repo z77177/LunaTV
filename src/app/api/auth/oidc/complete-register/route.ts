@@ -1,53 +1,11 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { AUTH_COOKIE_MAX_AGE_DAYS } from '@/lib/auth';
+import { AUTH_COOKIE_MAX_AGE_DAYS, generateAuthCookie, verifySignature } from '@/lib/auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
-
-// 生成签名
-async function generateSignature(
-  data: string,
-  secret: string
-): Promise<string> {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const messageData = encoder.encode(data);
-
-  const key = await crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signature = await crypto.subtle.sign('HMAC', key, messageData);
-
-  return Array.from(new Uint8Array(signature))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-// 生成认证Cookie
-async function generateAuthCookie(
-  username: string,
-  role: 'owner' | 'admin' | 'user'
-): Promise<string> {
-  const authData: any = { role };
-
-  if (username && process.env.PASSWORD) {
-    authData.username = username;
-    const signature = await generateSignature(username, process.env.PASSWORD);
-    authData.signature = signature;
-    authData.timestamp = Date.now();
-    authData.loginTime = Date.now();
-  }
-
-  return encodeURIComponent(JSON.stringify(authData));
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -89,6 +47,26 @@ export async function POST(request: NextRequest) {
     if (Date.now() - oidcSession.timestamp > 600000) {
       return NextResponse.json(
         { error: 'OIDC会话已过期，请重新登录' },
+        { status: 400 }
+      );
+    }
+
+    // 校验 OIDC 会话防篡改签名
+    if (!oidcSession.sig || !oidcSession.sub || !oidcSession.timestamp) {
+      return NextResponse.json(
+        { error: 'OIDC会话签名无效或已被篡改' },
+        { status: 400 }
+      );
+    }
+
+    const isSigValid = await verifySignature(
+      `${oidcSession.sub}:${oidcSession.timestamp}`,
+      oidcSession.sig,
+      process.env.PASSWORD || ''
+    );
+    if (!isSigValid) {
+      return NextResponse.json(
+        { error: 'OIDC会话签名校验失败' },
         { status: 400 }
       );
     }

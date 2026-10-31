@@ -1,6 +1,8 @@
 /* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
+import { isSafePublicUrl } from '@/lib/ssrf';
+
 export const runtime = 'nodejs';
 
 /**
@@ -24,6 +26,15 @@ export async function GET(request: NextRequest) {
     new URL(decodedUrl);
   } catch {
     return NextResponse.json({ error: '无效的 URL 地址' }, { status: 400 });
+  }
+
+  // 🛡️ SSRF 拦截防御：禁止访问本地、内网及云元数据地址
+  const safetyCheck = await isSafePublicUrl(decodedUrl);
+  if (!safetyCheck.safe) {
+    return NextResponse.json(
+      { error: safetyCheck.reason || '非法请求地址' },
+      { status: 403 }
+    );
   }
 
   const controller = new AbortController();

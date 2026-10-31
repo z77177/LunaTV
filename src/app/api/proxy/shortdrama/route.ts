@@ -1,6 +1,7 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 
 import { NextResponse } from "next/server";
+import { isSafePublicUrl } from '@/lib/ssrf';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
@@ -37,6 +38,16 @@ export async function GET(request: Request) {
 
   try {
     const decodedUrl = decodeURIComponent(url);
+
+    // SSRF 安全校验，阻断内网与保留地址
+    const safeCheck = await isSafePublicUrl(decodedUrl);
+    if (!safeCheck.safe) {
+      return NextResponse.json(
+        { error: '禁止访问该地址 (SSRF Protection)' },
+        { status: 403 }
+      );
+    }
+
     const isHttps = decodedUrl.startsWith('https:');
     const agent = isHttps ? httpsAgent : httpAgent;
 

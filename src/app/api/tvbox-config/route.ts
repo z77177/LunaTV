@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { getAuthInfoFromCookie, verifyAuthSignature } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
@@ -14,6 +14,15 @@ export async function GET(request: NextRequest) {
     const authInfo = getAuthInfoFromCookie(request);
     if (!authInfo || !authInfo.username || authInfo.isGuest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 强校验会话签名防篡改
+    const isValidSignature = await verifyAuthSignature(
+      authInfo,
+      process.env.PASSWORD || ''
+    );
+    if (!isValidSignature) {
+      return NextResponse.json({ error: '会话签名无效或已过期' }, { status: 401 });
     }
 
     // 获取配置

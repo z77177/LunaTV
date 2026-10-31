@@ -1,10 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { ensureAdmin } from '@/lib/admin-auth';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { serverUrl, authKey } = await request.json();
+    await ensureAdmin(request);
+  } catch {
+    return NextResponse.json(
+      { success: false, error: '无权限执行此操作' },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const { serverUrl } = await request.json();
 
     if (!serverUrl) {
       return NextResponse.json(
@@ -15,6 +27,15 @@ export async function POST(request: Request) {
 
     // 测试健康检查端点
     const healthUrl = `${serverUrl.replace(/\/$/, '')}/health`;
+
+    // 校验目标 URL 安全性，防止 SSRF 探测内网
+    const safeCheck = await isSafePublicUrl(healthUrl);
+    if (!safeCheck.safe) {
+      return NextResponse.json(
+        { success: false, error: '禁止访问该服务器地址 (SSRF Protection)' },
+        { status: 400 }
+      );
+    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000); // 10秒超时

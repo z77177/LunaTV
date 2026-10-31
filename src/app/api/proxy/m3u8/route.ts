@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { getConfig } from "@/lib/config";
 import { getBaseUrl, resolveUrl } from "@/lib/live";
+import { isSafePublicUrl } from "@/lib/ssrf";
 
 export const runtime = 'nodejs';
 
@@ -64,6 +65,14 @@ export async function GET(request: Request) {
 
   try {
     const decodedUrl = decodeURIComponent(url);
+
+    // SSRF 安全校验，阻断内网与保留地址
+    const safeCheck = await isSafePublicUrl(decodedUrl);
+    if (!safeCheck.safe) {
+      stats.errors++;
+      clearTimeout(timeoutId);
+      return NextResponse.json({ error: 'Forbidden URL' }, { status: 403 });
+    }
 
     // 选择合适的 agent
     const isHttps = decodedUrl.startsWith('https:');

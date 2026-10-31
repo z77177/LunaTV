@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -17,6 +18,15 @@ export async function GET(request: Request) {
     new URL(imageUrl);
   } catch {
     return NextResponse.json({ error: 'Invalid URL format' }, { status: 400 });
+  }
+
+  // 🛡️ SSRF 拦截防御：禁止访问本地、内网及云元数据地址
+  const safetyCheck = await isSafePublicUrl(imageUrl);
+  if (!safetyCheck.safe) {
+    return NextResponse.json(
+      { error: safetyCheck.reason || 'Blocked request' },
+      { status: 403 }
+    );
   }
 
   // 创建 AbortController 用于超时控制

@@ -7,7 +7,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import { Heart, Menu, Radio, RefreshCw, Search, Tv, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Tabs, Tab, Box } from '@mui/material';
+
 
 import {
   debounce,
@@ -2827,68 +2827,32 @@ function LivePageClient() {
                               </span>
                             </button>
 
-                            {/* Material UI Tabs 滚动容器 */}
+                            {/* 轻量级分类 Tabs 滚动容器 */}
                             <div className='flex-1 min-w-0'>
-                              <Box
-                                sx={{ borderBottom: 1, borderColor: 'divider' }}
+                              <div
+                                className='flex items-center overflow-x-auto no-scrollbar space-x-1 border-b border-gray-200 dark:border-gray-800 pb-1 scroll-smooth'
                                 {...dragHandlers}
                               >
-                                <Tabs
-                                  value={selectedGroup}
-                                  onChange={(_event, newValue) => handleGroupChange(newValue)}
-                                  variant="scrollable"
-                                  scrollButtons="auto"
-                                  allowScrollButtonsMobile
-                                  sx={{
-                                    '& .MuiTabs-scroller': {
-                                      cursor: isDragging ? 'grabbing' : 'grab',
-                                      userSelect: 'none',
-                                    },
-                                    '& .MuiTabs-indicator': {
-                                      backgroundColor: '#22c55e', // green-500
-                                    },
-                                    '& .MuiTab-root': {
-                                      color: 'rgb(var(--tw-text-gray-700))',
-                                      minWidth: 80,
-                                      fontSize: '0.875rem',
-                                      fontWeight: 500,
-                                      textTransform: 'none',
-                                      '&.Mui-selected': {
-                                        color: '#22c55e', // green-500
-                                      },
-                                      '&.Mui-disabled': {
-                                        color: 'rgb(var(--tw-text-gray-400))',
-                                        opacity: 0.5,
-                                      },
-                                      '@media (prefers-color-scheme: dark)': {
-                                        color: 'rgb(var(--tw-text-gray-300))',
-                                        '&.Mui-selected': {
-                                          color: '#4ade80', // green-400
-                                        },
-                                        '&.Mui-disabled': {
-                                          color: 'rgb(var(--tw-text-gray-600))',
-                                        },
-                                      },
-                                    },
-                                    '& .MuiTabScrollButton-root': {
-                                      color: 'rgb(var(--tw-text-gray-600))',
-                                      '@media (prefers-color-scheme: dark)': {
-                                        color: 'rgb(var(--tw-text-gray-400))',
-                                      },
-                                    },
-                                  }}
-                                >
-                                  {Object.keys(groupedChannels).map((group) => (
-                                    <Tab
+                                {Object.keys(groupedChannels).map((group) => {
+                                  const isSelected = selectedGroup === group;
+                                  return (
+                                    <button
                                       key={group}
-                                      label={group}
-                                      value={group}
+                                      type='button'
                                       disabled={isSwitchingSource}
+                                      onClick={() => handleGroupChange(group)}
                                       data-group={group}
-                                    />
-                                  ))}
-                                </Tabs>
-                              </Box>
+                                      className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-lg transition-colors border-b-2 shrink-0 ${
+                                        isSelected
+                                          ? 'text-green-500 border-green-500 font-semibold'
+                                          : 'text-gray-700 dark:text-gray-300 border-transparent hover:text-green-500 hover:border-green-300'
+                                      } ${isSwitchingSource ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                    >
+                                      {group}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         </div>

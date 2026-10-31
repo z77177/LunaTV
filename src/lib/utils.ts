@@ -441,3 +441,15 @@ export function isSeriesCompleted(remarks?: string): boolean {
   // - 单独的"完"（但不包括"完整"）
   return /完结|已完结|全\d+集|完(?!整)/.test(remarks);
 }
+
+/**
+ * 校验并返回安全的站内相对重定向地址，防范 Open Redirect 与 XSS 伪协议
+ */
+export function getSafeRedirectUrl(target?: string | null, defaultUrl = '/'): string {
+  if (!target || typeof target !== 'string') return defaultUrl;
+  const trimmed = target.trim();
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.startsWith('/\\')) {
+    return trimmed;
+  }
+  return defaultUrl;
+}

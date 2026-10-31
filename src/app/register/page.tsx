@@ -12,6 +12,7 @@ import { checkForUpdates, UpdateStatus } from '@/lib/version_check';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { useSite } from '@/components/SiteProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { getSafeRedirectUrl } from '@/lib/utils';
 
 // 版本显示组件
 function VersionDisplay() {
@@ -196,7 +197,7 @@ function RegisterPageClient() {
         const delay = data.needDelay ? 2500 : 1500;
 
         setTimeout(() => {
-          const redirect = searchParams.get('redirect') || '/';
+          const redirect = getSafeRedirectUrl(searchParams.get('redirect'));
           router.replace(redirect);
         }, delay);
       } else {
@@ -225,7 +226,7 @@ function RegisterPageClient() {
     const expires = new Date();
     expires.setDate(expires.getDate() + 3);
     document.cookie = `user_auth=${encodeURIComponent(JSON.stringify(guestAuth))}; path=/; expires=${expires.toUTCString()}; sameSite=lax`;
-    const redirect = searchParams.get('redirect') || '/';
+    const redirect = getSafeRedirectUrl(searchParams.get('redirect'));
     window.location.href = redirect;
   };
 

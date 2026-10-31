@@ -1,53 +1,11 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { AUTH_COOKIE_MAX_AGE_DAYS } from '@/lib/auth';
+import { AUTH_COOKIE_MAX_AGE_DAYS, generateAuthCookie, generateSignature } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
-
-// 生成签名
-async function generateSignature(
-  data: string,
-  secret: string
-): Promise<string> {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const messageData = encoder.encode(data);
-
-  const key = await crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signature = await crypto.subtle.sign('HMAC', key, messageData);
-
-  return Array.from(new Uint8Array(signature))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-// 生成认证Cookie
-async function generateAuthCookie(
-  username: string,
-  role: 'owner' | 'admin' | 'user'
-): Promise<string> {
-  const authData: any = { role };
-
-  if (username && process.env.PASSWORD) {
-    authData.username = username;
-    const signature = await generateSignature(username, process.env.PASSWORD);
-    authData.signature = signature;
-    authData.timestamp = Date.now();
-    authData.loginTime = Date.now();
-  }
-
-  return encodeURIComponent(JSON.stringify(authData));
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -373,14 +331,19 @@ export async function GET(request: NextRequest) {
     }
 
     // 需要注册,跳转到用户名输入页面
-    // 将OIDC信息存储到session中
+    // 将OIDC信息存储到session中并附加签名防伪造
+    const timestamp = Date.now();
+    const sigPayload = `${oidcSub}:${timestamp}`;
+    const sig = await generateSignature(sigPayload, process.env.PASSWORD || '');
+
     const oidcSession = {
       sub: oidcSub,
       email: userInfo.email,
       name: userInfo.name,
       trust_level: userInfo.trust_level, // 提取trust_level字段
       providerId: providerId, // 存储 provider ID 用于注册时验证
-      timestamp: Date.now(),
+      timestamp,
+      sig,
     };
     console.log('[OIDC Callback] Creating oidc_session:', { sub: oidcSession.sub, hasEmail: !!oidcSession.email, hasName: !!oidcSession.name, providerId });
 

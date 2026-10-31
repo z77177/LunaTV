@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
+import { isSafePublicUrl } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -106,6 +107,14 @@ export async function GET(request: Request) {
   const ua = liveSource?.ua || 'AptvPlayer/1.4.10';
 
   const decodedUrl = decodeURIComponent(imageUrl);
+
+  // SSRF 安全校验，阻断内网与保留地址
+  const safeCheck = await isSafePublicUrl(decodedUrl);
+  if (!safeCheck.safe) {
+    logoStats.errors++;
+    return NextResponse.json({ error: 'Forbidden URL' }, { status: 403 });
+  }
+
   const cacheKey = `${source || 'default'}-${decodedUrl}`;
   
   // 检查缓存

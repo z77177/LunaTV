@@ -3236,18 +3236,7 @@ function PlayPageClient() {
         console.log(`💾 已保存临时播放进度到 sessionStorage: ${tempProgressKey} = ${currentPlayTime.toFixed(2)}s`);
       }
 
-      // 清除前一个历史记录
-      if (currentSourceRef.current && currentIdRef.current) {
-        try {
-          await deletePlayRecord(
-            currentSourceRef.current,
-            currentIdRef.current
-          );
-          console.log('已清除前一个播放记录');
-        } catch (err) {
-          console.error('清除播放记录失败:', err);
-        }
-      }
+      // 注意：换源时保留原有历史播放记录，避免新源加载失败或对比画质时丢失历史进度
 
       const matchSource = (source: SearchResult) =>
         String(source.source) === String(newSource) &&
@@ -3321,8 +3310,10 @@ function PlayPageClient() {
       setDetail(newDetail);
 
       // 🔥 只有当集数确实改变时才调用 setCurrentEpisodeIndex
-      // 这样可以避免触发不必要的 useEffect 和集数切换逻辑
+      // 显式标记 isEpisodeChangingRef，防止将旧集的播放秒数错误应用到新集
       if (targetIndex !== currentEpisodeIndex) {
+        isEpisodeChangingRef.current = true;
+        resumeTimeRef.current = 0;
         setCurrentEpisodeIndex(targetIndex);
       }
 
@@ -5546,6 +5537,16 @@ function PlayPageClient() {
               }
             }, 300000); // 每5分钟重置一次
 
+            // 监听播放器销毁，彻底清理全局事件与定时器，防止内存泄漏
+            if (artPlayerRef.current) {
+              artPlayerRef.current.on('destroy', () => {
+                progressControl.removeEventListener('mousedown', handleProgressMouseDown);
+                document.removeEventListener('mousemove', handleDocumentMouseMove);
+                document.removeEventListener('mouseup', handleDocumentMouseUp);
+                clearInterval(danmakuResetInterval);
+              });
+            }
+
             // 🚀 立即恢复hover状态（修复当前可能已存在的问题）
             const immediateRestore = () => {
               const controls = document.querySelectorAll('.artplayer-plugin-danmuku .apd-config, .artplayer-plugin-danmuku .apd-style') as NodeListOf<HTMLElement>;
@@ -5657,7 +5658,7 @@ function PlayPageClient() {
               };
 
               // 点击其他地方自动隐藏
-              document.addEventListener('click', (e) => {
+              const handleMobileOutsideClick = (e: MouseEvent) => {
                 if (isConfigVisible &&
                     !configButton.contains(e.target as Node) &&
                     !configPanel.contains(e.target as Node)) {
@@ -5665,7 +5666,15 @@ function PlayPageClient() {
                   (configPanel as HTMLElement).style.display = 'none';
                   console.log('点击外部区域，隐藏弹幕配置面板');
                 }
-              });
+              };
+              document.addEventListener('click', handleMobileOutsideClick);
+
+              if (artPlayerRef.current) {
+                artPlayerRef.current.on('destroy', () => {
+                  _cleanup();
+                  document.removeEventListener('click', handleMobileOutsideClick);
+                });
+              }
 
               console.log('移动端弹幕配置切换功能已激活');
             }
