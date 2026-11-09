@@ -46,6 +46,12 @@ interface CronStats {
       favoritesErrors: number;
       duration: number;
     };
+    dailyBackup?: {
+      status: string;
+      snapshotKey?: string;
+      sizeBytes?: number;
+      duration: number;
+    };
   };
   memoryUsed: number;
   dbQueries: number;
@@ -373,6 +379,28 @@ async function cronJob() {
         console.log('✅ Spider JAR 更新检查完成');
       } catch (err) {
         console.error('❌ Spider JAR 更新失败:', err);
+      }
+    })(),
+
+    // 💾 每日自动化数据库灾备快照任务
+    (async () => {
+      try {
+        console.log('💾 执行每日自动化数据库快照...');
+        const backupStart = Date.now();
+        const backupResult = await automatedDailyBackup();
+        const backupDuration = Date.now() - backupStart;
+
+        if (currentCronStats) {
+          currentCronStats.tasks.dailyBackup = {
+            status: backupResult.status,
+            snapshotKey: backupResult.snapshotKey,
+            sizeBytes: backupResult.sizeBytes,
+            duration: backupDuration,
+          };
+        }
+        console.log(`✅ 每日数据库备份任务完成: ${backupResult.status} (耗时: ${backupDuration}ms)`);
+      } catch (err) {
+        console.error('❌ 每日数据库备份失败:', err);
       }
     })()
   ]);
@@ -1169,5 +1197,76 @@ async function updateSpiderJarToBlob() {
     }
   } catch (error) {
     console.error('[Spider Update] 更新失败:', error);
+  }
+}
+
+/**
+ * 💾 每日自动化数据库灾备快照任务
+ * 自动备份所有用户数据与全局配置并设置 7 天滚动 TTL
+ */
+async function automatedDailyBackup(): Promise<{
+  status: 'created' | 'already_exists' | 'skipped';
+  snapshotKey?: string;
+  sizeBytes?: number;
+}> {
+  try {
+    if (!db.isStatsSupported()) {
+      return { status: 'skipped' };
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const checkKey = `cron:backup:done:${today}`;
+    const isDone = await db.getCache(checkKey);
+    if (isDone) {
+      return { status: 'already_exists', snapshotKey: `backup:snapshot:${today}` };
+    }
+
+    const adminConfig = await db.getAdminConfig();
+    if (!adminConfig) {
+      return { status: 'skipped' };
+    }
+
+    let allUsers = await db.getAllUsers();
+    if (process.env.USERNAME) {
+      allUsers.push(process.env.USERNAME);
+    }
+    allUsers = Array.from(new Set(allUsers.filter(Boolean)));
+
+    const userData: Record<string, any> = {};
+    for (const username of allUsers) {
+      try {
+        userData[username] = {
+          playRecords: await db.getAllPlayRecords(username),
+          favorites: await db.getAllFavorites(username),
+          searchHistory: await db.getSearchHistory(username),
+          skipConfigs: await db.getAllEpisodeSkipConfigs(username),
+        };
+      } catch (e) {
+        console.warn(`备份用户 ${username} 数据失败:`, e);
+      }
+    }
+
+    const snapshot = {
+      version: '1.0',
+      date: today,
+      createdAt: new Date().toISOString(),
+      adminConfig,
+      userData,
+    };
+
+    const jsonStr = JSON.stringify(snapshot);
+    const snapshotKey = `backup:snapshot:${today}`;
+    const ttlSeconds = 7 * 24 * 60 * 60; // 7 天滚动保存
+    await db.setCache(snapshotKey, jsonStr, ttlSeconds);
+    await db.setCache(checkKey, 1, 24 * 60 * 60);
+
+    return {
+      status: 'created',
+      snapshotKey,
+      sizeBytes: Buffer.byteLength(jsonStr, 'utf8'),
+    };
+  } catch (error) {
+    console.error('automatedDailyBackup error:', error);
+    return { status: 'skipped' };
   }
 }

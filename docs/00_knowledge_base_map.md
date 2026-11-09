@@ -178,6 +178,27 @@
   - [`redis-base.db.ts`](file:///d:/Projects/brooklyntv/src/lib/redis-base.db.ts) & [`upstash.db.ts`](file:///d:/Projects/brooklyntv/src/lib/upstash.db.ts): `verifyHashedPassword` 增加对空密码/空存储字符串的直接拒绝防护 (DB-04)；
   - [`client-cache.ts`](file:///d:/Projects/brooklyntv/src/lib/client-cache.ts): `clearExpiredLocalCache` 严格限定在有匹配前缀时才在异常时清理，保护用户其他非 JSON 类型的 localStorage 键不被误删 (DB-06)。
 
+### 1.10 敏感接口 IP 频率限制与防暴力破解加固 (2026-11-09)
+- **统一轻量级频率限制模块 ([src/lib/rate-limit.ts](file:///d:/Projects/brooklyntv/src/lib/rate-limit.ts))**:
+  - 构建高可用双模限频核心：优先基于 Redis/Upstash/Kvrocks 分布式缓存，在 `localstorage` 单机无数据库模式下自动降级至进程级内存 `Map` 配合定时过期清理；
+  - 具备原生 Fail-open 容错机制：当数据库发生超时或网络断开时，自动降级放行并告警，绝不阻断合法用户的业务请求；
+  - 提供 `createRateLimitResponse` 统一封装 RFC 标准 429 响应，输出 `Retry-After`、`X-RateLimit-Limit`、`X-RateLimit-Remaining` 与 `X-RateLimit-Reset` 响应头。
+- **登录接口防字典爆破 ([/api/login](file:///d:/Projects/brooklyntv/src/app/api/login/route.ts))**:
+  - 基于真实客户端 IP 实施限制：单个 IP 每 60 秒最多允许 10 次登录尝试，超出立即阻断并返回 429。
+- **注册接口防批量注册 ([/api/register](file:///d:/Projects/brooklyntv/src/app/api/register/route.ts))**:
+  - 基于真实客户端 IP 实施限制：单个 IP 每 10 分钟最多允许 5 次注册操作，抵御自动化脚本批量灌水。
+- **TVBox 接口频率限制重构 ([/api/tvbox](file:///d:/Projects/brooklyntv/src/app/api/tvbox/route.ts))**:
+  - 移除原先冗余的内联缓存逻辑，接入统一模块，解决其在 `localstorage` 单机模式下因 `db.getCache` 返回 `null` 导致的限频静默失效缺陷。
+- **修改密码接口防爆破限频 ([/api/change-password](file:///d:/Projects/brooklyntv/src/app/api/change-password/route.ts))**:
+  - 接入 IP 频率限制：单个 IP 每分钟最多尝试 5 次原密码核验，防范攻击者利用泄露会话字典穷举原密码。
+- **定时任务自动化灾备与每日滚动快照 ([/api/cron](file:///d:/Projects/brooklyntv/src/app/api/cron/route.ts))**:
+  - 自动化每日备份：每天首次执行 cron 时自动将管理员配置与全量用户数据（播放记录、收藏、追剧、自定义跳过）导出并写入 `backup:snapshot:${today}`，设置 7 天滚动 TTL，解决依赖人工手动导出的单点风险。
+- **标准化基础设施健康巡检接口 ([/api/health](file:///d:/Projects/brooklyntv/src/app/api/health/route.ts))**:
+  - 新建轻量级健康巡检端点，集成数据库 Ping 往返延迟、进程 Uptime、内存占用 (Heap/RSS) 指标，支持 HTTP 200/503 探测与 60次/分 IP 频控，友好兼容 Docker HEALTHCHECK 与 Kubernetes 探针。
+- **播放器移动端双击寻道与死链友好反馈 ([src/app/play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 移动端手势升级：双击屏幕左侧 35% 触发快退 10 秒提示，双击右侧 35% 触发快进 10 秒提示，中间区域保留默认暂停/播放；
+  - 播放死链反馈：首播遇到 403/404 等加载失败时，自动弹出浮层提示引导用户换源，彻底解决黑屏假死无反馈。
+
 ---
 
 ## 二、 项目文档资产索引
@@ -234,3 +255,13 @@
   - **职责描述:** 多人同步观影室服务部署与状态同步机制文档。
   - **当前状态:** `[已定档]`
   - **维护者/相关人:** Core Team
+
+- **[频率限制]** [rate-limit.ts](file:///d:/Projects/brooklyntv/src/lib/rate-limit.ts)
+  *   **职责描述:** 敏感接口 (登录/注册/TVBox) IP 频率限制与防爆破核心模块，支持分布式与单机双模及 Fail-open。
+  *   **当前状态:** `[已定档]`
+  *   **维护者/相关人:** Core Team / AI Agent
+
+- **[系统健康]** [health/route.ts](file:///d:/Projects/brooklyntv/src/app/api/health/route.ts)
+  *   **职责描述:** 标准轻量级健康巡检 API，支持数据库延迟、Uptime、内存使用与 HTTP 200/503 探测。
+  *   **当前状态:** `[已定档]`
+  *   **维护者/相关人:** Core Team / AI Agent

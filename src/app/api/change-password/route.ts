@@ -4,11 +4,20 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie, verifyAuthSignature } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { getClientIP } from '@/lib/networkDetection';
+import { checkRateLimit, createRateLimitResponse } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
+
+  // 敏感接口 IP 频率限制（每分钟最多 5 次修改密码尝试）
+  const clientIP = getClientIP(request);
+  const rateLimit = await checkRateLimit(clientIP, 'change_password', 5, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return createRateLimitResponse(rateLimit, '修改密码尝试过于频繁，请稍后再试');
+  }
 
   // 不支持 localstorage 模式
   if (storageType === 'localstorage') {

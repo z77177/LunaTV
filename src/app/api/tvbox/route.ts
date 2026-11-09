@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { getSpiderJar, getCandidates } from '@/lib/spiderJar';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 import { getClientIP } from '@/lib/networkDetection';
+import { checkRateLimit as unifiedCheckRateLimit } from '@/lib/rate-limit';
 
 // Helper function to get base URL with SITE_BASE env support
 function getBaseUrl(request: NextRequest): string {
@@ -31,31 +32,10 @@ function isIPAddress(host: string): boolean {
   return ipv4Regex.test(hostWithoutPort) || ipv6Regex.test(hostWithoutPort);
 }
 
-// 生产环境使用Redis/Upstash/Kvrocks的频率限制
+// 接入统一频率限制模块 (@/lib/rate-limit)
 async function checkRateLimit(ip: string, limit = 60, windowMs = 60000): Promise<boolean> {
-  const now = Date.now();
-  const windowStart = Math.floor(now / windowMs) * windowMs; // 对齐到时间窗口开始
-  const key = `tvbox-rate-limit:${ip}:${windowStart}`;
-  
-  try {
-    // 获取当前计数
-    const currentCount = await db.getCache(key) || 0;
-    
-    if (currentCount >= limit) {
-      return false;
-    }
-    
-    // 增加计数并设置过期时间
-    const newCount = currentCount + 1;
-    const expireSeconds = Math.ceil(windowMs / 1000); // 转换为秒
-    await db.setCache(key, newCount, expireSeconds);
-    
-    return true;
-  } catch (error) {
-    console.error('Rate limit check failed:', error);
-    // 如果数据库操作失败，允许请求通过（fail-open策略）
-    return true;
-  }
+  const result = await unifiedCheckRateLimit(ip, 'tvbox', limit, windowMs);
+  return result.allowed;
 }
 
 // 清理过期的频率限制缓存（内部使用）

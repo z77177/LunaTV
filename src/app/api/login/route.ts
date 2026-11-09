@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIE_MAX_AGE_DAYS, generateAuthCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { getClientIP } from '@/lib/networkDetection';
+import { checkRateLimit, createRateLimitResponse } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -18,6 +20,13 @@ const STORAGE_TYPE =
 
 export async function POST(req: NextRequest) {
   try {
+    // 敏感接口 IP 频率限制（每分钟最多 10 次尝试）
+    const clientIP = getClientIP(req);
+    const rateLimit = await checkRateLimit(clientIP, 'login', 10, 60 * 1000);
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit, '登录尝试过于频繁，请稍后再试');
+    }
+
     // 本地 / localStorage 模式——仅校验固定密码
     if (STORAGE_TYPE === 'localstorage') {
       const envPassword = process.env.PASSWORD;

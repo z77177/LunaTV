@@ -6059,11 +6059,54 @@ function PlayPageClient() {
         }
       });
 
-      // 监听播放器错误
+      // 监听播放器错误并向用户提供换源反馈
       artPlayerRef.current.on('error', (err: any) => {
         console.error('播放器错误:', err);
-        if (artPlayerRef.current.currentTime > 0) {
-          return;
+        if (artPlayerRef.current && artPlayerRef.current.currentTime === 0) {
+          const availableCount = availableSourcesRef.current?.length || 0;
+          if (availableCount > 1) {
+            artPlayerRef.current.notice.show = '当前源加载失败，请点击换源尝试其他播放源';
+          } else {
+            artPlayerRef.current.notice.show = '当前视频加载失败，请检查网络或稍后重试';
+          }
+        }
+      });
+
+      // 📱 双击左右寻道手势（屏幕左侧 35% 快退 10 秒，右侧 35% 快进 10 秒，中间保留暂停/播放）
+      artPlayerRef.current.on('dblclick', (event: any) => {
+        const art = artPlayerRef.current;
+        if (!art || !art.template?.$player) return;
+
+        const rect = art.template.$player.getBoundingClientRect();
+        if (!rect.width) return;
+
+        const clientX =
+          event?.clientX ??
+          event?.detail?.clientX ??
+          event?.changedTouches?.[0]?.clientX ??
+          event?.touches?.[0]?.clientX;
+
+        if (typeof clientX !== 'number') return;
+
+        const ratio = (clientX - rect.left) / rect.width;
+
+        if (ratio < 0.35) {
+          // 左侧快退 10 秒
+          const targetTime = Math.max(0, art.currentTime - 10);
+          art.seek = targetTime;
+          art.notice.show = '⏪ 快退 10 秒';
+          if (art.video && !art.playing) {
+            art.play().catch(() => {});
+          }
+        } else if (ratio > 0.65) {
+          // 右侧快进 10 秒
+          const maxDuration = art.duration || Infinity;
+          const targetTime = Math.min(maxDuration, art.currentTime + 10);
+          art.seek = targetTime;
+          art.notice.show = '⏩ 快进 10 秒';
+          if (art.video && !art.playing) {
+            art.play().catch(() => {});
+          }
         }
       });
 

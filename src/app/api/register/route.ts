@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIE_MAX_AGE_DAYS, generateAuthCookie } from '@/lib/auth';
 import { clearConfigCache, getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { getClientIP } from '@/lib/networkDetection';
+import { checkRateLimit, createRateLimitResponse } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -24,6 +26,13 @@ export async function POST(req: NextRequest) {
         { error: 'localStorage 模式不支持用户注册' },
         { status: 400 }
       );
+    }
+
+    // 敏感接口 IP 频率限制（每 10 分钟最多 5 次注册尝试）
+    const clientIP = getClientIP(req);
+    const rateLimit = await checkRateLimit(clientIP, 'register', 5, 10 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit, '注册过于频繁，请稍后再试');
     }
 
     const { username, password, confirmPassword } = await req.json();
