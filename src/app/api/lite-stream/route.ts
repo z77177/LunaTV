@@ -1,7 +1,7 @@
 /* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { isSafePublicUrl } from '@/lib/ssrf';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       upstreamHeaders['Range'] = range;
     }
 
-    const response = await fetch(decodedUrl, {
+    const response = await safeFetch(decodedUrl, {
       headers: upstreamHeaders,
       signal: controller.signal,
     });

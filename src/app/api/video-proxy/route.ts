@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
+import { Readable } from 'stream';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
-import { isSafePublicUrl } from '@/lib/ssrf';
-import { isVideoCached, getCachedVideoPath, cacheVideoContent, cacheTrailerUrl, deleteVideoCache } from '@/lib/video-cache';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
+import { isVideoCached, getCachedVideoPath, cacheVideoContent, cacheVideoStream, cacheTrailerUrl, deleteVideoCache } from '@/lib/video-cache';
 import { promises as fs } from 'fs';
 import { createReadStream } from 'fs';
 
@@ -115,7 +116,7 @@ export async function GET(request: Request) {
       fetchHeaders['If-Modified-Since'] = ifModifiedSince;
     }
 
-    const videoResponse = await fetch(videoUrl, {
+    const videoResponse = await safeFetch(videoUrl, {
       signal: controller.signal,
       headers: fetchHeaders,
     });
@@ -209,19 +210,18 @@ export async function GET(request: Request) {
     // 返回正确的状态码：Range请求返回206，完整请求返回200
     const statusCode = rangeHeader && contentRange ? 206 : 200;
 
-    // 🎯 如果需要缓存且下载了完整视频，缓存视频内容
+    // 🎯 如果需要缓存且下载了完整视频，流式缓存视频内容（避免 V8 堆内存 OOM）
     console.log(`[VideoProxy] 缓存条件检查: shouldCache=${shouldCache}, contentRange=${contentRange}, hasBody=${!!videoResponse.body}, rangeHeader=${rangeHeader}`);
 
     if (shouldCache && !contentRange && videoResponse.body) {
       try {
-        console.log('[VideoProxy] 开始缓存视频...');
-        // 读取完整视频内容
-        const videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
-        console.log(`[VideoProxy] 视频下载完成，大小: ${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+        console.log('[VideoProxy] 开始流式写入缓存并直通响应...');
+        const [streamForClient, streamForDisk] = videoResponse.body.tee();
 
-        // 异步缓存视频内容（不阻塞响应）
-        cacheVideoContent(videoUrl, videoBuffer, contentType || 'video/mp4').catch(err => {
-          console.error('[VideoProxy] 缓存视频失败:', err);
+        // 异步将视频流流水线写入磁盘缓存，避免将整个视频加载到 V8 堆内存引发 OOM
+        const nodeReadable = Readable.fromWeb(streamForDisk as any);
+        cacheVideoStream(videoUrl, nodeReadable, contentType || 'video/mp4').catch(err => {
+          console.error('[VideoProxy] 流式缓存视频失败:', err);
         });
 
         // 🎯 尝试缓存 URL 映射（如果能从 referer 提取 douban_id）
@@ -232,34 +232,12 @@ export async function GET(request: Request) {
           });
         }
 
-        console.log(`[VideoProxy] ✅ 视频已缓存: ${videoUrl.substring(0, 50)}...`);
-
-        // 🎯 如果客户端请求的是 Range，从缓存的完整视频中返回指定范围
-        if (rangeHeader) {
-          const fileSize = videoBuffer.length;
-          const parts = rangeHeader.replace(/bytes=/, '').split('-');
-          const start = parseInt(parts[0], 10);
-          const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-          const chunkSize = end - start + 1;
-
-          const rangeHeaders = new Headers(headers);
-          rangeHeaders.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
-          rangeHeaders.set('Content-Length', chunkSize.toString());
-
-          return new Response(videoBuffer.slice(start, end + 1), {
-            status: 206,
-            headers: rangeHeaders,
-          });
-        }
-
-        // 返回完整视频
-        return new Response(videoBuffer, {
-          status: 200,
+        return new Response(streamForClient, {
+          status: statusCode,
           headers,
         });
       } catch (error) {
         console.error('[VideoProxy] 处理视频缓存失败:', error);
-        // 缓存失败时返回错误响应，因为流已经被消费无法再使用
         return NextResponse.json(
           { error: 'Failed to cache video', details: error instanceof Error ? error.message : 'Unknown error' },
           { status: 500 }
@@ -310,7 +288,7 @@ export async function HEAD(request: Request) {
     const videoUrlObj = new URL(videoUrl);
     const sourceOrigin = `${videoUrlObj.protocol}//${videoUrlObj.host}`;
 
-    const videoResponse = await fetch(videoUrl, {
+    const videoResponse = await safeFetch(videoUrl, {
       method: 'HEAD',
       headers: {
         'Referer': sourceOrigin + '/',

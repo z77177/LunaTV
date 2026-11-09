@@ -1,7 +1,7 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 
 import { NextResponse } from "next/server";
-import { isSafePublicUrl } from '@/lib/ssrf';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 export const runtime = 'nodejs';
@@ -64,9 +64,8 @@ export async function GET(request: Request) {
       delete headers['Range'];
     }
 
-    const response = await fetch(decodedUrl, {
+    const response = await safeFetch(decodedUrl, {
       cache: 'no-cache',
-      redirect: 'follow',
       signal: controller.signal,
       headers: new Headers(headers),
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -119,6 +118,62 @@ export async function GET(request: Request) {
 }
 
 export async function HEAD(request: Request) {
-  // HEAD 请求也需要支持
-  return GET(request);
+  const { searchParams } = new URL(request.url);
+  const url = searchParams.get('url');
+
+  if (!url) {
+    return new NextResponse(null, { status: 400 });
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const decodedUrl = decodeURIComponent(url);
+    const safeCheck = await isSafePublicUrl(decodedUrl);
+    if (!safeCheck.safe) {
+      return new NextResponse(null, { status: 403 });
+    }
+
+    const isHttps = decodedUrl.startsWith('https:');
+    const agent = isHttps ? httpsAgent : httpAgent;
+
+    const response = await safeFetch(decodedUrl, {
+      method: 'HEAD',
+      cache: 'no-cache',
+      signal: controller.signal,
+      headers: new Headers({
+        'User-Agent': DEFAULT_USER_AGENT,
+        Accept: '*/*',
+        Range: request.headers.get('range') || '',
+      }),
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - Node.js specific option
+      agent: typeof window === 'undefined' ? agent : undefined,
+    });
+
+    clearTimeout(timeoutId);
+
+    const responseHeaders = new Headers();
+    responseHeaders.set('Content-Type', response.headers.get('content-type') || 'video/mp4');
+    responseHeaders.set('Accept-Ranges', 'bytes');
+    responseHeaders.set('Access-Control-Allow-Origin', '*');
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    responseHeaders.set('Access-Control-Allow-Headers', 'Range');
+
+    if (response.headers.get('content-length')) {
+      responseHeaders.set('Content-Length', response.headers.get('content-length')!);
+    }
+    if (response.headers.get('content-range')) {
+      responseHeaders.set('Content-Range', response.headers.get('content-range')!);
+    }
+
+    return new NextResponse(null, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+  } catch {
+    clearTimeout(timeoutId);
+    return new NextResponse(null, { status: 500 });
+  }
 }

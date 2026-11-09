@@ -348,10 +348,33 @@ const PlayStatsPage: React.FC = () => {
     const searchTitle = record.search_title || record.title;
     const params = new URLSearchParams({
       title: record.title,
-      year: record.year,
+      year: record.year || '',
       stitle: searchTitle,
       stype: record.total_episodes > 1 ? 'tv' : 'movie',
     });
+
+    if (record.douban_id) {
+      params.set('douban_id', record.douban_id.toString());
+    }
+
+    // 🎯 核心修复：传递准确的 0 基选集索引与时间进度
+    if (typeof record.index === 'number' && record.index > 0) {
+      params.set('index', (record.index - 1).toString());
+    }
+
+    const recordKey = (record as any).key;
+    if (recordKey && typeof recordKey === 'string' && recordKey.includes('+')) {
+      const plusIdx = recordKey.indexOf('+');
+      params.set('source', recordKey.slice(0, plusIdx));
+      params.set('id', recordKey.slice(plusIdx + 1));
+    } else {
+      if ((record as any).source) params.set('source', (record as any).source);
+      if ((record as any).id) params.set('id', (record as any).id);
+    }
+
+    if (record.play_time && record.play_time > 0) {
+      params.set('t', record.play_time.toString());
+    }
 
     router.push(`/play?${params.toString()}`);
   };

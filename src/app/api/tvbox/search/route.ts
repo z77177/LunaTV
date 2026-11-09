@@ -1,9 +1,11 @@
 /* eslint-disable no-console */
 
+import ipaddr from 'ipaddr.js';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
+import { getClientIP } from '@/lib/networkDetection';
 import { rankSearchResults } from '@/lib/search-ranking';
 import { yellowWords } from '@/lib/yellow';
 
@@ -49,6 +51,67 @@ export async function GET(request: NextRequest) {
     }
 
     const config = await getConfig();
+    const securityConfig = config.TVBoxSecurityConfig;
+    const token = searchParams.get('token');
+
+    // 1. 验证用户专属 Token 或全局 Token
+    if (securityConfig?.enableAuth) {
+      let isTokenValid = false;
+      if (token) {
+        if (token === securityConfig.token) {
+          isTokenValid = true;
+        } else if (config.UserConfig?.Users?.some((u) => u.tvboxToken === token)) {
+          isTokenValid = true;
+        }
+      }
+      if (!isTokenValid) {
+        return NextResponse.json(
+          {
+            code: 401,
+            msg: 'Invalid token. Please add ?token=YOUR_TOKEN',
+            list: [],
+          },
+          { status: 401 }
+        );
+      }
+    }
+
+    // 2. IP 白名单校验
+    if (securityConfig?.enableIpWhitelist && securityConfig.allowedIPs?.length > 0) {
+      const clientIP = getClientIP(request);
+      const isAllowed = securityConfig.allowedIPs.some((allowedIP) => {
+        const trimmedIP = allowedIP.trim();
+        if (trimmedIP === '*') return true;
+        try {
+          const clientAddr = ipaddr.process(clientIP);
+          if (trimmedIP.includes('/')) {
+            const [network, prefixLength] = ipaddr.parseCIDR(trimmedIP);
+            return (
+              clientAddr.kind() === network.kind() &&
+              clientAddr.match(network, prefixLength)
+            );
+          }
+          const allowedAddr = ipaddr.process(trimmedIP);
+          return (
+            clientAddr.kind() === allowedAddr.kind() &&
+            clientAddr.toString() === allowedAddr.toString()
+          );
+        } catch {
+          return clientIP === trimmedIP;
+        }
+      });
+      if (!isAllowed) {
+        return NextResponse.json(
+          {
+            code: 403,
+            msg: `Access denied for IP: ${clientIP}`,
+            list: [],
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const shouldFilter = filterParam === 'on' || filterParam === 'enable';
 
     // 查找视频源配置

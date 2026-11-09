@@ -114,15 +114,26 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// 辅助函数：获取用户密码（通过数据库直接访问）
+// 辅助函数：获取用户密码（兼容 V1 与 V2 哈希）
 async function getUserPassword(username: string): Promise<string | null> {
   try {
-    // 使用 Redis 存储的直接访问方法
     const storage = (db as any).storage;
-    if (storage && typeof storage.client?.get === 'function') {
+    if (!storage) return null;
+
+    // 优先从 V2 hash 获取密码哈希
+    if (typeof storage.client?.hGet === 'function') {
+      const v2Pwd = await storage.client.hGet(`u:${username}:info`, 'password');
+      if (v2Pwd) return v2Pwd;
+    } else if (typeof storage.client?.hget === 'function') {
+      const v2Pwd = await storage.client.hget(`u:${username}:info`, 'password');
+      if (v2Pwd) return v2Pwd;
+    }
+
+    // 回退从 V1 独立键获取
+    if (typeof storage.client?.get === 'function') {
       const passwordKey = `u:${username}:pwd`;
       const password = await storage.client.get(passwordKey);
-      return password;
+      if (password) return password;
     }
     return null;
   } catch (error) {

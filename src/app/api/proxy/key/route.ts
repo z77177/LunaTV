@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 
 import { getConfig } from "@/lib/config";
-import { isSafePublicUrl } from "@/lib/ssrf";
+import { isSafePublicUrl, safeFetch } from "@/lib/ssrf";
 
 export const runtime = 'nodejs';
 
@@ -130,7 +130,7 @@ export async function GET(request: Request) {
     const isHttps = decodedUrl.startsWith('https:');
     const agent = isHttps ? httpsAgent : httpAgent;
 
-    const response = await fetch(decodedUrl, {
+    const response = await safeFetch(decodedUrl, {
       signal: controller.signal,
       headers: {
         'User-Agent': ua,

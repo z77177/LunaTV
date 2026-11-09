@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
-import { isSafePublicUrl } from '@/lib/ssrf';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -144,9 +144,8 @@ export async function GET(request: Request) {
     const isHttps = decodedUrl.startsWith('https:');
     const agent = isHttps ? httpsAgent : httpAgent;
 
-    const imageResponse = await fetch(decodedUrl, {
+    const imageResponse = await safeFetch(decodedUrl, {
       cache: 'no-cache',
-      redirect: 'follow',
       credentials: 'same-origin',
       signal: controller.signal,
       headers: {

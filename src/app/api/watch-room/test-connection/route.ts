@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { ensureAdmin } from '@/lib/admin-auth';
-import { isSafePublicUrl } from '@/lib/ssrf';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const timeout = setTimeout(() => controller.abort(), 10000); // 10秒超时
 
     try {
-      const response = await fetch(healthUrl, {
+      const response = await safeFetch(healthUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',

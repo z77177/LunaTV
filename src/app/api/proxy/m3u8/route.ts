@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 import { getConfig } from "@/lib/config";
 import { getBaseUrl, resolveUrl } from "@/lib/live";
-import { isSafePublicUrl } from "@/lib/ssrf";
+import { isSafePublicUrl, safeFetch } from "@/lib/ssrf";
 
 export const runtime = 'nodejs';
 
@@ -89,9 +89,8 @@ export async function GET(request: Request) {
       'Connection': 'keep-alive'
     };
 
-    response = await fetch(decodedUrl, {
+    response = await safeFetch(decodedUrl, {
       cache: 'no-cache',
-      redirect: 'follow',
       credentials: 'same-origin',
       signal: controller.signal,
       headers: new Headers(headers),

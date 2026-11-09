@@ -1,6 +1,7 @@
 /* eslint-disable no-console, @typescript-eslint/no-explicit-any */
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
+import { ensureAdmin } from '@/lib/admin-auth';
 import { getSpiderJar, getSpiderStatus } from '@/lib/spiderJar';
 
 export const runtime = 'nodejs';
@@ -68,9 +69,18 @@ export async function GET() {
 }
 
 /**
- * 手动刷新 JAR 缓存
+ * 手动刷新 JAR 缓存（需管理员权限）
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
+  try {
+    await ensureAdmin(request);
+  } catch {
+    return NextResponse.json(
+      { success: false, error: '无权限执行此操作' },
+      { status: 403 }
+    );
+  }
+
   try {
     const refreshedJar = await getSpiderJar(true);
 

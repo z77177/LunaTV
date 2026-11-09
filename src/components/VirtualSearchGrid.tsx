@@ -104,7 +104,7 @@ export const VirtualSearchGrid = React.forwardRef<VirtualSearchGridRef, VirtualS
         console.debug('Grid scroll error (safe to ignore):', error);
       }
     }
-  }, [searchQuery, viewMode, totalItemCount]);
+  }, [searchQuery, viewMode]);
 
   // 强制重新计算容器尺寸的useEffect
   useEffect(() => {

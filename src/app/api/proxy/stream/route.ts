@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
-import { isSafePublicUrl } from '@/lib/ssrf';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -71,9 +71,8 @@ export async function GET(request: Request) {
       requestHeaders.set('Range', range);
     }
 
-    const response = await fetch(decodedUrl, {
+    const response = await safeFetch(decodedUrl, {
       cache: 'no-cache',
-      redirect: 'follow',
       headers: requestHeaders,
     });
 

@@ -146,19 +146,36 @@ async function getGuestModeConfig(request: NextRequest): Promise<boolean> {
   return true;
 }
 
-// 获取客户端 IP
+// 获取客户端 IP（防御 X-Forwarded-For 客户端伪造）
 function getClientIP(request: NextRequest): string {
-  // 按优先级获取客户端 IP
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  if (forwardedFor) {
-    return forwardedFor.split(',')[0].trim();
+  // 1. Next.js 原生底层连接 IP（直接 TCP 连接，不可伪造）
+  const rawIp = (request as any).ip;
+  if (rawIp && typeof rawIp === 'string') {
+    return rawIp.trim();
   }
 
-  return (
-    request.headers.get('x-real-ip') ||
-    request.headers.get('cf-connecting-ip') ||
-    'unknown'
-  );
+  // 2. Cloudflare Edge 验证后的客户端真实 IP
+  const cfIP = request.headers.get('cf-connecting-ip');
+  if (cfIP) {
+    return cfIP.trim();
+  }
+
+  // 3. 受信反向代理设置的真实 IP（Nginx / Caddy 默认覆写，不可由客户端随意注入）
+  const realIP = request.headers.get('x-real-ip');
+  if (realIP) {
+    return realIP.trim();
+  }
+
+  // 4. x-forwarded-for: 代理追加模式下，末尾 IP 为直连反代的来源（绝不可取 ips[0]，防止攻击者在 Header 首部注入假内网 IP）
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    const ips = forwardedFor.split(',').map(ip => ip.trim()).filter(Boolean);
+    if (ips.length > 0) {
+      return ips[ips.length - 1];
+    }
+  }
+
+  return 'unknown';
 }
 
 // 高可靠 IP/CIDR 匹配（支持 IPv4/IPv6 标准与压缩格式）

@@ -18,6 +18,34 @@ export interface NetworkEnvironment {
  * @param req Next.js 请求对象
  * @returns 网络环境信息
  */
+export function getClientIP(req: NextRequest | Request): string {
+  const rawIp = (req as any).ip;
+  if (rawIp && typeof rawIp === 'string') {
+    return rawIp.trim();
+  }
+
+  const headers = req.headers;
+  const cfIP = headers.get('cf-connecting-ip');
+  if (cfIP) {
+    return cfIP.trim();
+  }
+
+  const realIP = headers.get('x-real-ip');
+  if (realIP) {
+    return realIP.trim();
+  }
+
+  const forwardedFor = headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    const ips = forwardedFor.split(',').map(ip => ip.trim()).filter(Boolean);
+    if (ips.length > 0) {
+      return ips[ips.length - 1];
+    }
+  }
+
+  return 'unknown';
+}
+
 export function detectNetworkEnvironment(req: NextRequest): NetworkEnvironment {
   const headers = req.headers;
   const userAgent = headers.get('user-agent') || '';

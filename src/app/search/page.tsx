@@ -63,14 +63,19 @@ function SearchPageClient() {
   const pendingResultsRef = useRef<SearchResult[]>([]);
   const flushTimerRef = useRef<number | null>(null);
   const [useFluidSearch, setUseFluidSearch] = useState(true);
-  // 虚拟化开关状态
-  const [useVirtualization, setUseVirtualization] = useState(() => {
-    if (typeof window !== 'undefined') {
+  // 虚拟化开关状态（默认 true，挂载后从 localStorage 同步避免 SSR 水合不一致）
+  const [useVirtualization, setUseVirtualization] = useState(true);
+
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem('useVirtualization');
-      return saved !== null ? JSON.parse(saved) : true; // 默认启用
+      if (saved !== null) {
+        setUseVirtualization(JSON.parse(saved));
+      }
+    } catch {
+      // ignore
     }
-    return true;
-  });
+  }, []);
 
   // 网盘搜索相关状态
   const [searchType, setSearchType] = useState<'video' | 'netdisk' | 'youtube' | 'tmdb-actor'>('video');

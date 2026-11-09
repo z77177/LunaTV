@@ -369,9 +369,20 @@ export function useWatchRoomSync({
       if (timeDiff > 2) {
         logger.debug('[PlaySync] Seeking to:', state.currentTime, '(diff:', timeDiff, 's)');
         player.currentTime = state.currentTime;
-        setTimeout(() => {
-          isHandlingRemoteCommandRef.current = false;
-        }, 500);
+        const onSeekDone = () => {
+          setTimeout(() => {
+            isHandlingRemoteCommandRef.current = false;
+          }, 100);
+        };
+        if (typeof (player as any).once === 'function') {
+          (player as any).once('seeked', onSeekDone);
+        } else if (player.video) {
+          player.video.addEventListener('seeked', onSeekDone, { once: true });
+        } else {
+          setTimeout(() => {
+            isHandlingRemoteCommandRef.current = false;
+          }, 1500);
+        }
       } else {
         isHandlingRemoteCommandRef.current = false;
       }
@@ -464,9 +475,20 @@ export function useWatchRoomSync({
       isHandlingRemoteCommandRef.current = true;
       player.currentTime = currentTime;
 
-      setTimeout(() => {
-        isHandlingRemoteCommandRef.current = false;
-      }, 500);
+      const onSeekDone = () => {
+        setTimeout(() => {
+          isHandlingRemoteCommandRef.current = false;
+        }, 100);
+      };
+      if (typeof (player as any).once === 'function') {
+        (player as any).once('seeked', onSeekDone);
+      } else if (player.video) {
+        player.video.addEventListener('seeked', onSeekDone, { once: true });
+      } else {
+        setTimeout(() => {
+          isHandlingRemoteCommandRef.current = false;
+        }, 1500);
+      }
     };
 
     const handleChangeCommand = (state: PlayState) => {

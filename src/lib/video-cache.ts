@@ -12,7 +12,8 @@
  */
 
 import { createHash } from 'crypto';
-import { promises as fs } from 'fs';
+import { promises as fs, createWriteStream } from 'fs';
+import { pipeline } from 'stream/promises';
 import { KvrocksStorage } from './kvrocks.db';
 
 // Kvrocks 客户端单例
@@ -278,6 +279,65 @@ export async function cacheVideoContent(
     return filePath;
   } catch (error) {
     console.error('[VideoCache] 缓存视频失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 流式缓存视频内容（低内存消耗，防止全量 ArrayBuffer 导致的 V8 堆内存 OOM）
+ */
+export async function cacheVideoStream(
+  videoUrl: string,
+  nodeReadable: NodeJS.ReadableStream,
+  contentType: string = 'video/mp4'
+): Promise<string> {
+  await ensureCacheDir();
+
+  const cacheKey = getCacheKey(videoUrl);
+  const filePath = getVideoCachePath(cacheKey);
+  const tempPath = `${filePath}.${Date.now()}.tmp`;
+
+  try {
+    const outStream = createWriteStream(tempPath);
+    await pipeline(nodeReadable, outStream);
+
+    const stats = await fs.stat(tempPath);
+    const fileSize = stats.size;
+
+    const redis = await getKvrocksClient();
+    const totalSizeStr = await redis.get(KEYS.VIDEO_SIZE);
+    const totalSize = totalSizeStr ? parseInt(totalSizeStr, 10) : 0;
+
+    if (totalSize + fileSize > CACHE_CONFIG.MAX_CACHE_SIZE) {
+      const cleaned = await cleanupLRU(fileSize);
+      if (!cleaned) {
+        await fs.unlink(tempPath).catch(() => {});
+        return filePath;
+      }
+    }
+
+    await fs.rename(tempPath, filePath);
+
+    const meta = JSON.stringify({
+      url: videoUrl,
+      cacheKey,
+      contentType,
+      size: fileSize,
+      cachedAt: Date.now(),
+    });
+
+    const metaKey = `${KEYS.VIDEO_META}${cacheKey}`;
+    await redis.setEx(metaKey, CACHE_CONFIG.VIDEO_TTL, meta);
+
+    const now = Date.now();
+    await redis.zAdd(KEYS.VIDEO_LRU, [{ score: now, value: cacheKey }]);
+    await redis.incrBy(KEYS.VIDEO_SIZE, fileSize);
+
+    console.log(`[VideoCache] 缓存视频流成功: ${cacheKey} (${(fileSize / 1024 / 1024).toFixed(2)}MB)`);
+    return filePath;
+  } catch (error) {
+    await fs.unlink(tempPath).catch(() => {});
+    console.error('[VideoCache] 缓存视频流失败:', error);
     throw error;
   }
 }

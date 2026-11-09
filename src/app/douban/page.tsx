@@ -6,7 +6,6 @@ import { ChevronUp } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 
 import { isAIRecommendFeatureDisabled } from '@/lib/ai-recommend.client';
 import { GetBangumiCalendarData } from '@/lib/bangumi.client';
@@ -279,6 +278,13 @@ function DoubanPageClient() {
       }
     }
 
+    // 切换大分类时立即重置页码与数据，杜绝跨 Tab 继承旧页码与旧数据引发的竞态错误
+    setCurrentPage(0);
+    setDoubanData([]);
+    setHasMore(true);
+    setIsLoadingMore(false);
+    setLoading(true);
+
     // 清空 MultiLevelSelector 状态
     setMultiLevelValues({
       type: 'all',
@@ -490,12 +496,9 @@ function DoubanPageClient() {
         );
 
         if (keyParamsMatch) {
-          // 🚀 使用 flushSync 强制同步更新，避免 React 批处理延迟
-          flushSync(() => {
-            setDoubanData(data.list);
-            setHasMore(data.list.length !== 0);
-            setLoading(false);
-          });
+          setDoubanData(data.list);
+          setHasMore(data.list.length !== 0);
+          setLoading(false);
         } else {
           console.log('关键参数不一致，不执行任何操作，避免设置过期数据');
         }
@@ -686,29 +689,26 @@ function DoubanPageClient() {
             );
 
             if (keyParamsMatch) {
-              // 🚀 使用 flushSync 强制同步更新，确保数据立即渲染
-              flushSync(() => {
-                // 🔧 双重去重逻辑：防止跨批次和批次内重复数据
-                setDoubanData((prev) => {
-                  const existingIds = new Set(prev.map((item) => item.id));
-                  const uniqueNewItems: DoubanItem[] = [];
+              // 🔧 双重去重逻辑：防止跨批次和批次内重复数据
+              setDoubanData((prev) => {
+                const existingIds = new Set(prev.map((item) => item.id));
+                const uniqueNewItems: DoubanItem[] = [];
 
-                  for (const item of data.list) {
-                    if (!existingIds.has(item.id)) {
-                      existingIds.add(item.id);  // 立即添加，防止批次内重复
-                      uniqueNewItems.push(item);
-                    }
+                for (const item of data.list) {
+                  if (!existingIds.has(item.id)) {
+                    existingIds.add(item.id);  // 立即添加，防止批次内重复
+                    uniqueNewItems.push(item);
                   }
+                }
 
-                  console.log(
-                    `📊 Batch: ${data.list.length}, Added: ${uniqueNewItems.length}, Duplicates removed: ${data.list.length - uniqueNewItems.length}`
-                  );
+                console.log(
+                  `📊 Batch: ${data.list.length}, Added: ${uniqueNewItems.length}, Duplicates removed: ${data.list.length - uniqueNewItems.length}`
+                );
 
-                  if (uniqueNewItems.length === 0) return prev;
-                  return [...prev, ...uniqueNewItems];
-                });
-                setHasMore(data.list.length !== 0);
+                if (uniqueNewItems.length === 0) return prev;
+                return [...prev, ...uniqueNewItems];
               });
+              setHasMore(data.list.length !== 0);
             } else {
               console.log('关键参数不一致，不执行任何操作，避免设置过期数据');
             }

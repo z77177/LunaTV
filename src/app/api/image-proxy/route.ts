@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
-import { isSafePublicUrl } from '@/lib/ssrf';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       'Connection': 'keep-alive',
     };
 
-    const imageResponse = await fetch(imageUrl, {
+    const imageResponse = await safeFetch(imageUrl, {
       signal: controller.signal,
       headers: fetchHeaders,
     });

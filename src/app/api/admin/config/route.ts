@@ -30,9 +30,12 @@ export async function GET(request: NextRequest) {
     const config = await getConfig();
     let safeConfig = config;
 
-    // 非站长管理员脱敏站长专属敏感凭证
+    // 非站长管理员脱敏站长专属敏感凭证与全局鉴权密钥
     if (role !== 'owner') {
       safeConfig = JSON.parse(JSON.stringify(config));
+      if (safeConfig.SiteConfig?.TMDBApiKey) {
+        safeConfig.SiteConfig.TMDBApiKey = '******';
+      }
       if (safeConfig.TelegramAuthConfig?.botToken) {
         safeConfig.TelegramAuthConfig.botToken = '******';
       }
@@ -47,6 +50,30 @@ export async function GET(request: NextRequest) {
       }
       if (safeConfig.AIRecommendConfig?.apiKey) {
         safeConfig.AIRecommendConfig.apiKey = '******';
+      }
+      if (Array.isArray(safeConfig.AIRecommendConfig?.tavilyApiKeys)) {
+        safeConfig.AIRecommendConfig.tavilyApiKeys = safeConfig.AIRecommendConfig.tavilyApiKeys.map(() => '******');
+      }
+      if (safeConfig.YouTubeConfig?.apiKey) {
+        safeConfig.YouTubeConfig.apiKey = '******';
+      }
+      if (safeConfig.DoubanConfig?.cookies) {
+        safeConfig.DoubanConfig.cookies = '******';
+      }
+      if (safeConfig.TVBoxSecurityConfig?.token) {
+        safeConfig.TVBoxSecurityConfig.token = '******';
+      }
+      if (safeConfig.WatchRoomConfig?.authKey) {
+        safeConfig.WatchRoomConfig.authKey = '******';
+      }
+      if (safeConfig.DanmuApiConfig?.customToken) {
+        safeConfig.DanmuApiConfig.customToken = '******';
+      }
+      if (Array.isArray(safeConfig.UserConfig?.Users)) {
+        safeConfig.UserConfig.Users = safeConfig.UserConfig.Users.map((u: any) => ({
+          ...u,
+          tvboxToken: u.tvboxToken ? '******' : '',
+        }));
       }
     }
 

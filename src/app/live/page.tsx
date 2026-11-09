@@ -212,48 +212,38 @@ function LivePageClient() {
   
   // 刷新相关状态
   const [isRefreshingSource, setIsRefreshingSource] = useState(false);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('live-auto-refresh-enabled');
-      return saved ? JSON.parse(saved) : false;
-    }
-    return false;
-  });
-  const [autoRefreshInterval, setAutoRefreshInterval] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('live-auto-refresh-interval');
-      return saved ? parseInt(saved) : 30; // 默认30分钟
-    }
-    return 30;
-  });
+  // 避免 SSR 水合不一致：初始状态使用安全固定默认值，在 mount 后同步 localStorage
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(30);
   const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 🚀 直连模式相关状态
-  const [directPlaybackEnabled, setDirectPlaybackEnabled] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('live-direct-playback-enabled');
-      return saved ? JSON.parse(saved) : false; // 默认关闭，使用代理
-    }
-    return false;
-  });
+  const [directPlaybackEnabled, setDirectPlaybackEnabled] = useState(false);
   const [corsSupport, setCorsSupport] = useState<Map<string, boolean>>(new Map());
   const corsSupportRef = useRef<Map<string, boolean>>(new Map());
   const [playbackMode, setPlaybackMode] = useState<'direct' | 'proxy'>('proxy');
 
   // 📊 CORS 检测统计（管理员用）
-  const [corsStats, setCorsStats] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('live-cors-stats');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          return { directCount: 0, proxyCount: 0, totalChecked: 0 };
-        }
-      }
+  const [corsStats, setCorsStats] = useState({ directCount: 0, proxyCount: 0, totalChecked: 0 });
+
+  // 挂载后安全同步本地配置，杜绝 SSR Hydration 不匹配
+  useEffect(() => {
+    try {
+      const savedAutoRefresh = localStorage.getItem('live-auto-refresh-enabled');
+      if (savedAutoRefresh) setAutoRefreshEnabled(JSON.parse(savedAutoRefresh));
+
+      const savedInterval = localStorage.getItem('live-auto-refresh-interval');
+      if (savedInterval) setAutoRefreshInterval(parseInt(savedInterval, 10));
+
+      const savedDirect = localStorage.getItem('live-direct-playback-enabled');
+      if (savedDirect) setDirectPlaybackEnabled(JSON.parse(savedDirect));
+
+      const savedStats = localStorage.getItem('live-cors-stats');
+      if (savedStats) setCorsStats(JSON.parse(savedStats));
+    } catch {
+      // ignore
     }
-    return { directCount: 0, proxyCount: 0, totalChecked: 0 };
-  });
+  }, []);
 
   // 分组相关
   const [groupedChannels, setGroupedChannels] = useState<{ [key: string]: LiveChannel[] }>({});

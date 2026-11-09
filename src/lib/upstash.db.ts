@@ -72,6 +72,8 @@ export class UpstashRedisStorage implements IStorage {
   protected async scanKeys(pattern: string): Promise<string[]> {
     const keys = new Set<string>();
     let cursor: string | number = 0;
+    let iterations = 0;
+    const MAX_ITERATIONS = 500; // 熔断保护：最多扫描 500 次批次
 
     do {
       const [nextCursor, matchedKeys] = await withRetry(() =>
@@ -82,10 +84,17 @@ export class UpstashRedisStorage implements IStorage {
       );
 
       cursor = nextCursor;
-      for (const key of matchedKeys) {
-        keys.add(key);
+      if (Array.isArray(matchedKeys)) {
+        for (const key of matchedKeys) {
+          keys.add(key);
+        }
       }
-    } while (cursor !== '0');
+      iterations++;
+    } while (
+      Number(cursor) !== 0 &&
+      String(cursor) !== '0' &&
+      iterations < MAX_ITERATIONS
+    );
 
     return Array.from(keys);
   }
@@ -246,6 +255,7 @@ export class UpstashRedisStorage implements IStorage {
 
   // 验证密码（支持加盐哈希或平滑兼容明文/老版本纯SHA256）
   protected async verifyHashedPassword(password: string, stored: string): Promise<boolean> {
+    if (!password || !stored) return false;
     if (stored.startsWith('sha256:')) {
       const parts = stored.split(':');
       if (parts.length === 3) {
@@ -267,11 +277,18 @@ export class UpstashRedisStorage implements IStorage {
   }
 
   async registerUser(userName: string, password: string): Promise<void> {
-    const hashedPassword = await this.hashPasswordWithSalt(password);
+    const hashedPassword = password.startsWith('sha256:')
+      ? password
+      : await this.hashPasswordWithSalt(password);
     await withRetry(() => this.client.set(this.userPwdKey(userName), hashedPassword));
   }
 
   async verifyUser(userName: string, password: string): Promise<boolean> {
+    // 优先校验 V2 用户哈希（存储在 Hash userInfoKey 中）
+    const isV2Valid = await this.verifyUserV2(userName, password);
+    if (isV2Valid) return true;
+
+    // 回退校验历史 V1 用户密码（独立 Key 存储）
     const stored = await withRetry(() =>
       this.client.get(this.userPwdKey(userName))
     );
@@ -287,13 +304,13 @@ export class UpstashRedisStorage implements IStorage {
     return isValid;
   }
 
-  // 检查用户是否存在
+  // 检查用户是否存在（同时检查 V1 和 V2）
   async checkUserExist(userName: string): Promise<boolean> {
-    // 使用 EXISTS 判断 key 是否存在
-    const exists = await withRetry(() =>
-      this.client.exists(this.userPwdKey(userName))
-    );
-    return exists === 1;
+    const [v1Exists, v2Exists] = await Promise.all([
+      withRetry(() => this.client.exists(this.userPwdKey(userName))),
+      withRetry(() => this.client.exists(this.userInfoKey(userName))),
+    ]);
+    return v1Exists === 1 || v2Exists === 1;
   }
 
   // 修改用户密码
@@ -400,7 +417,10 @@ export class UpstashRedisStorage implements IStorage {
     oidcSub?: string,
     enabledApis?: string[]
   ): Promise<void> {
-    const hashedPassword = await this.hashPasswordWithSalt(password);
+    // 幂等保护：若传入的 password 已是哈希格式（例如迁移导入），禁止二次加盐哈希
+    const hashedPassword = password.startsWith('sha256:')
+      ? password
+      : await this.hashPasswordWithSalt(password);
     const createdAt = Date.now();
 
     // 存储用户信息到Hash
@@ -1061,9 +1081,17 @@ export class UpstashRedisStorage implements IStorage {
 
   async getUserPlayStat(userName: string): Promise<UserPlayStat> {
     try {
-      // 获取用户的所有播放记录
+      // 获取用户的所有播放记录（保留 key、source 与 id 元数据）
       const records = await this.getAllPlayRecords(userName);
-      const playRecords = Object.values(records);
+      const playRecords = Object.entries(records).map(([key, record]) => {
+        const plusIdx = key.indexOf('+');
+        return {
+          ...record,
+          key,
+          source: plusIdx >= 0 ? key.slice(0, plusIdx) : '',
+          id: plusIdx >= 0 ? key.slice(plusIdx + 1) : '',
+        };
+      });
 
       if (playRecords.length === 0) {
         // 即使没有播放记录，也要获取登入统计

@@ -118,9 +118,17 @@ export async function GET(request: NextRequest) {
           loginCount = 0;
         }
 
-        // 获取用户的所有播放记录
+        // 获取用户的所有播放记录（并保留 key、source 与 id 元数据）
         const userPlayRecords = await storage.getAllPlayRecords(user.username);
-        const records = Object.values(userPlayRecords);
+        const records = Object.entries(userPlayRecords).map(([key, record]) => {
+          const plusIdx = key.indexOf('+');
+          return {
+            ...record,
+            key,
+            source: plusIdx >= 0 ? key.slice(0, plusIdx) : '',
+            id: plusIdx >= 0 ? key.slice(plusIdx + 1) : '',
+          };
+        });
 
         if (records.length === 0) {
           // 没有播放记录的用户也要显示
@@ -242,7 +250,15 @@ export async function GET(request: NextRequest) {
     try {
       const guestUsername = '访客(匿名汇总)';
       const guestRecordsMap = await storage.getAllPlayRecords(guestUsername);
-      const guestRecords = Object.values(guestRecordsMap);
+      const guestRecords = Object.entries(guestRecordsMap).map(([key, record]) => {
+        const plusIdx = key.indexOf('+');
+        return {
+          ...record,
+          key,
+          source: plusIdx >= 0 ? key.slice(0, plusIdx) : '',
+          id: plusIdx >= 0 ? key.slice(plusIdx + 1) : '',
+        };
+      });
 
       if (guestRecords.length > 0) {
         let guestWatchTime = 0;

@@ -368,6 +368,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
 
     // 构建豆瓣ID参数
     const doubanIdParam = actualDoubanId && actualDoubanId > 0 ? `&douban_id=${actualDoubanId}` : '';
+    // 从播放记录进入时，若存在已播集数，优先携带对应 0 基 index 参数，确保首屏直接恢复目标集数
+    const episodeParam = from === 'playrecord' && typeof currentEpisode === 'number' && currentEpisode > 0
+      ? `&index=${currentEpisode - 1}`
+      : '';
 
     if (origin === 'live' && actualSource && actualId) {
       // 直播内容跳转到直播页面
@@ -375,25 +379,26 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       router.push(url);
     } else if (actualSource === 'shortdrama' && actualId) {
       // 短剧内容 - 使用shortdrama_id参数
-      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}&shortdrama_id=${actualId}`;
+      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}&shortdrama_id=${actualId}${episodeParam}`;
       router.push(url);
     } else if (from === 'douban' || (isAggregate && !actualSource && !actualId) || actualSource === 'upcoming_release' || actualSource === 'douban' || actualSource === 'bangumi') {
       // 豆瓣内容 或 聚合搜索 或 即将上映 或 Bangumi番剧 - 只用标题和年份搜索
       const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${actualYear ? `&year=${actualYear}` : ''
-        }${doubanIdParam}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}`;
+        }${doubanIdParam}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}${episodeParam}`;
       router.push(url);
     } else if (actualSource && actualId) {
       const url = `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
         actualTitle
       )}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${isAggregate ? '&prefer=true' : ''
         }${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
-        }${actualSearchType ? `&stype=${actualSearchType}` : ''}`;
+        }${actualSearchType ? `&stype=${actualSearchType}` : ''}${episodeParam}`;
       router.push(url);
     }
   }, [
     isUpcoming,
     origin,
     from,
+    currentEpisode,
     actualSource,
     actualId,
     router,
@@ -409,6 +414,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
   const handlePlayInNewTab = useCallback(() => {
     // 构建豆瓣ID参数
     const doubanIdParam = actualDoubanId && actualDoubanId > 0 ? `&douban_id=${actualDoubanId}` : '';
+    // 从播放记录进入时，若存在已播集数，优先携带对应 0 基 index 参数，确保首屏直接恢复目标集数
+    const episodeParam = from === 'playrecord' && typeof currentEpisode === 'number' && currentEpisode > 0
+      ? `&index=${currentEpisode - 1}`
+      : '';
 
     if (origin === 'live' && actualSource && actualId) {
       // 直播内容跳转到直播页面
@@ -416,23 +425,24 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(function VideoCard
       window.open(url, '_blank');
     } else if (actualSource === 'shortdrama' && actualId) {
       // 短剧内容 - 使用shortdrama_id参数
-      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}&shortdrama_id=${actualId}`;
+      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}&shortdrama_id=${actualId}${episodeParam}`;
       window.open(url, '_blank');
     } else if (from === 'douban' || (isAggregate && !actualSource && !actualId) || actualSource === 'upcoming_release' || actualSource === 'douban' || actualSource === 'bangumi') {
       // 豆瓣内容 或 聚合搜索 或 即将上映 或 Bangumi番剧 - 只用标题和年份搜索
-      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}`;
+      const url = `/play?title=${encodeURIComponent(actualTitle.trim())}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${actualSearchType ? `&stype=${actualSearchType}` : ''}${isAggregate ? '&prefer=true' : ''}${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''}${episodeParam}`;
       window.open(url, '_blank');
     } else if (actualSource && actualId) {
       const url = `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
         actualTitle
       )}${actualYear ? `&year=${actualYear}` : ''}${doubanIdParam}${isAggregate ? '&prefer=true' : ''
         }${actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
-        }${actualSearchType ? `&stype=${actualSearchType}` : ''}`;
+        }${actualSearchType ? `&stype=${actualSearchType}` : ''}${episodeParam}`;
       window.open(url, '_blank');
     }
   }, [
     origin,
     from,
+    currentEpisode,
     actualSource,
     actualId,
     actualTitle,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { ensureAdmin } from '@/lib/admin-auth';
-import { isSafePublicUrl } from '@/lib/ssrf';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 
 export const runtime = 'nodejs';
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const timeout = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const response = await fetch(statsUrl, {
+      const response = await safeFetch(statsUrl, {
         signal: controller.signal,
         headers: {
           Authorization: `Bearer ${authKey}`,

@@ -250,6 +250,9 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
     return new Promise<{ success: boolean; room?: Room; error?: string }>((resolve) => {
       socket.emit('room:create', { ...data, userName }, (response) => {
         if (response.success && response.room) {
+          try {
+            sessionStorage.setItem(`watchroom_owner_${response.room.id}`, 'true');
+          } catch {}
           // 立即更新状态
           setCurrentRoom(response.room);
           setMembers([{
@@ -291,13 +294,18 @@ export function useWatchRoom(options: UseWatchRoomOptions): UseWatchRoomReturn {
   // 离开房间
   const leaveRoom = useCallback(() => {
     if (socket && connected) {
+      if (currentRoom?.id) {
+        try {
+          sessionStorage.removeItem(`watchroom_owner_${currentRoom.id}`);
+        } catch {}
+      }
       socket.emit('room:leave');
       // 立即清空本地状态，不等服务器响应
       setCurrentRoom(null);
       setMembers([]);
       setMessages([]);
     }
-  }, [socket, connected]);
+  }, [socket, connected, currentRoom]);
 
   // 获取房间列表
   const getRoomList = useCallback(async () => {

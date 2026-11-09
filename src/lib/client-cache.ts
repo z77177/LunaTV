@@ -54,17 +54,21 @@ function clearExpiredLocalCache(prefix?: string): void {
   const keysToRemove: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (!key || (prefix && !key.startsWith(prefix))) continue;
+    if (!key) continue;
+    if (prefix && !key.startsWith(prefix)) continue;
 
     try {
       const raw = localStorage.getItem(key);
       if (!raw) continue;
       const entry = JSON.parse(raw) as LocalCacheEntry;
-      if (entry.expire && Date.now() > entry.expire) {
-        keysToRemove.push(key);
+      if (entry && typeof entry === 'object' && typeof entry.expire === 'number') {
+        if (Date.now() > entry.expire) {
+          keysToRemove.push(key);
+        }
       }
     } catch {
-      if (!prefix || key.startsWith(prefix)) {
+      // 仅当明确指定了特定缓存前缀且 JSON 损坏时才清理，绝不盲目删除用户其他非 JSON 偏好设置
+      if (prefix && key.startsWith(prefix)) {
         keysToRemove.push(key);
       }
     }

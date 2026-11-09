@@ -12,7 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config';
-import { isSafePublicUrl } from '@/lib/ssrf';
+import { isSafePublicUrl, safeFetch } from '@/lib/ssrf';
 import { DEFAULT_USER_AGENT } from '@/lib/user-agent';
 
 // 使用 Node.js Runtime 以获得更好的网络兼容性
@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
     try {
       console.log(`[CMS Proxy] Fetching: ${targetUrl}`);
 
-      const response = await fetch(targetUrl, {
+      const response = await safeFetch(targetUrl, {
         method: 'GET',
         headers: BROWSER_HEADERS,
         signal: controller.signal,

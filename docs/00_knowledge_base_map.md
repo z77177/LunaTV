@@ -129,6 +129,55 @@
   - 单元测试用例扩充至 34 项（覆盖 302 深度 SSRF 阻断与跳转安全、负时区 XMLTV 时间解析与异常秒数格式化），通过率 100%；
   - 全站 TypeScript 严格检查与 ESLint 静态代码检查达到 0 错误（0 errors）。
 
+### 1.7 移动端从历史记录进入电视剧集数回退与竞态覆盖彻底修复 (2026-11-09)
+- **卡片跳转路由元数据补全与首屏直达**:
+  - [`VideoCard.tsx`](file:///d:/Projects/brooklyntv/src/components/VideoCard.tsx): 当 `from === 'playrecord'` 且存在有效已播集数 `currentEpisode`（1 基）时，在 `handleClick` 与 `handlePlayInNewTab` 中为 `/play` 路由拼接 `&index=${currentEpisode - 1}`，消除了历史卡片跳转丢失选集信息导致播放页默认以第 1 集加载的缺陷；
+  - [`play-stats/page.tsx`](file:///d:/Projects/brooklyntv/src/app/play-stats/page.tsx): 在最近播放列表中点击 `handlePlayRecord` 时，补齐 `index`（0 基）、`source`、`id` 与 `t`（已播秒数）完整路由参数。
+- **播放页生命周期确定性选集预载与覆盖防御**:
+  - [`play/page.tsx`](file:///d:/Projects/brooklyntv/src/app/play/page.tsx): 在 `initAll()` 获取详情后、调用 `setDetail(detailData)` 启动播放流之前，若 URL 缺少 `index` 参数，立即通过 `getAllPlayRecords()` 确定性预查历史选集索引 `targetIndex` 与播放时间 `play_time`；在首帧渲染前提前设置 `currentEpisodeIndex` 与 `resumeTimeRef.current`，彻底消除了由于移动端网络或 IndexedDB 延迟导致的“先以第 1 集初始化播放流、后异步切流”的竞态抖动与回退；
+  - [`play/page.tsx`](file:///d:/Projects/brooklyntv/src/app/play/page.tsx): 在 `saveCurrentPlayProgress` 中增加守卫，在 `isEpisodeChangingRef.current`、`isSourceChangingRef.current`、`loading` 或 `currentTime < 2` 期间严禁保存进度，彻底杜绝了加载第 1 集时误将数据库历史集数篡改为第 1 集的致命数据破坏 Bug；
+  - [`play/page.tsx`](file:///d:/Projects/brooklyntv/src/app/play/page.tsx): 在 `handlePreviousEpisode`、`handleNextEpisode` 及 `video:ended` 自动播放下一集时，同步通过 `history.replaceState` 维持 URL 中的 `index` 参数最新。
+- **服务端历史统计元数据增强**:
+  - [`play-stats/route.ts`](file:///d:/Projects/brooklyntv/src/app/api/admin/play-stats/route.ts)、[`redis-base.db.ts`](file:///d:/Projects/brooklyntv/src/lib/redis-base.db.ts)、[`upstash.db.ts`](file:///d:/Projects/brooklyntv/src/lib/upstash.db.ts): 在提取用户最近播放记录 `recentRecords` 时，从字典键解析并挂载 `key`、`source` 与 `id` 元数据，确保前端具备直接唤起精准定位播放的能力。
+
+### 1.8 PC 网页端全链路卡顿根治与弹幕按需动态加载架构升级 (2026-11-09)
+- **播放源测速彻底轻量化与带宽/硬解通道保护**:
+  - [`play/page.tsx`](file:///d:/Projects/brooklyntv/src/app/play/page.tsx): 彻底废除桌面端启动时并发创建 2~6 个后台隐藏 `<video>` 与 `new Hls()` 实例拉流测速的 `fullSpeedTest`，全端统一采用轻量级 HTTP HEAD ping 优选（`lightweightPreference`）。彻底消除了开播时并发下载其他源切片争抢带宽的问题，同时释放了全部浏览器硬件视频解码器通道（Hardware Decoder）。
+- **弹幕默认关闭、零首屏开销与按需动态挂载**:
+  - [`play/page.tsx`](file:///d:/Projects/brooklyntv/src/app/play/page.tsx): 弹幕默认设为关闭；播放器初始化时完全不引入 `artplayer-plugin-danmuku` 插件，首屏零弹幕网络请求、零 DOM 节点与零内存消耗。
+  - 控制栏提供轻量级“弹幕: 关 / 弹幕: 开”切换按钮，仅当用户主动点击后，才异步动态 `import('artplayer-plugin-danmuku')` 并通过 `art.plugins.add(...)` 动态挂载到运行中的播放器实例上，拉取数据后平滑显示；
+  - 彻底关闭 `antiOverlap: false`，杜绝了每帧遍历 DOM 执行 `getBoundingClientRect()` 引发的严重强制同步重排（Layout Thrashing）与主线程卡死。
+- **HLS.js 缓冲与空洞秒级自愈收紧**:
+  - [`play/page.tsx`](file:///d:/Projects/brooklyntv/src/app/play/page.tsx): 电脑端最大缓冲长度 `maxMaxBufferLength` 从贪婪的 180s 降至 60s，最大缓冲区限制为 60MB~100MB，避免持续向 SourceBuffer 塞入巨量切片导致 Chromium GC 停顿与第三方采集 CDN 频控限速；
+  - 空洞容错阈值 `maxBufferHole` 从 0.5s 收紧至 0.1s，遇到切片非连续微小时间戳空洞（0.1s~0.3s）时，播放器立即自动微调跳过，避免长时间假死挂起。
+- **GPU 渲染性能减负与 CSS 优化**:
+  - [`artplayer-liquid-glass.css`](file:///d:/Projects/brooklyntv/src/styles/artplayer-liquid-glass.css): 将控制栏上的昂贵 `backdrop-filter: blur(12px/16px)` 替换为高质量暗黑半透明底色 `rgba(20, 20, 25, 0.92)`，免去 GPU 对硬解视频帧的昂贵离屏高斯模糊卷积计算；
+  - 移除高开销的 `.artplayer-plugin-liquid-glass:has(.art-liquid-glass:hover)` 选择器，杜绝高刷新率鼠标移动时触发的全 DOM 树样式重算。
+
+### 1.9 第四轮全量深度审查：安全漏洞阻断、流媒体与OOM根治、用户认证融合与体验优化 (2026-11-09)
+- **严重级安全漏洞拦截与特权提权阻断 (Tier 1 P0)**:
+  - [`proxy.ts`](file:///d:/Projects/brooklyntv/src/proxy.ts) & [`networkDetection.ts`](file:///d:/Projects/brooklyntv/src/lib/networkDetection.ts): 彻底重构 `getClientIP` 解析顺序（优先原生 TCP 连接 `request.ip`、Cloudflare `cf-connecting-ip` 及 Nginx 覆写的 `x-real-ip`；对 `x-forwarded-for` 仅采用末尾直连反代 IP），彻底阻断外网攻击者在 HTTP 请求头伪造 `X-Forwarded-For: 192.168.1.1` 自动获取受信任网络站长 `owner` 权限 Cookie 的高危漏洞 (SEC-01)；
+  - [`ssrf.ts`](file:///d:/Projects/brooklyntv/src/lib/ssrf.ts) & 全站代理路由: 全面在 [`image-proxy`](file:///d:/Projects/brooklyntv/src/app/api/image-proxy/route.ts)、[`video-proxy`](file:///d:/Projects/brooklyntv/src/app/api/video-proxy/route.ts)、[`lite-stream`](file:///d:/Projects/brooklyntv/src/app/api/lite-stream/route.ts)、[`proxy/cms`](file:///d:/Projects/brooklyntv/src/app/api/proxy/cms/route.ts)、[`proxy/m3u8`](file:///d:/Projects/brooklyntv/src/app/api/proxy/m3u8/route.ts)、[`proxy/stream`](file:///d:/Projects/brooklyntv/src/app/api/proxy/stream/route.ts)、[`proxy/segment`](file:///d:/Projects/brooklyntv/src/app/api/proxy/segment/route.ts)、[`proxy/shortdrama`](file:///d:/Projects/brooklyntv/src/app/api/proxy/shortdrama/route.ts)、[`proxy/key`](file:///d:/Projects/brooklyntv/src/app/api/proxy/key/route.ts)、[`proxy/logo`](file:///d:/Projects/brooklyntv/src/app/api/proxy/logo/route.ts)、[`watch-room/test-connection`](file:///d:/Projects/brooklyntv/src/app/api/watch-room/test-connection/route.ts)、[`watch-room/stats`](file:///d:/Projects/brooklyntv/src/app/api/watch-room/stats/route.ts) 将原生 `fetch` 与 `redirect: 'follow'` 升级为逐跳过滤的 `safeFetch`，彻底封堵利用公网 302 重定向穿透内网或探测云元数据服务的 SSRF 绕过 (SEC-02)；
+  - [`admin/reset`](file:///d:/Projects/brooklyntv/src/app/api/admin/reset/route.ts): 破坏性重置接口全面废除 `GET` 改为 `POST`，并强制执行 `ensureAdmin` HMAC 防篡改与 `role === 'owner'` 校验，彻底消除外部钓鱼 CSRF 风险；并在 [`admin/page.tsx`](file:///d:/Projects/brooklyntv/src/app/admin/page.tsx) 同步更新为 POST 请求 (SEC-03)；
+  - [`admin/config`](file:///d:/Projects/brooklyntv/src/app/api/admin/config/route.ts): 非站长管理员读取配置时，补齐对 `SiteConfig.TMDBApiKey`、`YouTubeConfig.apiKey`、`DoubanConfig.cookies`、`TVBoxSecurityConfig.token`、`WatchRoomConfig.authKey`、`DanmuApiConfig.customToken`、`AIRecommendConfig.tavilyApiKeys` 及 `UserConfig.Users[].tvboxToken` 的脱敏清洗 (`******`)，防止次级管理员越权窃取敏感密钥 (SEC-04)；
+  - [`tvbox/search`](file:///d:/Projects/brooklyntv/src/app/api/tvbox/search/route.ts) & [`tvbox/spider-status`](file:///d:/Projects/brooklyntv/src/app/api/tvbox/spider-status/route.ts): 为 TVBox 搜索接口接入严格的 Token 校验与 IP 白名单/CIDR 校验，为 Spider 状态刷新 POST 接口增加 `ensureAdmin` 鉴权 (SEC-05)；
+  - [`upstash.db.ts`](file:///d:/Projects/brooklyntv/src/lib/upstash.db.ts): 修复 `scanKeys` 中 Upstash REST 返回数值 `0` 游标导致 `while (cursor !== '0')` 永不终止的无限死循环与 API 配额耗尽缺陷，增加最大 500 次批次熔断保护 (DB-01)；
+  - [`video-proxy`](file:///d:/Projects/brooklyntv/src/app/api/video-proxy/route.ts) & [`video-cache.ts`](file:///d:/Projects/brooklyntv/src/lib/video-cache.ts): 废除 `Buffer.from(await videoResponse.arrayBuffer())` 全量内存缓冲，采用 `videoResponse.body.tee()` 结合 `cacheVideoStream` 流水线分块写入磁盘，实现直通响应与异步磁盘缓存，彻底杜绝大视频文件导致的 V8 堆内存 OOM 崩溃 (STREAM-01)。
+- **核心数据层、用户体系与流媒体深度修复 (Tier 2 P1)**:
+  - [`redis-base.db.ts`](file:///d:/Projects/brooklyntv/src/lib/redis-base.db.ts) & [`upstash.db.ts`](file:///d:/Projects/brooklyntv/src/lib/upstash.db.ts): 在 `verifyUser` 中优先校验 V2 哈希 `verifyUserV2`、回退校验 V1 独立键，在 `checkUserExist` 中同时检查 V1/V2 键，彻底解决带标签组的 V2 用户无法登录和修改密码的缺陷 (DB-05)；
+  - [`data_migration/export`](file:///d:/Projects/brooklyntv/src/app/api/admin/data_migration/export/route.ts)、[`import`](file:///d:/Projects/brooklyntv/src/app/api/admin/data_migration/import/route.ts)、[`redis-base.db.ts`](file:///d:/Projects/brooklyntv/src/lib/redis-base.db.ts)、[`upstash.db.ts`](file:///d:/Projects/brooklyntv/src/lib/upstash.db.ts): 导出备份时同时读取 V2 与 V1 用户哈希；在 `createUserV2` 与 `registerUser` 中识别已有 `sha256:` 哈希并跳过加盐，实现密码幂等导入，彻底杜绝备份恢复时密码丢失或被二次加盐破坏 (DB-02)；
+  - [`play/page.tsx`](file:///d:/Projects/brooklyntv/src/app/play/page.tsx): 选集切换成功后，优先恢复 `resumeTimeRef.current` 记录的历史播放进度并置空引用，仅在无历史记录时才归零，解决换集时历史进度被硬编码重置的体验缺陷 (STREAM-02)；
+  - [`play/page.tsx`](file:///d:/Projects/brooklyntv/src/app/play/page.tsx): `customType.m3u8` 增加 `Hls.isSupported()` 检测；在不支持 MSE 的 iOS Safari 等环境中自动降级为原生 `video.canPlayType('application/vnd.apple.mpegurl')` 播放并移除 MSE 模式下的 `<source>` 标签直接注入，彻底解决 iOS Safari 偶发白屏 (STREAM-03)；
+  - [`proxy/shortdrama`](file:///d:/Projects/brooklyntv/src/app/api/proxy/shortdrama/route.ts): 重新实现独立的 `HEAD` 请求处理器，仅向上游发起 HEAD 并转发响应头，返回空响应体，严格符合 RFC 7231 规范 (STREAM-04)；
+  - [`VirtualSearchGrid.tsx`](file:///d:/Projects/brooklyntv/src/components/VirtualSearchGrid.tsx): 从置顶 Effect 依赖项中移除 `totalItemCount`，仅在搜索关键词或视图变化时置顶，解决流式搜索分批加载时用户被强制拉回顶部的严重体验缺陷 (FE-02)。
+- **水合治理、交互竞态、样式性能与观影室治理 (Tier 3 P2)**:
+  - [`live/page.tsx`](file:///d:/Projects/brooklyntv/src/app/live/page.tsx) & [`search/page.tsx`](file:///d:/Projects/brooklyntv/src/app/search/page.tsx): 移除 `useState` 初始化工厂函数中对 `localStorage` 的直接访问，改用安全固定默认值并在挂载后 `useEffect` 中安全同步，彻底杜绝 SSR 水合不一致报错 (FE-01)；
+  - [`douban/page.tsx`](file:///d:/Projects/brooklyntv/src/app/douban/page.tsx): 移除反模式的 `flushSync` 强制同步渲染，恢复 React 18 自动批处理；在大分类或 Tab 切换时即时重置页码与数据，避免跨分类错误请求第 3 页数据 (FE-03, FE-05)；
+  - [`globals.css`](file:///d:/Projects/brooklyntv/src/app/globals.css): 移除全量通配否定选择器 `*:not(.artplayer):not(.artplayer *)`，收敛至 `.scrollbar-hide` 与 `html, body` 规则，消除全局高频 DOM 变更时的样式重算风暴 (FE-06)；
+  - [`useWatchRoom.ts`](file:///d:/Projects/brooklyntv/src/hooks/useWatchRoom.ts) & [`useWatchRoomSync.ts`](file:///d:/Projects/brooklyntv/src/app/play/hooks/useWatchRoomSync.ts): 废除 500ms 定时器解除广播锁，改为监听原生异步 `seeked` 事件完成回调；创建房间时将房主标识持久化至 `sessionStorage`并在离开房间时自动清理，杜绝异步缓冲时发生的乒乓 Seek 风暴与房主凭据丢失 (STREAM-05)；
+  - [`redis-base.db.ts`](file:///d:/Projects/brooklyntv/src/lib/redis-base.db.ts) & [`upstash.db.ts`](file:///d:/Projects/brooklyntv/src/lib/upstash.db.ts): `verifyHashedPassword` 增加对空密码/空存储字符串的直接拒绝防护 (DB-04)；
+  - [`client-cache.ts`](file:///d:/Projects/brooklyntv/src/lib/client-cache.ts): `clearExpiredLocalCache` 严格限定在有匹配前缀时才在异常时清理，保护用户其他非 JSON 类型的 localStorage 键不被误删 (DB-06)。
+
 ---
 
 ## 二、 项目文档资产索引

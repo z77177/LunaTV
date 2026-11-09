@@ -2,12 +2,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { ensureAdmin } from '@/lib/admin-auth';
 import { resetConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
   if (storageType === 'localstorage') {
     return NextResponse.json(
@@ -18,14 +18,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const authInfo = getAuthInfoFromCookie(request);
-  if (!authInfo || !authInfo.username) {
+  let auth;
+  try {
+    auth = await ensureAdmin(request);
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const username = authInfo.username;
 
-  if (username !== process.env.USERNAME) {
-    return NextResponse.json({ error: '仅支持站长重置配置' }, { status: 401 });
+  if (auth.role !== 'owner') {
+    return NextResponse.json({ error: '仅支持站长重置配置' }, { status: 403 });
   }
 
   try {
@@ -48,4 +49,12 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// 废弃旧版 GET 请求，防止 CSRF 攻击导致配置被恶意重置
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Method Not Allowed. 请使用 POST 方法并附带合法站长认证凭据。' },
+    { status: 405 }
+  );
 }
