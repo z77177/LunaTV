@@ -217,14 +217,17 @@
 - **聚合进度跳转弹幕重置防抖 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
   - 将 `seek` 与 `video:seeked` 中对 `artplayerPluginDanmuku.reset()` 的重复调用收敛为统一的 300ms 防抖函数 `scheduleDanmuReset`，消除频繁 Seek 时主线程重复进行全量弹幕重排的微顿挫。
 
-### 1.13 播放窗口与控制栏动态透明度功能完整恢复 (2026-11-10)
-- **重新接通 CSS `--glass-opacity` 变量与毛玻璃滤镜 ([artplayer-liquid-glass.css](file:///d:/Projects/brooklyntv/src/styles/artplayer-liquid-glass.css))**:
-  - 修复历史优化提交中将底栏背景色写死为 `rgba(20, 20, 25, 0.92)` 导致透明度滑块失联的缺陷，重新接入 `background-color: rgba(20, 20, 25, var(--glass-opacity, 0.85))` 与 `backdrop-filter: blur(12px)`；
-  - 同步将齿轮设置菜单和弹幕发送面板背景色接入 `var(--glass-opacity)`，恢复通透毛玻璃质感。
-- **全场景注入透明度变量覆盖常规播放与全屏播放 ([useDraggableControlBar.ts](file:///d:/Projects/brooklyntv/src/hooks/useDraggableControlBar.ts))**:
-  - 解除原先仅在全屏状态注入 `--glass-opacity` 的范围限制，使其在播放器容器 (`playerNode`) 与底栏 (`bottomNode`) 全场景生效，确保常规网页窗口模式下拖动滑块也能即时改变透明度。
-- **窗口透明度滑块 60fps 零延迟直连渲染 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
-  - 在播放器“设置 -> 窗口设置 -> 窗口透明度”的 `onRange` 回调中增加对 DOM `--glass-opacity` 的直接赋值，消除中间状态同步等待，实现拖动滑块时毫秒级实时所见即所得。
+### 1.13 近期更新全面审核与越界改动精准修复 (2026-11-10)
+- **恢复控制栏毛玻璃 25% 默认通透度、纯暗黑设置菜单与悬停防隐藏 ([artplayer-liquid-glass.css](file:///d:/Projects/brooklyntv/src/styles/artplayer-liquid-glass.css) & [useImmersiveMode.ts](file:///d:/Projects/brooklyntv/src/hooks/useImmersiveMode.ts) & [useDraggableControlBar.ts](file:///d:/Projects/brooklyntv/src/hooks/useDraggableControlBar.ts))**:
+  - 将 `.art-liquid-glass::before` 还原至 `5c6b49f0` 基线（`background-color: rgba(20, 20, 25, var(--glass-opacity, 0.25))` 与 `backdrop-filter: blur(12px)`，移除多余边框与阴影），并将 `useImmersiveMode` 默认 `opacity` 对齐为 `0.25`；
+  - 还原 `.art-control-setting .art-settings` 的纯暗黑无边框底色（`rgba(18, 18, 18, 0.98)`）与 `.artplayer-plugin-liquid-glass:has(.art-liquid-glass:hover) .art-bottom` 悬停防自动隐藏选择器；
+  - 修复 `useDraggableControlBar` 未监听 `playerReady` 导致播放器异步初始化完成后初始 `--glass-opacity` 未同步的挂载时机缺陷。
+- **恢复弹幕插件原生挂载闭环与控制簇 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 还原 `artplayerPluginDanmuku` 在 `loadAndInit` 与 `new Artplayer({ plugins: [...] })` 中的挂载逻辑，修复开启外部弹幕用户首次进入播放页时弹幕不加载、齿轮菜单“外部弹幕”开关失灵以及控制栏按钮重复的回归缺陷。
+- **PC 双击全屏手势隔离、桌面端优选测速与全局隐藏滚动条恢复 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx) & [globals.css](file:///d:/Projects/brooklyntv/src/app/globals.css))**:
+  - 为 `dblclick` 左右 35% 区域快退/快进 10 秒手势增加 `if (!isMobile) return;` 守卫，杜绝劫持 PC 桌面端双击全屏；
+  - 恢复桌面端 `fullSpeedTest` 优选测速与 `ensureVideoSource`，清理孤儿死代码；
+  - 恢复 `globals.css` 中 `*:not(.artplayer):not(.artplayer *)` 全局隐藏滚动条规则；修正 `filterAdsFromM3U8` 中 `#EXT-X-DISCONTINUITY` 的精确匹配。
 
 ---
 

@@ -32,12 +32,9 @@
   left: 0;
   right: 0;
   border-radius: 8px;
-  /* 🚀 毛玻璃与动态透明度底色：支持通过 --glass-opacity 动态调节透明度 */
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background-color: rgba(20, 20, 25, var(--glass-opacity, 0.85));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  background-color: rgba(20, 20, 25, var(--glass-opacity, 0.25));
   z-index: -1;
   pointer-events: none;
 }
@@ -125,11 +122,11 @@
   top: auto !important;
   width: 220px !important; /* 🌟 设定固定宽度，彻底解决子菜单文字长度不同导致宽度动态跳动/浮动的问题！ */
 
-  /* 🎨 动态透明毛玻璃底色：接入 --glass-opacity 与全局窗口透明度联动 */
-  background: rgba(18, 18, 18, var(--glass-opacity, 0.95)) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  /* 🎨 极致尊贵纯暗黑底色：与弹幕面板保持一致，舍弃流光毛玻璃与白边框，统一圆角与高级暗阴影 */
+  background: rgba(18, 18, 18, 0.98) !important;
+  border: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border-radius: 8px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
 
@@ -160,12 +157,12 @@
   padding: 12px !important;
   border-radius: 12px !important;
   
-  /* 🪄 动态透明毛玻璃与发光边框：接入 --glass-opacity 与全局窗口透明度联动 */
-  background-color: rgba(20, 20, 25, var(--glass-opacity, 0.95)) !important;
+  /* 🪄 高端毛玻璃与发光边框 */
+  background-color: rgba(20, 20, 25, 0.85) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 229, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 229, 255, 0.1) !important;
   z-index: 99999 !important;
 
   /* 过渡状态 */
@@ -270,8 +267,8 @@
   transform: translateY(1px) !important;
 }
 
-/* 🚀 性能优化：移除昂贵的 :has(:hover) 全树重算选择器，依靠播放器原生类名驱动显示 */
-.artplayer-plugin-liquid-glass.art-control-show .art-bottom,
+/* 🚀 极致体验加固：当用户鼠标悬浮于进度条面板/控制栏（仅限实际的毛玻璃区域），或弹幕输入框正在被聚焦使用时，强制控制栏保持显示，完全屏蔽自动隐藏！ */
+.artplayer-plugin-liquid-glass:has(.art-liquid-glass:hover) .art-bottom,
 .artplayer-plugin-liquid-glass:has(.apd-danmaku-input:focus) .art-bottom {
   opacity: 1 !important;
   visibility: visible !important;

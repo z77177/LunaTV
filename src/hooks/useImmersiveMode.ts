@@ -10,7 +10,7 @@ const IS_FEATURE_DISABLED = process.env.NEXT_PUBLIC_ENABLE_IMMERSIVE_PLAYER === 
 
 const DEFAULT_SETTINGS: ImmersiveSettings = {
   enabled: !IS_FEATURE_DISABLED,
-  opacity: 0.85, // 85% opacity by default, won't go below 0.05 (5%)
+  opacity: 0.25, // 25% opacity by default (matching --glass-opacity, 0.25), won't go below 0.05 (5%)
   hideTimeout: 3000, // 3 seconds by default
 };
 

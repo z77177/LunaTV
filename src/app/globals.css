@@ -187,6 +187,15 @@ html:not(.dark) body {
   }
 }
 
+/* 隐藏所有滚动条（兼容 WebKit、Firefox、IE/Edge）- 排除ArtPlayer */
+*:not(.artplayer):not(.artplayer *) {
+  -ms-overflow-style: none; /* IE & Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+*:not(.artplayer):not(.artplayer *)::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
 
 /* ============================================
    View Transitions API 动画

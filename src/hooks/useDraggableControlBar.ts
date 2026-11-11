@@ -5,7 +5,8 @@ export function useDraggableControlBar(
   isFullscreen: boolean,
   enabled: boolean,
   opacity: number,
-  hideTimeout: number
+  hideTimeout: number,
+  playerReady?: boolean
 ) {
   const dragState = useRef({
     isDragging: false,
@@ -25,12 +26,10 @@ export function useDraggableControlBar(
     const playerNode = art.template.$player as HTMLElement;
     let dragHandle = bottomNode.querySelector('.art-custom-drag-handle') as HTMLElement;
 
-    // 1. 全局设置透明度变量给 CSS 使用（同时作用于常规窗口与全屏模式）
+    // 1. 设置透明度变量给 CSS 使用（同时支持常规窗口与全屏模式）
     if (enabled) {
-      playerNode.style.setProperty('--glass-opacity', opacity.toString());
       bottomNode.style.setProperty('--glass-opacity', opacity.toString());
     } else {
-      playerNode.style.removeProperty('--glass-opacity');
       bottomNode.style.removeProperty('--glass-opacity');
     }
 
@@ -208,7 +207,7 @@ export function useDraggableControlBar(
         if (timerRef.current) clearTimeout(timerRef.current);
       };
     } else {
-      // 还原 ArtPlayer 原生全屏拖拽与尺寸样式（保留 enabled 时的 --glass-opacity）
+      // 还原 ArtPlayer 原生样式（保留 --glass-opacity 使常规窗口同样遵循窗口透明度配置）
       bottomNode.style.pointerEvents = '';
       bottomNode.style.transform = '';
       
@@ -229,5 +228,5 @@ export function useDraggableControlBar(
       }
     }
 
-  }, [artPlayerRef, isFullscreen, enabled, opacity, hideTimeout]);
+  }, [artPlayerRef, isFullscreen, enabled, opacity, hideTimeout, playerReady]);
 }
