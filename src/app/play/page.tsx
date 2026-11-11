@@ -387,14 +387,14 @@ function PlayPageClient() {
         // 增强模式：1.5 倍缓冲
         return {
           maxBufferLength: 45, // 45s
-          backBufferLength: 60, // 60s 内存后向保留，允许回退时免网络请求
+          backBufferLength: 20, // 20s 内存后向保留（杜绝过长后向缓冲引发 MSE 内存碎片与音画脱轨）
           maxBufferSize: 80 * 1000 * 1000, // 80MB
         };
       case 'max':
         // 强力模式：2 倍缓冲
         return {
           maxBufferLength: 60, // 60s
-          backBufferLength: 90, // 90s 内存后向保留
+          backBufferLength: 30, // 30s 内存后向保留
           maxBufferSize: 100 * 1000 * 1000, // 100MB
         };
       case 'standard':
@@ -402,7 +402,7 @@ function PlayPageClient() {
         // 默认模式
         return {
           maxBufferLength: 30,
-          backBufferLength: 60, // 60s 内存后向保留，使后退 10~30 秒直接命中缓存
+          backBufferLength: 15, // 15s 内存后向保留（平衡短快退与避免陈旧分片时间戳污染）
           maxBufferSize: 60 * 1000 * 1000, // 60MB
         };
     }
@@ -2373,6 +2373,7 @@ function PlayPageClient() {
       const filteredLines: string[] = [];
 
       let i = 0;
+      let removedAdSegment = false;
       while (i < lines.length) {
         const line = lines[i];
 
@@ -2382,6 +2383,7 @@ function PlayPageClient() {
           if (filteredLines.length > 0 && filteredLines[filteredLines.length - 1] !== '#EXT-X-DISCONTINUITY') {
             filteredLines.push('#EXT-X-DISCONTINUITY');
           }
+          removedAdSegment = false; // 已有不连续性标记，无需重复插入
           i++;
           continue;
         }
@@ -2395,11 +2397,21 @@ function PlayPageClient() {
             );
 
             if (containsAdKeyword) {
+              // 标记移除了广告分段
+              removedAdSegment = true;
               // 跳过 EXTINF 行和 URL 行
               i += 2;
               continue;
             }
           }
+        }
+
+        // 关键修复：如果在切除广告分段后推入新正片切片，必须插入 #EXT-X-DISCONTINUITY 重置 PTS 基准，根治音画脱轨
+        if (removedAdSegment && line.includes('#EXTINF:')) {
+          if (filteredLines.length > 0 && filteredLines[filteredLines.length - 1] !== '#EXT-X-DISCONTINUITY') {
+            filteredLines.push('#EXT-X-DISCONTINUITY');
+          }
+          removedAdSegment = false;
         }
 
         filteredLines.push(line);
@@ -4450,17 +4462,21 @@ function PlayPageClient() {
 
               /* 网络加载优化与微缝容错 */
               maxLoadingDelay: isMobile ? (localIsIOS13 ? 2 : 3) : 4,
-              maxBufferHole: 0.5, // 🚀 恢复官方推荐 0.5s，容许 TS 切片正常音视频 GOP 偏差，消除伪空洞停顿
-              highBufferWatchdogPeriod: 3, // 开启缓冲看门狗，3秒检测一次真正卡顿
+              maxBufferHole: 0.1, // 🚀 恢复官方推荐 0.1s，遇到微小空洞第一时间轻微跳跃，杜绝 Chrome 视频挂起
+              highBufferWatchdogPeriod: 2, // 开启缓冲看门狗，2秒检测一次真正卡顿
               nudgeOffset: 0.1, // 遇到微缝自动向后跳跃 0.1s 恢复播放
               nudgeMaxRetry: 5, // 最多尝试微调 5 次
               
+              /* 音视频同步与关键帧容错 (根治音画脱节与黑屏) */
+              forceKeyFrameOnDiscontinuity: true, // 遭遇时间戳跳变时强制丢弃非关键帧，以关键帧 IDR 开局解码
+              maxAudioFramesDrift: 1, // 音频时间戳容差限制在 1 帧以内，防止音频大幅超前/滞后
+
               /* Fragment管理 */
               liveDurationInfinity: false,
               liveBackBufferLength: isMobile ? (localIsIOS13 ? 3 : 5) : null,
 
               /* 高级优化配置 */
-              maxMaxBufferLength: 60, // 🚀 桌面端从 180s 降至 60s，避免过度贪婪拉取触发 CDN 频控断流
+              maxMaxBufferLength: 120, // 🚀 桌面端放宽至 120s，避免过度压低天花板导致前向缓冲过早被截断
               maxFragLookUpTolerance: isMobile ? 0.1 : 0.25,
               
               /* ABR优化 */
@@ -4500,12 +4516,25 @@ function PlayPageClient() {
             hls.attachMedia(video);
             video.hls = hls;
 
+            let mediaRecoveryAttempts = 0;
+
             hls.on(Hls.Events.ERROR, function (event: any, data: any) {
               console.error('HLS Error:', event, data);
 
-              // 处理缓冲区停顿（交由 Hls.js gap-controller 内部 nudge 机制优雅恢复，严禁外部手动强制 currentTime += 0.1 导致循环寻道风暴）
+              // 处理缓冲区停顿：微小空洞由 gap-controller 内部 nudge 机制自愈；若重试耗尽抛出致命停顿，必须调用 recoverMediaError 重建解码管道
               if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-                console.warn('[HLS] 检测到缓冲区停顿，由 Hls.js 自动调度恢复');
+                if (data.fatal) {
+                  console.warn('[HLS] 缓冲区严重停顿无法自愈，执行 recoverMediaError 重建解码管道');
+                  if (mediaRecoveryAttempts < 3) {
+                    mediaRecoveryAttempts++;
+                    hls.recoverMediaError();
+                  } else {
+                    console.error('[HLS] 缓冲区卡顿多次恢复失败');
+                    hls.destroy();
+                  }
+                } else {
+                  console.warn('[HLS] 检测到缓冲区微小停顿，由 Hls.js 自动调度恢复');
+                }
                 return;
               }
 
@@ -4513,24 +4542,25 @@ function PlayPageClient() {
               // v1.6.13 增强：处理片段解析错误（针对initPTS修复）
               if (data.details === Hls.ErrorDetails.FRAG_PARSING_ERROR) {
                 console.log('片段解析错误，尝试重新加载...');
-                // 重新开始加载，利用v1.6.13的initPTS修复
-                hls.startLoad();
+                if (data.fatal) {
+                  if (mediaRecoveryAttempts < 3) {
+                    mediaRecoveryAttempts++;
+                    hls.recoverMediaError();
+                  }
+                } else {
+                  hls.startLoad();
+                }
                 return;
               }
 
-              // v1.6.13 增强：处理时间戳相关错误（直播回搜修复）
-              if (data.details === Hls.ErrorDetails.BUFFER_APPEND_ERROR &&
-                  data.err && data.err.message &&
-                  data.err.message.includes('timestamp')) {
-                console.log('时间戳错误，清理缓冲区并重新加载...');
-                try {
-                  // 清理缓冲区后重新开始，利用v1.6.13的时间戳包装修复
-                  const currentTime = video.currentTime;
-                  hls.trigger(Hls.Events.BUFFER_RESET, undefined);
-                  hls.startLoad(currentTime);
-                } catch (e) {
-                  console.warn('缓冲区重置失败:', e);
-                  hls.startLoad();
+              // v1.6.13 增强：处理时间戳与缓冲区追加错误（恢复媒体源）
+              if (data.details === Hls.ErrorDetails.BUFFER_APPEND_ERROR) {
+                console.warn('缓冲区追加错误，尝试恢复媒体...');
+                if (data.fatal) {
+                  if (mediaRecoveryAttempts < 3) {
+                    mediaRecoveryAttempts++;
+                    hls.recoverMediaError();
+                  }
                 }
                 return;
               }
@@ -4543,7 +4573,20 @@ function PlayPageClient() {
                     break;
                   case Hls.ErrorTypes.MEDIA_ERROR:
                     console.log('媒体错误，尝试恢复...');
-                    hls.recoverMediaError();
+                    if (mediaRecoveryAttempts < 2) {
+                      mediaRecoveryAttempts++;
+                      hls.recoverMediaError();
+                    } else if (mediaRecoveryAttempts === 2) {
+                      mediaRecoveryAttempts++;
+                      console.warn('再次尝试恢复媒体 (swapAudioCodec)...');
+                      try {
+                        hls.swapAudioCodec();
+                      } catch {}
+                      hls.recoverMediaError();
+                    } else {
+                      console.log('无法恢复的媒体错误');
+                      hls.destroy();
+                    }
                     break;
                   default:
                     console.log('无法恢复的错误');
@@ -4551,6 +4594,11 @@ function PlayPageClient() {
                     break;
                 }
               }
+            });
+
+            // 成功解析切片后重置媒体恢复计数器
+            hls.on(Hls.Events.FRAG_LOADED, function () {
+              mediaRecoveryAttempts = 0;
             });
           } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             console.log('[Player] 当前浏览器不支持 MSE，降级为原生 HLS 播放');
@@ -5811,22 +5859,22 @@ function PlayPageClient() {
           }
         });
 
-        // 监听播放进度跳转，优化弹幕重置（减少闪烁）
-        artPlayerRef.current.on('seek', () => {
-          if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-            // 清除之前的重置计时器
-            if (seekResetTimeoutRef.current) {
-              clearTimeout(seekResetTimeoutRef.current);
-            }
-            
-            // 增加延迟并只在非拖拽状态下重置，减少快进时的闪烁
-            seekResetTimeoutRef.current = setTimeout(() => {
-              if (!isDraggingProgressRef.current && artPlayerRef.current?.plugins?.artplayerPluginDanmuku && !artPlayerRef.current.seeking) {
-                artPlayerRef.current.plugins.artplayerPluginDanmuku.reset();
-                console.log('进度跳转，弹幕已重置');
-              }
-            }, 500); // 增加到500ms延迟，减少频繁重置导致的闪烁
+        // 统一弹幕跳转重置防抖（消除 100ms 与 500ms 重复 reset 引发的 UI 主线程卡顿）
+        const scheduleDanmuReset = () => {
+          if (seekResetTimeoutRef.current) {
+            clearTimeout(seekResetTimeoutRef.current);
           }
+          seekResetTimeoutRef.current = setTimeout(() => {
+            if (!isDraggingProgressRef.current && artPlayerRef.current?.plugins?.artplayerPluginDanmuku && !artPlayerRef.current.seeking) {
+              artPlayerRef.current.plugins.artplayerPluginDanmuku.reset();
+              console.log('进度跳转，弹幕已重置（防抖）');
+            }
+          }, 300);
+        };
+
+        // 监听播放进度跳转，优化弹幕重置
+        artPlayerRef.current.on('seek', () => {
+          scheduleDanmuReset();
         });
 
         // 监听拖拽状态 - v5.2.0优化: 在拖拽期间暂停弹幕更新以减少闪烁
@@ -5848,13 +5896,7 @@ function PlayPageClient() {
             // 只有在外部弹幕开启时才恢复显示
             if (externalDanmuEnabledRef.current) {
               artPlayerRef.current.plugins.artplayerPluginDanmuku.show(); // 先恢复显示
-              setTimeout(() => {
-                // 延迟重置以确保播放状态稳定
-                if (artPlayerRef.current?.plugins?.artplayerPluginDanmuku) {
-                  artPlayerRef.current.plugins.artplayerPluginDanmuku.reset();
-                  console.log('拖拽结束，弹幕已重置');
-                }
-              }, 100);
+              scheduleDanmuReset();
             } else {
               // 外部弹幕关闭时，确保保持隐藏状态
               artPlayerRef.current.plugins.artplayerPluginDanmuku.hide();

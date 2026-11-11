@@ -201,13 +201,21 @@
 
 ### 1.11 PC 网页端快进/后退死循环卡顿根治与 HLS 寻道管道优化 (2026-11-10)
 - **消除 `BUFFER_STALLED_ERROR` 外部死循环微寻道 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
-  - 彻底移除错误监听器中对停顿错误强制执行 `video.currentTime += 0.1` 的反模式逻辑。消除快进/后退至未缓冲时间戳时触发的“等待分片 -> 抛出停顿 -> 强制改时间戳 -> MSE 抛弃解封装管道 -> 再次停顿”的恶性死循环寻道风暴。
-- **恢复 Hls.js 标准空洞容差阈值 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
-  - 将 `maxBufferHole` 从过严的 0.1s 恢复至官方推荐值 0.5s，`highBufferWatchdogPeriod` 设为 3s；容许第三方切片音视频 GOP 关键帧之间正常的 0.1s~0.3s 微小时间戳偏差，避免播放中高频触发伪空洞 Nudge 告警。
-- **放宽桌面端后向保留长度实现零等待回退 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
-  - 桌面端 `backBufferLength` 由 15s 放宽至 60s（强力模式 90s）；用户回退 10~30 秒时直接命中已缓存在 SourceBuffer 内存中的切片，实现免网络请求的零等待瞬时平滑回退。
+  - 彻底移除错误监听器中对停顿错误强制执行 `video.currentTime += 0.1` 的反模式逻辑。消除快进/后退至未缓冲时间戳时触发的恶性死循环寻道风暴。
 - **按键快进/快退高频连击聚合防抖调度 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
-  - 规范使用 `art.seek` 替代原生 `currentTime += 10`；实现 150ms 连击聚合防抖调度器 `scheduleKeyboardSeek`，在连按右/左箭头键时即时更新 UI 浮层时间提示，停止敲击后向底层管道提交单次精准 Seek，彻底消除连续按键造成的 SourceBuffer 阻塞。
+  - 规范使用 `art.seek` 替代原生 `currentTime += 10`；实现 150ms 连击聚合防抖调度器 `scheduleKeyboardSeek`，在连按右/左箭头键时即时更新 UI 浮层时间提示，停止敲击后向底层管道提交单次精准 Seek，消除连续按键造成的 SourceBuffer 阻塞。
+
+### 1.12 PC 网页端回退卡顿与音画不同步底层根治 (2026-11-10)
+- **广告分段切除补齐 `#EXT-X-DISCONTINUITY` 根治时间戳脱轨 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 针对去广告函数 `filterAdsFromM3U8` 切除广告切片后未声明时间戳跳跃的根本缺陷，实现 `removedAdSegment` 追踪逻辑：在推入正片分片前自动补充规范的 `#EXT-X-DISCONTINUITY` 标签，确保 Hls.js demuxer 与 MSE 正确重置 PTS/DTS 解封装时钟，彻底杜绝跳过广告或跨段寻道时音画时间轴脱节（声画不同步）。
+- **回退缓冲区黄金阈值收敛 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 将桌面端 `backBufferLength` 从过大的 60s/90s 恢复为安全阈值（标准 15s / 增强 20s / 强力 30s）。杜绝 Chromium MSE 堆积超长陈旧分片引起的非均匀 GOP 内存碎片，消除回退播放时音频立即出声而视频被迫回溯找帧导致的严重声画脱轨。
+- **恢复 Hls.js 官方最佳空洞容差与看门狗周期 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 恢复 `maxBufferHole: 0.1` 与 `highBufferWatchdogPeriod: 2`；当遇到切片间隙大于 100ms 时第一时间通过 gap-controller 内部微调跳跃过去，杜绝 Chrome 视频管线挂起。显式配置 `forceKeyFrameOnDiscontinuity: true` 与 `maxAudioFramesDrift: 1`。
+- **修复致命停顿错误 `BUFFER_STALLED_ERROR (fatal: true)` 吞没漏洞 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 修复停顿错误监听器在 `fatal: true` 时被无条件 `return` 吞没的致命漏洞。在微调重试耗尽后正确调用 `hls.recoverMediaError()` 重新解绑与挂载媒体源重建解码管线，并增加重试次数控制与 `FRAG_LOADED` 计数重置，彻底消除不可逆卡死。
+- **聚合进度跳转弹幕重置防抖 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 将 `seek` 与 `video:seeked` 中对 `artplayerPluginDanmuku.reset()` 的重复调用收敛为统一的 300ms 防抖函数 `scheduleDanmuReset`，消除频繁 Seek 时主线程重复进行全量弹幕重排的微顿挫。
 
 ---
 
