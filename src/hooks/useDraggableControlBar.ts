@@ -25,11 +25,16 @@ export function useDraggableControlBar(
     const playerNode = art.template.$player as HTMLElement;
     let dragHandle = bottomNode.querySelector('.art-custom-drag-handle') as HTMLElement;
 
-    if (isFullscreen && enabled) {
-      // 1. 设置沉浸式外观
-      // 1. 设置透明度变量给 CSS 使用
+    // 1. 全局设置透明度变量给 CSS 使用（同时作用于常规窗口与全屏模式）
+    if (enabled) {
+      playerNode.style.setProperty('--glass-opacity', opacity.toString());
       bottomNode.style.setProperty('--glass-opacity', opacity.toString());
-      
+    } else {
+      playerNode.style.removeProperty('--glass-opacity');
+      bottomNode.style.removeProperty('--glass-opacity');
+    }
+
+    if (isFullscreen && enabled) {
       // 穿透底部的无形容器，只让实际内容（liquidGlass）响应点击
       bottomNode.style.pointerEvents = 'none';
       
@@ -203,8 +208,7 @@ export function useDraggableControlBar(
         if (timerRef.current) clearTimeout(timerRef.current);
       };
     } else {
-      // 还原 ArtPlayer 原生样式
-      bottomNode.style.removeProperty('--glass-opacity');
+      // 还原 ArtPlayer 原生全屏拖拽与尺寸样式（保留 enabled 时的 --glass-opacity）
       bottomNode.style.pointerEvents = '';
       bottomNode.style.transform = '';
       

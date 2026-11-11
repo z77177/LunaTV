@@ -32,8 +32,10 @@
   left: 0;
   right: 0;
   border-radius: 8px;
-  /* 🚀 高性能暗黑半透明底色：替代昂贵的 GPU 离屏高斯模糊，杜绝视频播放时掉帧 */
-  background-color: rgba(20, 20, 25, 0.92);
+  /* 🚀 毛玻璃与动态透明度底色：支持通过 --glass-opacity 动态调节透明度 */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background-color: rgba(20, 20, 25, var(--glass-opacity, 0.85));
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   z-index: -1;
@@ -123,11 +125,11 @@
   top: auto !important;
   width: 220px !important; /* 🌟 设定固定宽度，彻底解决子菜单文字长度不同导致宽度动态跳动/浮动的问题！ */
 
-  /* 🎨 极致尊贵纯暗黑底色：与弹幕面板保持一致，舍弃流光毛玻璃与白边框，统一圆角与高级暗阴影 */
-  background: rgba(18, 18, 18, 0.98) !important;
-  border: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  /* 🎨 动态透明毛玻璃底色：接入 --glass-opacity 与全局窗口透明度联动 */
+  background: rgba(18, 18, 18, var(--glass-opacity, 0.95)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
   border-radius: 8px !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
 
@@ -158,8 +160,10 @@
   padding: 12px !important;
   border-radius: 12px !important;
   
-  /* 🪄 高端暗黑半透明底色与发光边框（免去 GPU 离屏模糊开销） */
-  background-color: rgba(20, 20, 25, 0.95) !important;
+  /* 🪄 动态透明毛玻璃与发光边框：接入 --glass-opacity 与全局窗口透明度联动 */
+  background-color: rgba(20, 20, 25, var(--glass-opacity, 0.95)) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 229, 255, 0.15) !important;
   z-index: 99999 !important;

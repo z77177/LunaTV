@@ -4712,6 +4712,13 @@ function PlayPageClient() {
                 onRange: function (item: any) {
                   const val = Math.round(item.range[0] * 20) / 20; // 0.05 step
                   updateImmersiveSetting('opacity', val);
+                  // 🚀 立即直连同步 CSS 变量到播放器 DOM，实现 60fps 零延迟实时透明度反馈
+                  if (artPlayerRef.current?.template?.$player) {
+                    artPlayerRef.current.template.$player.style.setProperty('--glass-opacity', val.toString());
+                  }
+                  if (artPlayerRef.current?.template?.$bottom) {
+                    artPlayerRef.current.template.$bottom.style.setProperty('--glass-opacity', val.toString());
+                  }
                   return `${Math.round(val * 100)}%`;
                 },
               },
