@@ -199,6 +199,16 @@
   - 移动端手势升级：双击屏幕左侧 35% 触发快退 10 秒提示，双击右侧 35% 触发快进 10 秒提示，中间区域保留默认暂停/播放；
   - 播放死链反馈：首播遇到 403/404 等加载失败时，自动弹出浮层提示引导用户换源，彻底解决黑屏假死无反馈。
 
+### 1.11 PC 网页端快进/后退死循环卡顿根治与 HLS 寻道管道优化 (2026-11-10)
+- **消除 `BUFFER_STALLED_ERROR` 外部死循环微寻道 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 彻底移除错误监听器中对停顿错误强制执行 `video.currentTime += 0.1` 的反模式逻辑。消除快进/后退至未缓冲时间戳时触发的“等待分片 -> 抛出停顿 -> 强制改时间戳 -> MSE 抛弃解封装管道 -> 再次停顿”的恶性死循环寻道风暴。
+- **恢复 Hls.js 标准空洞容差阈值 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 将 `maxBufferHole` 从过严的 0.1s 恢复至官方推荐值 0.5s，`highBufferWatchdogPeriod` 设为 3s；容许第三方切片音视频 GOP 关键帧之间正常的 0.1s~0.3s 微小时间戳偏差，避免播放中高频触发伪空洞 Nudge 告警。
+- **放宽桌面端后向保留长度实现零等待回退 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 桌面端 `backBufferLength` 由 15s 放宽至 60s（强力模式 90s）；用户回退 10~30 秒时直接命中已缓存在 SourceBuffer 内存中的切片，实现免网络请求的零等待瞬时平滑回退。
+- **按键快进/快退高频连击聚合防抖调度 ([play/page.tsx](file:///d:/Projects/brooklyntv/src/app/play/page.tsx))**:
+  - 规范使用 `art.seek` 替代原生 `currentTime += 10`；实现 150ms 连击聚合防抖调度器 `scheduleKeyboardSeek`，在连按右/左箭头键时即时更新 UI 浮层时间提示，停止敲击后向底层管道提交单次精准 Seek，彻底消除连续按键造成的 SourceBuffer 阻塞。
+
 ---
 
 ## 二、 项目文档资产索引

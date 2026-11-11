@@ -306,6 +306,8 @@ function PlayPageClient() {
   // 进度条拖拽状态管理
   const isDraggingProgressRef = useRef(false);
   const seekResetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSeekTargetRef = useRef<number | null>(null);
+  const seekDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // resize事件防抖管理
   const resizeResetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -385,14 +387,14 @@ function PlayPageClient() {
         // 增强模式：1.5 倍缓冲
         return {
           maxBufferLength: 45, // 45s
-          backBufferLength: 20,
+          backBufferLength: 60, // 60s 内存后向保留，允许回退时免网络请求
           maxBufferSize: 80 * 1000 * 1000, // 80MB
         };
       case 'max':
         // 强力模式：2 倍缓冲
         return {
           maxBufferLength: 60, // 60s
-          backBufferLength: 25,
+          backBufferLength: 90, // 90s 内存后向保留
           maxBufferSize: 100 * 1000 * 1000, // 100MB
         };
       case 'standard':
@@ -400,7 +402,7 @@ function PlayPageClient() {
         // 默认模式
         return {
           maxBufferLength: 30,
-          backBufferLength: 15,
+          backBufferLength: 60, // 60s 内存后向保留，使后退 10~30 秒直接命中缓存
           maxBufferSize: 60 * 1000 * 1000, // 60MB
         };
     }
@@ -3543,6 +3545,35 @@ function PlayPageClient() {
   // ---------------------------------------------------------------------------
   // 键盘快捷键
   // ---------------------------------------------------------------------------
+  // 🚀 快进/快退按键高频连击聚合防抖调度器（避免频繁触发底层 SourceBuffer 重置）
+  const scheduleKeyboardSeek = (delta: number) => {
+    const art = artPlayerRef.current;
+    if (!art) return;
+
+    const currentTarget =
+      pendingSeekTargetRef.current !== null
+        ? pendingSeekTargetRef.current
+        : (art.currentTime || 0);
+
+    const maxDur = art.duration || Infinity;
+    const newTarget = Math.max(0, Math.min(maxDur, currentTarget + delta));
+    pendingSeekTargetRef.current = newTarget;
+
+    const diff = Math.round(newTarget - (art.currentTime || 0));
+    art.notice.show = (diff >= 0 ? '⏩ 快进 ' : '⏪ 快退 ') + Math.abs(diff) + ' 秒';
+
+    if (seekDebounceTimeoutRef.current) {
+      clearTimeout(seekDebounceTimeoutRef.current);
+    }
+
+    seekDebounceTimeoutRef.current = setTimeout(() => {
+      if (pendingSeekTargetRef.current !== null && artPlayerRef.current) {
+        artPlayerRef.current.seek = pendingSeekTargetRef.current;
+        pendingSeekTargetRef.current = null;
+      }
+    }, 150);
+  };
+
   // 处理全局快捷键
   const handleKeyboardShortcuts = (e: KeyboardEvent) => {
     // 忽略输入框中的按键事件
@@ -3570,22 +3601,19 @@ function PlayPageClient() {
       }
     }
 
-    // 左箭头 = 快退
+    // 左箭头 = 快退（带聚合防抖，防止高频连击破坏解码队列）
     if (!e.altKey && e.key === 'ArrowLeft') {
-      if (artPlayerRef.current && artPlayerRef.current.currentTime > 5) {
-        artPlayerRef.current.currentTime -= 10;
+      if (artPlayerRef.current) {
         e.preventDefault();
+        scheduleKeyboardSeek(-10);
       }
     }
 
-    // 右箭头 = 快进
+    // 右箭头 = 快进（带聚合防抖）
     if (!e.altKey && e.key === 'ArrowRight') {
-      if (
-        artPlayerRef.current &&
-        artPlayerRef.current.currentTime < artPlayerRef.current.duration - 5
-      ) {
-        artPlayerRef.current.currentTime += 10;
+      if (artPlayerRef.current) {
         e.preventDefault();
+        scheduleKeyboardSeek(10);
       }
     }
 
@@ -4422,8 +4450,8 @@ function PlayPageClient() {
 
               /* 网络加载优化与微缝容错 */
               maxLoadingDelay: isMobile ? (localIsIOS13 ? 2 : 3) : 4,
-              maxBufferHole: 0.1, // 🚀 全平台收紧至 0.1s，遇到微小空洞时瞬间微调向前跳跃，杜绝长时间假死挂起
-              highBufferWatchdogPeriod: 2, // 开启缓冲看门狗，2秒检测一次卡顿
+              maxBufferHole: 0.5, // 🚀 恢复官方推荐 0.5s，容许 TS 切片正常音视频 GOP 偏差，消除伪空洞停顿
+              highBufferWatchdogPeriod: 3, // 开启缓冲看门狗，3秒检测一次真正卡顿
               nudgeOffset: 0.1, // 遇到微缝自动向后跳跃 0.1s 恢复播放
               nudgeMaxRetry: 5, // 最多尝试微调 5 次
               
@@ -4475,16 +4503,9 @@ function PlayPageClient() {
             hls.on(Hls.Events.ERROR, function (event: any, data: any) {
               console.error('HLS Error:', event, data);
 
-              // 处理缓冲区停顿卡死（自动微调播放进度自愈）
+              // 处理缓冲区停顿（交由 Hls.js gap-controller 内部 nudge 机制优雅恢复，严禁外部手动强制 currentTime += 0.1 导致循环寻道风暴）
               if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-                console.warn('[HLS] 检测到缓冲区停顿，自动微调播放进度以恢复...');
-                try {
-                  if (video && !video.paused && video.buffered.length > 0) {
-                    video.currentTime += 0.1;
-                  }
-                } catch (e) {
-                  console.warn('[HLS] 自动微调失败:', e);
-                }
+                console.warn('[HLS] 检测到缓冲区停顿，由 Hls.js 自动调度恢复');
                 return;
               }
 
@@ -6246,6 +6267,9 @@ function PlayPageClient() {
       // 清理弹幕重置定时器
       if (seekResetTimeoutRef.current) {
         clearTimeout(seekResetTimeoutRef.current);
+      }
+      if (seekDebounceTimeoutRef.current) {
+        clearTimeout(seekDebounceTimeoutRef.current);
       }
       
       // 清理resize防抖定时器
